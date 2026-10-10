@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix dawry-NU1",
+  "description": "Imported from GitHub: samir102030/dawry-NU1",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
