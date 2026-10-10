@@ -1191,6 +1191,8 @@ export const UsersDirectoryPage: React.FC<UsersDirectoryPageProps> = ({
             </form>
           </div>
         </div>
+      )}
+
       {/* ========================================================================= */}
       {/* MODAL 4: IN-APP DELETE USER CONFIRMATION (حل مشكلة عدم المسح نهائياً) */}
       {/* ========================================================================= */}

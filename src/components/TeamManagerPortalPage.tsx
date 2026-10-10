@@ -20,11 +20,15 @@ import {
   Copy,
   AlertCircle,
   FileSpreadsheet,
-  Layers
+  Layers,
+  GraduationCap,
+  Lock,
+  UserCheck,
+  XCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Match, Team } from '../App';
-import { Player, MatchSubstitution, MatchCardEvent, CardType, MAX_SUBS_PER_TEAM } from '../utils/roster';
+import { Player, MatchSubstitution, MatchCardEvent, CardType, MAX_SUBS_PER_TEAM, PlayerRegistrationRequest } from '../utils/roster';
 
 interface TeamManagerPortalPageProps {
   teams: Team[];
@@ -33,6 +37,12 @@ interface TeamManagerPortalPageProps {
   onUpdateSquads: (updatedSquads: Record<string, Player[]>) => void;
   onUpdateMatchLineups?: (matchId: string, teamName: string, starters: string[], bench: string[], substitutions: MatchSubstitution[], cards?: MatchCardEvent[]) => void;
   isAdmin?: boolean;
+  assignedTeamName?: string;
+  managerName?: string;
+  playerRequests?: PlayerRegistrationRequest[];
+  onRequestAddPlayer?: (req: Omit<PlayerRegistrationRequest, 'id' | 'requestedAt' | 'status'>) => void;
+  onRequestEditPlayer?: (req: Omit<PlayerRegistrationRequest, 'id' | 'requestedAt' | 'status'>) => void;
+  onOpenApprovalsModal?: () => void;
 }
 
 export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
@@ -42,26 +52,43 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
   onUpdateSquads,
   onUpdateMatchLineups,
   isAdmin = true,
+  assignedTeamName,
+  managerName,
+  playerRequests = [],
+  onRequestAddPlayer,
+  onRequestEditPlayer,
+  onOpenApprovalsModal,
 }) => {
-  // Currently selected team that the manager is managing
-  const [managedTeamName, setManagedTeamName] = useState<string>(teams[0]?.name || 'برشلونة');
+  // Currently selected team that the manager is managing (locked to assignedTeamName if not admin)
+  const initialTeam = (!isAdmin && assignedTeamName) ? assignedTeamName : (teams[0]?.name || 'برشلونة');
+  const [managedTeamName, setManagedTeamName] = useState<string>(initialTeam);
 
-  // Sub-tabs: 'squad_builder' (قائمة الفريق وإضافة اللاعبين) | 'match_lineup' (تشكيل الماتش مين لعب ومين ملعبش) | 'bulk_paste' (إضافة جماعية سريعة)
-  const [subTab, setSubTab] = useState<'squad_builder' | 'match_lineup' | 'bulk_paste'>('squad_builder');
+  React.useEffect(() => {
+    if (!isAdmin && assignedTeamName) {
+      setManagedTeamName(assignedTeamName);
+    }
+  }, [isAdmin, assignedTeamName]);
+
+  // Sub-tabs: 'squad_builder' | 'match_lineup' | 'bulk_paste' | 'registration_requests'
+  const [subTab, setSubTab] = useState<'squad_builder' | 'match_lineup' | 'bulk_paste' | 'registration_requests'>('squad_builder');
 
   // Modal / Inline Add Player State
   const [isAddingPlayer, setIsAddingPlayer] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [playerForm, setPlayerForm] = useState<{
     name: string;
+    studentId: string;
     number: number;
     position: 'GK' | 'DEF' | 'MID' | 'FWD';
     isCaptain: boolean;
+    editReason: string;
   }>({
     name: '',
+    studentId: '',
     number: 10,
     position: 'MID',
     isCaptain: false,
+    editReason: '',
   });
 
   // Bulk paste players
@@ -90,6 +117,10 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
     }
     return teamMatches[0];
   }, [teamMatches, selectedMatchId]);
+
+  const teamPendingRequests = useMemo(() => {
+    return (playerRequests || []).filter(r => r.teamName === managedTeamName);
+  }, [playerRequests, managedTeamName]);
 
   // Participation local state for active match
   const isTeamA = activeMatch?.teamA === managedTeamName;
@@ -223,34 +254,100 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
     if (!playerForm.name.trim()) return;
 
     if (editingPlayer) {
-      const updated = currentSquad.map(p => {
-        if (p.id === editingPlayer.id) {
-          return {
-            ...p,
-            name: playerForm.name.trim(),
-            number: Number(playerForm.number),
-            position: playerForm.position,
+      if (isAdmin) {
+        // ADMIN DIRECT EDIT: Admin can directly edit name, student ID, number, position, and captain status!
+        const updated = currentSquad.map(p => {
+          if (p.id === editingPlayer.id) {
+            return {
+              ...p,
+              name: playerForm.name.trim(),
+              studentId: playerForm.studentId.trim() || p.studentId,
+              number: Number(playerForm.number),
+              position: playerForm.position,
+              isCaptain: playerForm.isCaptain,
+              isIdentityLocked: true, // محمي ومقفل
+            };
+          }
+          return p;
+        });
+        onUpdateSquads({ ...squads, [managedTeamName]: updated });
+        setIsAddingPlayer(false);
+        setEditingPlayer(null);
+        setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, editReason: '' });
+        confetti({ particleCount: 30, spread: 40 });
+        alert(`تم تعديل بيانات اللاعب (${playerForm.name.trim()}) مباشرة بصلاحية الأدمن 👑🔒`);
+      } else {
+        // TEAM MANAGER / NON-ADMIN:
+        // Must send an Edit Request to Admin for approval!
+        if (onRequestEditPlayer) {
+          onRequestEditPlayer({
+            type: 'edit',
+            playerId: editingPlayer.id,
+            teamName: managedTeamName,
+            playerName: playerForm.name.trim(),
+            studentId: playerForm.studentId.trim() || editingPlayer.studentId,
+            playerNumber: Number(playerForm.number),
+            playerPosition: playerForm.position,
             isCaptain: playerForm.isCaptain,
-          };
+            editReason: playerForm.editReason.trim() || 'طلب تعديل بيانات اللاعب الرسمية',
+            originalPlayer: {
+              name: editingPlayer.name,
+              studentId: editingPlayer.studentId,
+              number: editingPlayer.number,
+              position: editingPlayer.position,
+              isCaptain: editingPlayer.isCaptain,
+            },
+            requestedBy: managerName || `مسؤول فريق ${managedTeamName}`,
+          });
         }
-        return p;
-      });
-      onUpdateSquads({ ...squads, [managedTeamName]: updated });
+        setIsAddingPlayer(false);
+        setEditingPlayer(null);
+        setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, editReason: '' });
+      }
     } else {
-      const newP: Player = {
-        id: `p_${Date.now()}`,
-        name: playerForm.name.trim(),
-        number: Number(playerForm.number),
-        position: playerForm.position,
-        isCaptain: playerForm.isCaptain,
-      };
-      onUpdateSquads({ ...squads, [managedTeamName]: [...currentSquad, newP] });
-    }
+      // Adding new player:
+      if (!playerForm.studentId.trim()) {
+        alert('يرجى إدخال الرقم الجامعي للطالب (Student ID) بشكل صحيح.');
+        return;
+      }
 
-    setIsAddingPlayer(false);
-    setEditingPlayer(null);
-    setPlayerForm({ name: '', number: 10, position: 'MID', isCaptain: false });
-    confetti({ particleCount: 40, spread: 50 });
+      if (!isAdmin) {
+        // TEAM MANAGER: Send request to Admin for approval!
+        if (onRequestAddPlayer) {
+          onRequestAddPlayer({
+            type: 'add',
+            teamName: managedTeamName,
+            playerName: playerForm.name.trim(),
+            playerNumber: Number(playerForm.number),
+            playerPosition: playerForm.position,
+            isCaptain: playerForm.isCaptain,
+            studentId: playerForm.studentId.trim(),
+            requestedBy: managerName || `مسؤول فريق ${managedTeamName}`,
+          });
+        }
+        setIsAddingPlayer(false);
+        setEditingPlayer(null);
+        setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, editReason: '' });
+        alert(`تم إرسال طلب قيد اللاعب (${playerForm.name}) والـ ID (${playerForm.studentId}) لمدير البطولة (Admin) للموافقة عليه واعتماده رسمياً! ⏳🔒`);
+      } else {
+        // ADMIN: Can directly add and lock identity
+        const newP: Player = {
+          id: `p_${Date.now()}`,
+          name: playerForm.name.trim(),
+          studentId: playerForm.studentId.trim(),
+          number: Number(playerForm.number),
+          position: playerForm.position,
+          isCaptain: playerForm.isCaptain,
+          isIdentityLocked: true,
+        };
+        onUpdateSquads({ ...squads, [managedTeamName]: [...currentSquad, newP] });
+        setIsAddingPlayer(false);
+        setEditingPlayer(null);
+        setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, editReason: '' });
+        confetti({ particleCount: 40, spread: 50 });
+        alert(`تمت إضافة اللاعب (${newP.name}) واعتماد رقمه الجامعي (${newP.studentId}) رسمياً مع قفل الهوية 🔒✅`);
+      }
+    }
   };
 
   const handleDeletePlayer = (playerId: string) => {
@@ -270,10 +367,17 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
     const newPlayers: Player[] = [];
 
     lines.forEach((line, idx) => {
-      // Possible formats: "10 - محمد صلاح" or "محمد صلاح (10)" or just "محمد صلاح"
+      // Possible formats: "10 - محمد صلاح - 20230114" or "محمد صلاح (10)"
       let name = line;
       let num = currentSquad.length + idx + 1;
       let pos: 'GK' | 'DEF' | 'MID' | 'FWD' = 'MID';
+      let studentId = `${2021 + ((idx + currentSquad.length) % 4)}${1000 + currentSquad.length + idx}`;
+
+      const matchId = line.match(/(?:ID|رقم)[:\s]*(\d{7,10})/i);
+      if (matchId) {
+        studentId = matchId[1];
+        line = line.replace(matchId[0], '').trim();
+      }
 
       const matchNum = line.match(/^(\d+)[-.\s]+(.+)$/);
       if (matchNum) {
@@ -299,6 +403,8 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
           number: num,
           position: pos,
           isCaptain: idx === 0 && currentSquad.length === 0,
+          studentId,
+          isIdentityLocked: true,
         });
       }
     });
@@ -308,13 +414,31 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
       return;
     }
 
-    onUpdateSquads({
-      ...squads,
-      [managedTeamName]: [...currentSquad, ...newPlayers],
-    });
-    setBulkText('');
-    confetti({ particleCount: 70, spread: 80 });
-    alert(`تمت إضافة ${newPlayers.length} لاعبين إلى فريق ${managedTeamName} بنجاح! 🎉`);
+    if (!isAdmin) {
+      newPlayers.forEach(p => {
+        if (onRequestAddPlayer) {
+          onRequestAddPlayer({
+            teamName: managedTeamName,
+            playerName: p.name,
+            playerNumber: p.number,
+            playerPosition: p.position,
+            isCaptain: p.isCaptain,
+            studentId: p.studentId,
+            requestedBy: managerName || `مسؤول فريق ${managedTeamName}`,
+          });
+        }
+      });
+      setBulkText('');
+      alert(`تم إرسال طلبات قيد (${newPlayers.length}) لاعبين لمدير البطولة (Admin) للمراجعة والموافقة الرسمية! ⏳`);
+    } else {
+      onUpdateSquads({
+        ...squads,
+        [managedTeamName]: [...currentSquad, ...newPlayers],
+      });
+      setBulkText('');
+      confetti({ particleCount: 70, spread: 80 });
+      alert(`تمت إضافة ${newPlayers.length} لاعبين إلى فريق ${managedTeamName} واعتماد بياناتهم بنجاح! 🎉`);
+    }
   };
 
   const copyShareRoster = () => {
@@ -365,21 +489,38 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
       {/* Team Selection Bar */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="text-xs font-black text-slate-300 flex items-center gap-1.5 shrink-0">
-            <Shield className="w-4 h-4 text-emerald-400" />
-            اختر الفريق الذي تديره:
-          </label>
-          <select
-            value={managedTeamName}
-            onChange={(e) => setManagedTeamName(e.target.value)}
-            className="bg-slate-950 border-2 border-emerald-500/40 text-white font-black text-sm rounded-2xl px-4 py-2.5 min-w-[220px] focus:outline-none focus:border-emerald-400 shadow-inner"
-          >
-            {teams.map(t => (
-              <option key={t.id} value={t.name}>
-                {t.name} (المجموعة {t.group})
-              </option>
-            ))}
-          </select>
+          {isAdmin ? (
+            <>
+              <label className="text-xs font-black text-slate-300 flex items-center gap-1.5 shrink-0">
+                <Shield className="w-4 h-4 text-emerald-400" />
+                اختر الفريق الذي تديره (تحكم الأدمن 👑):
+              </label>
+              <select
+                value={managedTeamName}
+                onChange={(e) => setManagedTeamName(e.target.value)}
+                className="bg-slate-950 border-2 border-emerald-500/40 text-white font-black text-sm rounded-2xl px-4 py-2.5 min-w-[220px] focus:outline-none focus:border-emerald-400 shadow-inner"
+              >
+                {teams.map(t => (
+                  <option key={t.id} value={t.name}>
+                    {t.name} (المجموعة {t.group})
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="text-xs font-black text-slate-300 flex items-center gap-1.5 shrink-0">
+                <Shield className="w-4 h-4 text-emerald-400" />
+                فريقك المعتمد كمسؤول:
+              </span>
+              <div className="px-3.5 py-1.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-black text-sm flex items-center gap-2 shadow-sm">
+                <span>{managedTeamName}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-bold">
+                  مسؤول الفريق المعتمد 📋
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Active Team Badge */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
@@ -393,7 +534,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
         </div>
 
         {/* Sub-Tabs Switcher */}
-        <div className="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shrink-0">
           <button
             onClick={() => setSubTab('squad_builder')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
@@ -429,6 +570,32 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
             <Shirt className="w-3.5 h-3.5" />
             تشكيل المباراة ومين لعب ⚽
           </button>
+
+          <button
+            onClick={() => setSubTab('registration_requests')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              subTab === 'registration_requests'
+                ? 'bg-amber-500 text-slate-950 shadow font-black'
+                : 'text-amber-400 hover:text-white'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>طلبات القيد ({teamPendingRequests.length})</span>
+            {teamPendingRequests.filter(r => r.status === 'pending').length > 0 && (
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+            )}
+          </button>
+
+          {isAdmin && onOpenApprovalsModal && (
+            <button
+              onClick={onOpenApprovalsModal}
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow cursor-pointer mr-auto"
+              title="فتح لوحة مراجعة واعتماد طلبات اللاعبين"
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>اعتماد الطلبات 👑</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -444,7 +611,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
             <button
               onClick={() => {
                 setEditingPlayer(null);
-                setPlayerForm({ name: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false });
+                setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, editReason: '' });
                 setIsAddingPlayer(true);
               }}
               className="px-4 py-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 cursor-pointer"
@@ -458,9 +625,20 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
           {isAddingPlayer && (
             <div className="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl p-5 shadow-2xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <strong className="text-sm font-black text-emerald-300">
-                  {editingPlayer ? `تعديل بيانات اللاعب: ${editingPlayer.name}` : `إضافة لاعب جديد إلى ${managedTeamName}`}
-                </strong>
+                <div className="flex items-center gap-2">
+                  <Shirt className="w-4 h-4 text-emerald-400" />
+                  <strong className="text-sm font-black text-emerald-300">
+                    {editingPlayer 
+                      ? (isAdmin ? `تعديل مباشر لبيانات اللاعب: ${editingPlayer.name} (صلاحية الأدمن 👑)` : `طلب تعديل بيانات اللاعب: ${editingPlayer.name}`)
+                      : `إضافة وتسجيل لاعب جديد إلى ${managedTeamName}`}
+                  </strong>
+                  {editingPlayer?.isIdentityLocked && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                      <Lock className="w-3 h-3 text-amber-400" />
+                      {isAdmin ? 'معتمد ومقفل (متاح للأدمن تعديله)' : 'معتمد ومقفل — يتطلب موافقة الأدمن للتعديل 🔒'}
+                    </span>
+                  )}
+                </div>
                 <button
                   onClick={() => setIsAddingPlayer(false)}
                   className="p-1 rounded-lg text-slate-400 hover:text-white"
@@ -469,9 +647,30 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                 </button>
               </div>
 
+              {/* Informational Banner for Team Manager when requesting modification */}
+              {editingPlayer && !isAdmin && (
+                <div className="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/40 text-xs text-indigo-300 flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <strong className="text-white block font-black">حماية بيانات وهوية اللاعب 🔒</strong>
+                    <p className="text-[11px] text-slate-300">
+                      بيانات اللاعب ورقم الـ ID مقفلان رسمياً لمنع التلاعب. عند تعديل أي بيانات هنا وكتابة سبب التعديل، سيصل طلبك مباشرة إلى حساب الأدمن، وسيقوم بمراجعة الفروقات واعتماد التعديل أو رفضه.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <form onSubmit={handleSavePlayer} className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="md:col-span-2 space-y-1">
-                  <label className="text-xs text-slate-400 font-bold">اسم اللاعب بالكامل:</label>
+                  <label className="text-xs text-slate-400 font-bold flex items-center justify-between">
+                    <span>اسم اللاعب بالكامل *:</span>
+                    {editingPlayer?.isIdentityLocked && !isAdmin && (
+                      <span className="text-[10px] text-amber-400 font-mono flex items-center gap-0.5">
+                        <Lock className="w-2.5 h-2.5" />
+                        (مقفل — إرسال طلب للأدمن)
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="text"
                     required
@@ -480,6 +679,34 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                     onChange={(e) => setPlayerForm(prev => ({ ...prev, name: e.target.value }))}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                   />
+                </div>
+
+                <div className="md:col-span-2 space-y-1">
+                  <label className="text-xs text-slate-400 font-bold flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
+                      الرقم الجامعي للطالب (ID) *:
+                    </span>
+                    {editingPlayer?.isIdentityLocked && !isAdmin && (
+                      <span className="text-[10px] text-amber-400 font-mono flex items-center gap-0.5">
+                        <Lock className="w-2.5 h-2.5" />
+                        (مقفل — إرسال طلب للأدمن)
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="مثال: 20230555"
+                    value={playerForm.studentId}
+                    onChange={(e) => setPlayerForm(prev => ({ ...prev, studentId: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500"
+                  />
+                  {!editingPlayer && (
+                    <span className="text-[10px] text-amber-400/90 block font-bold">
+                      ⚠️ بمجرد اعتماد اللاعب، يُقفل الاسم والـ ID نهائياً ولا يمكن تغييرهما إلا بطلب للأدمن 🔒
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -509,7 +736,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                   </select>
                 </div>
 
-                <div className="md:col-span-4 flex items-center justify-between pt-2">
+                <div className="md:col-span-2 flex items-center justify-between pt-2">
                   <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-300">
                     <input
                       type="checkbox"
@@ -519,6 +746,47 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                     />
                     <span>تعيين هذا اللاعب كقائد للفريق (الكابتن 👑)</span>
                   </label>
+                </div>
+
+                {/* Reason for modification (When editing and not admin) */}
+                {editingPlayer && !isAdmin && (
+                  <div className="md:col-span-4 space-y-1 bg-slate-950/60 p-3 rounded-xl border border-indigo-500/30">
+                    <label className="text-xs text-indigo-300 font-bold flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 text-indigo-400" />
+                      سبب طلب التعديل (سيظهر لإدارة البطولة والأدمن للموافقة) *:
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="مثال: تصحيح خطأ إملائي في اسم الطالب، أو تحديث الرقم الجامعي الرسمي، أو تغيير رقم القميص..."
+                      value={playerForm.editReason}
+                      onChange={(e) => setPlayerForm(prev => ({ ...prev, editReason: e.target.value }))}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                )}
+
+                <div className="md:col-span-4 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
+                  <div className="text-xs text-slate-400">
+                    {!isAdmin ? (
+                      editingPlayer ? (
+                        <span className="flex items-center gap-1.5 text-indigo-300">
+                          <Clock className="w-4 h-4 text-indigo-400" />
+                          سيتم إرسال طلب التعديل للأدمن لمراجعته والموافقة عليه ⏳
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 text-amber-300">
+                          <Clock className="w-4 h-4 text-amber-400" />
+                          سيتم إرسال طلب القيد للأدمن للاعتماد والموافقة أولاً قبل نزوله في القائمة ⏳
+                        </span>
+                      )
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-emerald-400">
+                        <Shield className="w-4 h-4 text-emerald-400" />
+                        صلاحية الأدمن: حفظ وتعديل فوري ومباشر في القائمة الرسمية 👑
+                      </span>
+                    )}
+                  </div>
 
                   <div className="flex items-center gap-2">
                     <button
@@ -530,9 +798,26 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 cursor-pointer"
+                      className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center gap-1.5"
                     >
-                      حفظ اللاعب
+                      {!isAdmin ? (
+                        editingPlayer ? (
+                          <>
+                            <Clock className="w-4 h-4" />
+                            <span>إرسال طلب التعديل للأدمن للموافقة 📨</span>
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="w-4 h-4" />
+                            <span>إرسال طلب القيد للأدمن للموافقة 🚀</span>
+                          </>
+                        )
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>{editingPlayer ? 'حفظ التعديلات كـ أدمن 💾' : 'إضافة واعتماد اللاعب فوراً'}</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -542,67 +827,88 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
 
           {/* Players Table / Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {currentSquad.map((player, idx) => (
-              <div
-                key={player.id}
-                className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-md transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center font-mono font-black text-emerald-400 text-base shadow-inner">
-                    {player.number}
-                  </div>
-                  <div>
-                    <strong className="text-sm font-bold text-white block group-hover:text-emerald-300 transition-colors">
-                      {player.name}
-                    </strong>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                        player.position === 'GK'
-                          ? 'bg-amber-950 text-amber-300 border border-amber-500/30'
-                          : player.position === 'DEF'
-                          ? 'bg-blue-950 text-blue-300 border border-blue-500/30'
-                          : player.position === 'MID'
-                          ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/30'
-                          : 'bg-rose-950 text-rose-300 border border-rose-500/30'
-                      }`}>
-                        {player.position}
-                      </span>
-                      {player.isCaptain && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-bold flex items-center gap-0.5 border border-amber-500/30">
-                          👑 كابتن
+            {currentSquad.map((player) => {
+              const hasPendingEdit = (playerRequests || []).some(
+                r => r.type === 'edit' && r.status === 'pending' && (r.playerId === player.id || r.playerName === player.name)
+              );
+
+              return (
+                <div
+                  key={player.id}
+                  className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-md transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center font-mono font-black text-emerald-400 text-base shadow-inner">
+                      {player.number}
+                    </div>
+                    <div>
+                      <strong className="text-sm font-bold text-white block group-hover:text-emerald-300 transition-colors">
+                        {player.name}
+                      </strong>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                          player.position === 'GK'
+                            ? 'bg-amber-950 text-amber-300 border border-amber-500/30'
+                            : player.position === 'DEF'
+                            ? 'bg-blue-950 text-blue-300 border border-blue-500/30'
+                            : player.position === 'MID'
+                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/30'
+                            : 'bg-rose-950 text-rose-300 border border-rose-500/30'
+                        }`}>
+                          {player.position}
                         </span>
-                      )}
+                        {player.isCaptain && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-bold flex items-center gap-0.5 border border-amber-500/30">
+                            👑 كابتن
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 rounded-md bg-slate-950 text-emerald-400 text-[10px] font-mono font-bold border border-slate-800 flex items-center gap-1">
+                          <GraduationCap className="w-3 h-3 text-emerald-400" />
+                          ID: {player.studentId || '—'}
+                          <span title="مقفل ومحمي"><Lock className="w-2.5 h-2.5 text-slate-500" /></span>
+                        </span>
+                        {hasPendingEdit && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-bold border border-indigo-500/40 flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5 text-indigo-400" />
+                            طلب تعديل قيد المراجعة ⏳
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      setEditingPlayer(player);
-                      setPlayerForm({
-                        name: player.name,
-                        number: player.number,
-                        position: player.position,
-                        isCaptain: !!player.isCaptain,
-                      });
-                      setIsAddingPlayer(true);
-                    }}
-                    className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
-                    title="تعديل اللاعب"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDeletePlayer(player.id)}
-                    className="p-2 rounded-xl text-rose-400 hover:text-rose-200 hover:bg-rose-950/40 transition-all cursor-pointer"
-                    title="حذف اللاعب"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setEditingPlayer(player);
+                        setPlayerForm({
+                          name: player.name,
+                          studentId: player.studentId || '',
+                          number: player.number,
+                          position: player.position,
+                          isCaptain: !!player.isCaptain,
+                          editReason: '',
+                        });
+                        setIsAddingPlayer(true);
+                      }}
+                      className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+                      title={isAdmin ? "تعديل اللاعب كـ أدمن" : "طلب تعديل اللاعب"}
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDeletePlayer(player.id)}
+                        className="p-2 rounded-xl text-rose-400 hover:text-rose-200 hover:bg-rose-950/40 transition-all cursor-pointer"
+                        title="حذف اللاعب"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {currentSquad.length === 0 && (
@@ -612,7 +918,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
               <button
                 onClick={() => {
                   setEditingPlayer(null);
-                  setPlayerForm({ name: '', number: 1, position: 'GK', isCaptain: true });
+                  setPlayerForm({ name: '', studentId: '', number: 1, position: 'GK', isCaptain: true, editReason: '' });
                   setIsAddingPlayer(true);
                 }}
                 className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs cursor-pointer inline-flex items-center gap-1"
@@ -979,6 +1285,128 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
           ) : (
             <p className="text-xs text-slate-400">لا توجد مباريات لهذا الفريق</p>
           )}
+        </div>
+      )}
+
+      {/* SUB-TAB 4: REGISTRATION REQUESTS (طلبات قيد وتسجيل اللاعبين) */}
+      {subTab === 'registration_requests' && (
+        <div className="space-y-4 animate-fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-amber-400" />
+                  <h3 className="text-base font-black text-white">
+                    طلبات قيد لاعبي فريق {managedTeamName} ({teamPendingRequests.length})
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-300">
+                  جميع طلبات قيد اللاعبين التي يرفعها مسؤول الفريق تمر بموافقة واعتماد مدير البطولة (Admin) رسمياً أولاً 🔒.
+                </p>
+              </div>
+
+              {isAdmin && onOpenApprovalsModal && (
+                <button
+                  onClick={onOpenApprovalsModal}
+                  className="px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/20 cursor-pointer self-start sm:self-auto"
+                >
+                  <UserCheck className="w-4 h-4" />
+                  <span>فتح نافذة الاعتمادات الرسمية (Admin) 👑</span>
+                </button>
+              )}
+            </div>
+
+            {/* List of Requests */}
+            {teamPendingRequests.length === 0 ? (
+              <div className="text-center py-12 px-4 bg-slate-950/60 rounded-2xl border border-slate-800/80 space-y-2">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
+                <h4 className="text-sm font-bold text-white">لا توجد طلبات قيد مسجلة لفريق {managedTeamName}</h4>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  يمكنك رفع طلب إضافة لاعب جديد من تبويب «قائمة اللاعبين»، وسيظهر هنا فوراً حتى يعتمده الأدمن.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-2">
+                {teamPendingRequests.map(req => (
+                  <div
+                    key={req.id}
+                    className={`p-4 rounded-2xl border space-y-2.5 transition-all shadow-md ${
+                      req.status === 'pending'
+                        ? 'bg-slate-950 border-amber-500/40'
+                        : req.status === 'approved'
+                        ? 'bg-slate-950/80 border-emerald-500/30'
+                        : 'bg-slate-950/40 border-rose-500/30'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <strong className="text-white font-black text-sm">{req.playerName}</strong>
+                        {req.type === 'edit' ? (
+                          <span className="px-2 py-0.2 rounded-full bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/40 text-[10px]">
+                            🔄 طلب تعديل
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 text-[10px]">
+                            ➕ طلب قيد جديد
+                          </span>
+                        )}
+                      </div>
+
+                      {req.status === 'pending' && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 text-[10px] flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-400" />
+                          بانتظار موافقة الأدمن ⏳
+                        </span>
+                      )}
+                      {req.status === 'approved' && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 text-[10px] flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          تم الاعتماد رسمياً ✅
+                        </span>
+                      )}
+                      {req.status === 'rejected' && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40 text-[10px] flex items-center gap-1">
+                          <XCircle className="w-3 h-3 text-rose-400" />
+                          تم رفض الطلب ❌
+                        </span>
+                      )}
+                    </div>
+
+                    {req.editReason && (
+                      <div className="text-[11px] text-indigo-300 bg-indigo-950/30 p-2 rounded-lg border border-indigo-500/30">
+                        سبب طلب التعديل: <strong className="text-white">{req.editReason}</strong>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-2 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 text-[11px] font-mono">
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">الرقم الجامعي (ID):</span>
+                        <strong className="text-emerald-400 flex items-center gap-1">
+                          <GraduationCap className="w-3 h-3 text-emerald-400" />
+                          {req.studentId || '—'}
+                          <Lock className="w-2.5 h-2.5 text-slate-500" />
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">القميص والمركز:</span>
+                        <span className="text-white font-bold">#{req.playerNumber} • {req.playerPosition}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">وقت الطلب:</span>
+                        <span className="text-slate-400 text-[10px]">{req.requestedAt}</span>
+                      </div>
+                    </div>
+
+                    {req.status === 'rejected' && req.rejectionReason && (
+                      <div className="text-[11px] text-rose-300 bg-rose-950/30 p-2 rounded-lg border border-rose-500/20">
+                        سبب الرفض: <strong>{req.rejectionReason}</strong>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

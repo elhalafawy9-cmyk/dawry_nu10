@@ -1,6 +1,6 @@
 {
-  "name": "Remix Remix dawry-NU1",
-  "description": "Imported from GitHub: samir102030/dawry-NU1",
+  "name": "دوري جامعة النيل — بطولة كرة القدم",
+  "description": "بطولة كرة القدم لجامعة النيل — 48 فريق في 8 مجموعات، أدوار إقصائية حتى النهائي. سجّل فريقك وشارك!",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

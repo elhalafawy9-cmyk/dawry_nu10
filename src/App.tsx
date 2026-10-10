@@ -9,6 +9,8 @@ import { UsersDirectoryPage } from './components/UsersDirectoryPage';
 import { AuthModal } from './components/AuthModal';
 import { LoginPage } from './components/LoginPage';
 import { SignupPage } from './components/SignupPage';
+import { PlayerTeamPortalPage } from './components/PlayerTeamPortalPage';
+import { PlayerApprovalsModal } from './components/PlayerApprovalsModal';
 import { 
   AppUser, 
   UserRole, 
@@ -33,7 +35,10 @@ import {
   MatchCardEvent, 
   CardType, 
   MAX_SUBS_PER_TEAM, 
-  generateInitialSquads 
+  generateInitialSquads,
+  PlayerRegistrationRequest,
+  loadStoredPlayerRequests,
+  saveStoredPlayerRequests
 } from './utils/roster';
 import { 
   Trophy, 
@@ -339,7 +344,7 @@ const INITIAL_SCOREKEEPERS: Scorekeeper[] = [
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<
-    'matches_control' | 'spectator_portal' | 'team_manager' | 'users_directory' | 'groups' | 'bracket' | 'teams_roster' | 'stats_leaders' | 'manage'
+    'matches_control' | 'spectator_portal' | 'team_manager' | 'my_team' | 'users_directory' | 'groups' | 'bracket' | 'teams_roster' | 'stats_leaders' | 'manage'
   >('matches_control');
   
   // Auth & Nile University Users State
@@ -347,6 +352,18 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(() => loadActiveUser(loadStoredUsers()));
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+
+  // Role Preview for Admin to test each role's view (معاينة الصلاحيات)
+  const [previewRole, setPreviewRole] = useState<UserRole | null>(null);
+
+  const effectiveRole: UserRole = (currentUser?.role === 'admin' && previewRole)
+    ? previewRole
+    : (currentUser?.role || 'spectator');
+
+  const isAdmin = effectiveRole === 'admin';
+  const isTeamManager = effectiveRole === 'team_manager';
+  const isPlayer = effectiveRole === 'player';
+  const isSpectator = effectiveRole === 'spectator';
 
   // Data States
   const [teams, setTeams] = useState<Team[]>(INITIAL_TEAMS);
@@ -357,6 +374,10 @@ export default function App() {
   const [squads, setSquads] = useState<Record<string, Player[]>>(() => {
     return generateInitialSquads(INITIAL_TEAMS.map(t => t.name));
   });
+
+  // Player Registration Requests State (طلبات قيد وتسجيل اللاعبين من مسؤولي الفرق)
+  const [playerRequests, setPlayerRequests] = useState<PlayerRegistrationRequest[]>(() => loadStoredPlayerRequests());
+  const [isApprovalsModalOpen, setIsApprovalsModalOpen] = useState<boolean>(false);
 
   // Round Matchup Organizer Modal State
   const [isRoundOrganizerOpen, setIsRoundOrganizerOpen] = useState<boolean>(false);
@@ -537,6 +558,304 @@ export default function App() {
       }
       return m;
     }));
+  };
+
+  // --- PLAYER REGISTRATION & MODIFICATION APPROVAL HANDLERS ---
+  // 1. Team Manager requests a new player registration (must be approved by Admin)
+  const handleRequestAddPlayer = (reqData: Omit<PlayerRegistrationRequest, 'id' | 'requestedAt' | 'status'>) => {
+    const newReq: PlayerRegistrationRequest = {
+      ...reqData,
+      type: 'add',
+      id: `req_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      requestedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      status: 'pending',
+    };
+
+    setPlayerRequests(prev => {
+      const updated = [newReq, ...prev];
+      saveStoredPlayerRequests(updated);
+      return updated;
+    });
+
+    confetti({ particleCount: 30, spread: 50 });
+  };
+
+  // 2. Team Manager requests to EDIT an existing locked player (sent to Admin for approval)
+  const handleRequestEditPlayer = (reqData: Omit<PlayerRegistrationRequest, 'id' | 'requestedAt' | 'status'>) => {
+    const newReq: PlayerRegistrationRequest = {
+      ...reqData,
+      type: 'edit',
+      id: `req_edit_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      requestedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      status: 'pending',
+    };
+
+    setPlayerRequests(prev => {
+      const updated = [newReq, ...prev];
+      saveStoredPlayerRequests(updated);
+      return updated;
+    });
+
+    confetti({ particleCount: 30, spread: 50 });
+    alert(`تم إرسال طلب تعديل بيانات اللاعب (${reqData.playerName}) إلى مدير البطولة (Admin) لمراجعته والموافقة عليه! ⏳📩`);
+  };
+
+  // 3. Admin approves request (Add or Edit)
+  const handleApprovePlayerRequest = (requestId: string) => {
+    const target = playerRequests.find(r => r.id === requestId);
+    if (!target) return;
+
+    if (target.type === 'edit') {
+      // Apply modification to existing player
+      setSquads(prev => {
+        const teamSquad = prev[target.teamName] || [];
+        const updatedSquad = teamSquad.map(p => {
+          const isTargetPlayer = target.playerId ? p.id === target.playerId : (target.originalPlayer?.name ? p.name === target.originalPlayer.name : p.name === target.playerName);
+          if (isTargetPlayer) {
+            return {
+              ...p,
+              name: target.playerName,
+              studentId: target.studentId || p.studentId,
+              number: target.playerNumber,
+              position: target.playerPosition,
+              isCaptain: target.isCaptain,
+              isIdentityLocked: true, // محمي ومقفل رسمياً
+            };
+          }
+          return p;
+        });
+
+        return {
+          ...prev,
+          [target.teamName]: updatedSquad,
+        };
+      });
+
+      setPlayerRequests(prev => {
+        const updated = prev.map(r => {
+          if (r.id === requestId) {
+            return {
+              ...r,
+              status: 'approved' as const,
+              reviewedBy: currentUser?.name || 'مدير البطولة (Admin)',
+              reviewedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+            };
+          }
+          return r;
+        });
+        saveStoredPlayerRequests(updated);
+        return updated;
+      });
+
+      confetti({ particleCount: 50, spread: 60 });
+      alert(`تم اعتماد وتطبيق تعديل بيانات اللاعب (${target.playerName}) في فريق (${target.teamName}) رسمياً! وتم قفل الاسم والـ ID نهائياً 🔒✅`);
+    } else {
+      // Add new player to squad
+      const newPlayer: Player = {
+        id: `p_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        name: target.playerName,
+        studentId: target.studentId || '',
+        number: target.playerNumber,
+        position: target.playerPosition,
+        isCaptain: target.isCaptain,
+        isIdentityLocked: true, // مقفل ومحمي رسمياً بعد الاعتماد
+      };
+
+      setSquads(prev => {
+        const existing = prev[target.teamName] || [];
+        if (existing.some(p => p.name === target.playerName || (p.studentId && p.studentId === target.studentId))) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [target.teamName]: [...existing, newPlayer],
+        };
+      });
+
+      setPlayerRequests(prev => {
+        const updated = prev.map(r => {
+          if (r.id === requestId) {
+            return {
+              ...r,
+              status: 'approved' as const,
+              reviewedBy: currentUser?.name || 'مدير البطولة (Admin)',
+              reviewedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+            };
+          }
+          return r;
+        });
+        saveStoredPlayerRequests(updated);
+        return updated;
+      });
+
+      confetti({ particleCount: 50, spread: 60 });
+      alert(`تمت الموافقة واعتماد قيد اللاعب (${target.playerName}) في فريق (${target.teamName}) رسمياً! وتم قفل الاسم والـ ID نهائياً 🔒✅`);
+    }
+  };
+
+  // 4. Admin edits and applies custom changes from Approvals modal
+  const handleAdminApplyPlayerEdit = (requestId: string, customData: Partial<PlayerRegistrationRequest>) => {
+    const target = playerRequests.find(r => r.id === requestId);
+    if (!target) return;
+
+    const finalName = customData.playerName || target.playerName;
+    const finalStudentId = customData.studentId !== undefined ? customData.studentId : (target.studentId || '');
+    const finalNumber = customData.playerNumber !== undefined ? customData.playerNumber : target.playerNumber;
+    const finalPosition = customData.playerPosition || target.playerPosition;
+    const finalCaptain = customData.isCaptain !== undefined ? customData.isCaptain : target.isCaptain;
+
+    if (target.type === 'edit') {
+      setSquads(prev => {
+        const teamSquad = prev[target.teamName] || [];
+        const updatedSquad = teamSquad.map(p => {
+          const isTargetPlayer = target.playerId ? p.id === target.playerId : (target.originalPlayer?.name ? p.name === target.originalPlayer.name : p.name === target.playerName);
+          if (isTargetPlayer) {
+            return {
+              ...p,
+              name: finalName,
+              studentId: finalStudentId,
+              number: finalNumber,
+              position: finalPosition,
+              isCaptain: finalCaptain,
+              isIdentityLocked: true,
+            };
+          }
+          return p;
+        });
+
+        return {
+          ...prev,
+          [target.teamName]: updatedSquad,
+        };
+      });
+    } else {
+      // It was an add request with admin adjustments
+      const newPlayer: Player = {
+        id: `p_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        name: finalName,
+        studentId: finalStudentId,
+        number: finalNumber,
+        position: finalPosition,
+        isCaptain: finalCaptain,
+        isIdentityLocked: true,
+      };
+
+      setSquads(prev => {
+        const existing = prev[target.teamName] || [];
+        return {
+          ...prev,
+          [target.teamName]: [...existing, newPlayer],
+        };
+      });
+    }
+
+    setPlayerRequests(prev => {
+      const updated = prev.map(r => {
+        if (r.id === requestId) {
+          return {
+            ...r,
+            ...customData,
+            status: 'approved' as const,
+            reviewedBy: `${currentUser?.name || 'مدير البطولة'} (تعديل واعتماد الأدمن)`,
+            reviewedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+          };
+        }
+        return r;
+      });
+      saveStoredPlayerRequests(updated);
+      return updated;
+    });
+
+    confetti({ particleCount: 50, spread: 60 });
+    alert(`تم تعديل واعتماد اللاعب (${finalName}) في فريق (${target.teamName}) بصلاحية الأدمن رسمياً! 👑🔒✅`);
+  };
+
+  // 5. Admin rejects player request (with reason)
+  const handleRejectPlayerRequest = (requestId: string, reason?: string) => {
+    const target = playerRequests.find(r => r.id === requestId);
+    if (!target) return;
+
+    setPlayerRequests(prev => {
+      const updated = prev.map(r => {
+        if (r.id === requestId) {
+          return {
+            ...r,
+            status: 'rejected' as const,
+            rejectionReason: reason || 'لم يتم استيفاء شروط القيد الرسمية',
+            reviewedBy: currentUser?.name || 'مدير البطولة (Admin)',
+            reviewedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+          };
+        }
+        return r;
+      });
+      saveStoredPlayerRequests(updated);
+      return updated;
+    });
+
+    alert(`تم رفض الطلب للاعب (${target.playerName}) لفريق (${target.teamName}) مع تسجيل سبب الرفض ❌`);
+  };
+
+  // 6. Admin approves all pending requests at once
+  const handleApproveAllPending = () => {
+    const pending = playerRequests.filter(r => r.status === 'pending');
+    if (pending.length === 0) return;
+
+    setSquads(prev => {
+      const nextSquads = { ...prev };
+      pending.forEach(req => {
+        const teamSquad = nextSquads[req.teamName] || [];
+        if (req.type === 'edit') {
+          nextSquads[req.teamName] = teamSquad.map(p => {
+            const isMatch = req.playerId ? p.id === req.playerId : (req.originalPlayer?.name ? p.name === req.originalPlayer.name : p.name === req.playerName);
+            if (isMatch) {
+              return {
+                ...p,
+                name: req.playerName,
+                studentId: req.studentId || p.studentId,
+                number: req.playerNumber,
+                position: req.playerPosition,
+                isCaptain: req.isCaptain,
+                isIdentityLocked: true,
+              };
+            }
+            return p;
+          });
+        } else {
+          if (!teamSquad.some(p => p.name === req.playerName || (p.studentId && p.studentId === req.studentId))) {
+            const newPlayer: Player = {
+              id: `p_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              name: req.playerName,
+              studentId: req.studentId || '',
+              number: req.playerNumber,
+              position: req.playerPosition,
+              isCaptain: req.isCaptain,
+              isIdentityLocked: true,
+            };
+            nextSquads[req.teamName] = [...teamSquad, newPlayer];
+          }
+        }
+      });
+      return nextSquads;
+    });
+
+    setPlayerRequests(prev => {
+      const updated = prev.map(r => {
+        if (r.status === 'pending') {
+          return {
+            ...r,
+            status: 'approved' as const,
+            reviewedBy: currentUser?.name || 'مدير البطولة (Admin)',
+            reviewedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+          };
+        }
+        return r;
+      });
+      saveStoredPlayerRequests(updated);
+      return updated;
+    });
+
+    confetti({ particleCount: 70, spread: 80 });
+    alert(`تم اعتماد وقبول جميع الطلبات المعلقة (${pending.length} طلبات) رسمياً مع قفل الهوية والـ ID 🔒🎉`);
   };
 
   // Open Round Matchup Organizer
@@ -1378,10 +1697,13 @@ export default function App() {
   const handleLogin = (user: AppUser) => {
     setCurrentUser(user);
     saveActiveUser(user);
+    setPreviewRole(null);
     if (user.role === 'team_manager') {
       setCurrentTab('team_manager');
     } else if (user.role === 'admin') {
       setCurrentTab('matches_control');
+    } else if (user.role === 'player') {
+      setCurrentTab('my_team');
     } else {
       setCurrentTab('spectator_portal');
     }
@@ -1516,15 +1838,15 @@ export default function App() {
                         <Lock className="w-2.5 h-2.5 text-amber-400" />
                         أدمن دائم 👑
                       </span>
-                    ) : currentUser.role === 'admin' ? (
+                    ) : effectiveRole === 'admin' ? (
                       <span className="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 text-[9px] font-bold border border-purple-500/30">
                         أدمن 🛡️
                       </span>
-                    ) : currentUser.role === 'team_manager' ? (
+                    ) : effectiveRole === 'team_manager' ? (
                       <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-bold border border-emerald-500/30">
                         مسؤول {currentUser.managedTeamName || 'فريق'} 📋
                       </span>
-                    ) : currentUser.role === 'player' ? (
+                    ) : effectiveRole === 'player' ? (
                       <span className="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 text-[9px] font-bold border border-blue-500/30">
                         لاعب ⚽
                       </span>
@@ -1538,9 +1860,63 @@ export default function App() {
                     {currentUser.email}
                   </span>
                 </div>
+
+                {/* Admin Quick Role Testing Switcher */}
+                {currentUser.role === 'admin' && (
+                  <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-xl border border-slate-800 text-[11px] mr-1">
+                    <span className="text-slate-400 text-[10px] font-bold hidden sm:inline">معاينة رتبة:</span>
+                    <select
+                      value={previewRole || 'admin'}
+                      onChange={(e) => {
+                        const val = e.target.value as UserRole;
+                        if (val === 'admin') {
+                          setPreviewRole(null);
+                        } else {
+                          setPreviewRole(val);
+                          if (val === 'team_manager') setCurrentTab('team_manager');
+                          else if (val === 'player') setCurrentTab('my_team');
+                          else setCurrentTab('spectator_portal');
+                        }
+                      }}
+                      className="bg-slate-900 text-amber-300 font-bold text-[11px] rounded-lg px-2 py-0.5 border border-slate-700 focus:outline-none cursor-pointer"
+                      title="تجربة شكل وصلاحيات كل صفحة بحسب الرتبة"
+                    >
+                      <option value="admin">👑 وضع الأدمن (كامل)</option>
+                      <option value="team_manager">📋 مسؤول فريق</option>
+                      <option value="player">⚽ لاعب عادي</option>
+                      <option value="spectator">👁️ متفرج ومشجع</option>
+                    </select>
+                    {previewRole && (
+                      <button
+                        onClick={() => setPreviewRole(null)}
+                        className="px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-bold text-[10px] transition-colors cursor-pointer"
+                        title="الرجوع لوضع الأدمن"
+                      >
+                        إنهاء ✕
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5 border-r border-slate-800 pr-2">
+                {/* Admin Player Approvals Quick Button */}
+                {isAdmin && (
+                  <button
+                    onClick={() => setIsApprovalsModalOpen(true)}
+                    className="relative px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 hover:text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
+                    title="مراجعة واعتماد طلبات قيد اللاعبين رسمياً"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="hidden sm:inline">اعتمادات اللاعبين</span>
+                    {playerRequests.filter(r => r.status === 'pending').length > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] animate-pulse">
+                        {playerRequests.filter(r => r.status === 'pending').length}
+                      </span>
+                    )}
+                  </button>
+                )}
+
                 {/* Logout button */}
                 <button
                   onClick={handleLogout}
@@ -1554,9 +1930,39 @@ export default function App() {
             </div>
           </div>
 
-          {/* Navigation Tabs */}
+          {/* Navigation Tabs based on Role */}
           <nav className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
-            {/* Tab 1: Spectators & Players Portal */}
+            {/* If Player: show dedicated My Team Tab */}
+            {isPlayer && (
+              <button
+                onClick={() => setCurrentTab('my_team')}
+                className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  currentTab === 'my_team'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30 font-black ring-1 ring-blue-400'
+                    : 'bg-slate-900/80 text-blue-300 hover:bg-slate-800 border border-blue-500/30'
+                }`}
+              >
+                <Shirt className="w-4 h-4 text-blue-400" />
+                بطاقة فريقي ({currentUser.playerTeamName || 'فريقك'}) ⚽
+              </button>
+            )}
+
+            {/* If Team Manager: show My Team Manager Tab */}
+            {isTeamManager && (
+              <button
+                onClick={() => setCurrentTab('team_manager')}
+                className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  currentTab === 'team_manager'
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/30 font-black ring-1 ring-emerald-400'
+                    : 'bg-slate-900/80 text-emerald-300 hover:bg-slate-800 border border-emerald-500/30'
+                }`}
+              >
+                <UserCheck className="w-4 h-4 text-emerald-400" />
+                إدارة فريقي ({currentUser.managedTeamName || 'الفريق'}) 📋
+              </button>
+            )}
+
+            {/* Tab: Spectators & Players Portal (Available to all) */}
             <button
               onClick={() => setCurrentTab('spectator_portal')}
               className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -1569,32 +1975,37 @@ export default function App() {
               صفحة المتفرجين واللاعبين 👁️
             </button>
 
-            {/* Tab 2: Team Manager Portal */}
-            <button
-              onClick={() => setCurrentTab('team_manager')}
-              className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                currentTab === 'team_manager'
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/30 font-black'
-                  : 'bg-slate-900/80 text-emerald-300 hover:bg-slate-800 border border-emerald-500/30'
-              }`}
-            >
-              <UserCheck className="w-4 h-4 text-emerald-400" />
-              صفحة مسؤول كل فرقة 📋
-            </button>
+            {/* Admin Team Manager Portal (All 48 Teams) */}
+            {isAdmin && (
+              <button
+                onClick={() => setCurrentTab('team_manager')}
+                className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  currentTab === 'team_manager'
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/30 font-black'
+                    : 'bg-slate-900/80 text-emerald-300 hover:bg-slate-800 border border-emerald-500/30'
+                }`}
+              >
+                <UserCheck className="w-4 h-4 text-emerald-400" />
+                إدارة الفرق ومسؤوليها (كل الفرق) 📋
+              </button>
+            )}
 
-            {/* Tab 3: Users Directory & Roles (المستخدمين والأعضاء) */}
-            <button
-              onClick={() => setCurrentTab('users_directory')}
-              className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                currentTab === 'users_directory'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/30 font-black'
-                  : 'bg-slate-900/80 text-purple-300 hover:bg-slate-800 border border-purple-500/30'
-              }`}
-            >
-              <Users className="w-4 h-4 text-purple-400" />
-              دليل المستخدمين والصلاحيات 👥 ({users.length})
-            </button>
+            {/* Tab: Users Directory & Roles (Admin Only) */}
+            {isAdmin && (
+              <button
+                onClick={() => setCurrentTab('users_directory')}
+                className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  currentTab === 'users_directory'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/30 font-black'
+                    : 'bg-slate-900/80 text-purple-300 hover:bg-slate-800 border border-purple-500/30'
+                }`}
+              >
+                <Users className="w-4 h-4 text-purple-400" />
+                دليل المستخدمين والصلاحيات 👥 ({users.length})
+              </button>
+            )}
 
+            {/* Tab: Matches & Schedule (Full control for Admin, Schedule view for others) */}
             <button
               onClick={() => setCurrentTab('matches_control')}
               className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -1604,7 +2015,7 @@ export default function App() {
               }`}
             >
               <Calendar className="w-4 h-4" />
-              الجدول والمواعيد ({scheduledMatchesCount})
+              {isAdmin ? `الجدول والتحكم 📅 (${scheduledMatchesCount})` : 'جدول ومواعيد المباريات 📅'}
             </button>
 
             <button
@@ -1655,17 +2066,20 @@ export default function App() {
               الهداف والصانع ({tournamentStatsData.scorers.length + tournamentStatsData.playmakers.length})
             </button>
 
-            <button
-              onClick={() => setCurrentTab('manage')}
-              className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                currentTab === 'manage'
-                  ? 'bg-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/30'
-                  : 'bg-slate-900/80 text-amber-400 border border-amber-500/30 hover:bg-slate-800'
-              }`}
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              لوحة التحكم (Admin) ⚡
-            </button>
+            {/* Admin Control Panel (Admin Only) */}
+            {isAdmin && (
+              <button
+                onClick={() => setCurrentTab('manage')}
+                className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  currentTab === 'manage'
+                    ? 'bg-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/30'
+                    : 'bg-slate-900/80 text-amber-400 border border-amber-500/30 hover:bg-slate-800'
+                }`}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                لوحة التحكم (Admin) ⚡
+              </button>
+            )}
           </nav>
         </div>
       </header>
@@ -1691,32 +2105,90 @@ export default function App() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB: TEAM MANAGER PORTAL (صفحة مسؤول كل فرقة لإضافة وتعديل اللاعبين) */}
         {/* ========================================================================= */}
-        {currentTab === 'team_manager' && (
-          <TeamManagerPortalPage
+        {/* TAB: MY TEAM PORTAL (صفحة وبطاقة فريقي الخاصة باللاعب) */}
+        {/* ========================================================================= */}
+        {currentTab === 'my_team' && (
+          <PlayerTeamPortalPage
+            currentUser={{ ...currentUser, role: effectiveRole }}
             teams={teams}
             matches={matches}
             squads={squads}
-            onUpdateSquads={setSquads}
-            onUpdateMatchLineups={handleUpdateMatchLineups}
-            isAdmin={currentUser.role === 'admin'}
+            onSelectTeamForMatches={(teamName) => setSelectedTeamNameForMatches(teamName)}
+            onNavigateToSpectatorPortal={() => setCurrentTab('spectator_portal')}
+            onNavigateToGroups={() => setCurrentTab('groups')}
           />
         )}
 
         {/* ========================================================================= */}
-        {/* TAB: USERS & PERMISSIONS DIRECTORY (دليل المستخدمين واللاعبين والمتفرجين) */}
+        {/* TAB: TEAM MANAGER PORTAL (صفحة مسؤول كل فرقة لإضافة وتعديل اللاعبين) */}
+        {/* ========================================================================= */}
+        {currentTab === 'team_manager' && (
+          isAdmin || isTeamManager ? (
+            <TeamManagerPortalPage
+              teams={teams}
+              matches={matches}
+              squads={squads}
+              onUpdateSquads={setSquads}
+              onUpdateMatchLineups={handleUpdateMatchLineups}
+              isAdmin={isAdmin}
+              assignedTeamName={currentUser.managedTeamName}
+              managerName={currentUser.name}
+              playerRequests={playerRequests}
+              onRequestAddPlayer={handleRequestAddPlayer}
+              onRequestEditPlayer={handleRequestEditPlayer}
+              onOpenApprovalsModal={() => setIsApprovalsModalOpen(true)}
+            />
+          ) : (
+            <div className="bg-slate-900 border border-emerald-500/30 rounded-3xl p-8 text-center max-w-lg mx-auto my-12 shadow-2xl space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/30">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-black text-white">صفحة مسؤولي ومدربي الفرق المعتمدين 📋</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                هذه الصفحة مخصصة لمدربي ومسؤولي الفرق فقط لإدارة قوائم وتشكيلات لاعبيهم. رتبتك الحالية: <strong className="text-emerald-400">{isPlayer ? 'لاعب رسمي ⚽' : 'متفرج ومشجع 👁️'}</strong>. يمكنك متابعة جدول ومباريات البطولة من خلال صفحة المتفرجين أو بطاقة فريقك.
+              </p>
+              <button
+                onClick={() => setCurrentTab(isPlayer ? 'my_team' : 'spectator_portal')}
+                className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition-colors cursor-pointer shadow-lg"
+              >
+                العودة إلى صفحتك المعتمدة ➔
+              </button>
+            </div>
+          )
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB: USERS & PERMISSIONS DIRECTORY (دليل المستخدمين واللاعبين والمتفرجين - للأدمن فقط) */}
         {/* ========================================================================= */}
         {currentTab === 'users_directory' && (
-          <UsersDirectoryPage
-            users={users}
-            currentUser={currentUser}
-            teams={teams}
-            onUpdateUserRole={handleUpdateUserRole}
-            onUpdateUser={handleUpdateUser}
-            onAddUser={handleAddUser}
-            onDeleteUser={handleDeleteUser}
-          />
+          isAdmin ? (
+            <UsersDirectoryPage
+              users={users}
+              currentUser={{ ...currentUser, role: effectiveRole }}
+              teams={teams}
+              onUpdateUserRole={handleUpdateUserRole}
+              onUpdateUser={handleUpdateUser}
+              onAddUser={handleAddUser}
+              onDeleteUser={handleDeleteUser}
+            />
+          ) : (
+            <div className="bg-slate-900 border border-purple-500/30 rounded-3xl p-8 text-center max-w-lg mx-auto my-12 shadow-2xl space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center mx-auto border border-purple-500/30">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-black text-white">صلاحيات مقيدة • دليل المستخدمين للأدمن فقط 👥</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                عذراً، الاطلاع على دليل المستخدمين وتعديل الرتب وتعيين مسؤولي الفرق متاح فقط للمشرفين ومدير النظام (Admin).
+              </p>
+              <button
+                onClick={() => setCurrentTab(isTeamManager ? 'team_manager' : isPlayer ? 'my_team' : 'spectator_portal')}
+                className="px-5 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs transition-colors cursor-pointer shadow-lg"
+              >
+                العودة إلى صفحتك المعتمدة ➔
+              </button>
+            </div>
+          )
         )}
 
         {/* ========================================================================= */}
@@ -1730,40 +2202,51 @@ export default function App() {
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold mb-2">
                   <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                  التحكم في مواعيد وتنزيل المباريات وتسجيل النتائج
+                  {isAdmin ? 'التحكم في مواعيد وتنزيل المباريات وتسجيل النتائج (Admin 👑)' : 'جدول ومواعيد مباريات البطولة المعتمدة 📅'}
                 </div>
                 <h2 className="text-xl md:text-3xl font-black text-white mb-2">
-                  جدول المباريات: لا ينزل أي ماتش إلا بعد تحديد موعده وملعبه
+                  {isAdmin ? 'جدول المباريات: لا ينزل أي ماتش إلا بعد تحديد موعده وملعبه' : 'مواعيد وملاعب ونتائج مباريات دوري جامعة النيل'}
                 </h2>
                 <p className="text-xs md:text-sm text-slate-300 max-w-2xl leading-relaxed">
-                  يمكنك مراجعة المباريات غير المجدولة، وتحديد تاريخ وساعة وملعب كل مباراة لتنزل رسمياً في الجدول، وتسجيل النتائج المباشرة والنهائية وتحديث الترتيب فوراً.
+                  {isAdmin 
+                    ? 'يمكنك مراجعة المباريات غير المجدولة، وتحديد تاريخ وساعة وملعب كل مباراة لتنزل رسمياً في الجدول، وتسجيل النتائج المباشرة والنهائية وتحديث الترتيب فوراً.'
+                    : 'يمكنك استعراض تواريخ ومواعيد وملاعب المباريات المعتمدة من اللجنة المنظمة، ومتابعة النتائج الحية والنهائية والأهداف المسجلة.'}
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3 shrink-0">
-                <button
-                  onClick={() => handleOpenRoundOrganizer(groupStageLetterFilter === 'all' ? 'A' : groupStageLetterFilter, typeof groupStageRoundFilter === 'number' ? groupStageRoundFilter : 1, matchStageFilter === 'r32' ? 'r32' : 'group')}
-                  className="px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs md:text-sm shadow-xl shadow-amber-500/20 flex items-center gap-2 transition-all cursor-pointer"
-                  title="تحديد مواجهات كل جولة ودور واختيار مين هيلاعب مين"
-                >
-                  <Swords className="w-4 h-4" />
-                  <span>تحديد مواجهات الجولات (مين هيلاعب مين)</span>
-                </button>
-                <button
-                  onClick={handleResetAllMatches}
-                  className="px-4 py-3 rounded-2xl bg-rose-500/10 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 hover:border-rose-600 font-bold text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-lg"
-                  title="تصفير كل الماتشات والنتائج وإعادة النقاط لصفر"
-                >
-                  <RotateCcw className="w-4 h-4 text-rose-400" />
-                  صفر كل الماتشات
-                </button>
-                <button
-                  onClick={() => setIsAddingMatch(true)}
-                  className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs md:text-sm shadow-xl shadow-emerald-500/20 flex items-center gap-2 transition-all cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  إضافة مباراة مخصصة
-                </button>
+                {isAdmin ? (
+                  <>
+                    <button
+                      onClick={() => handleOpenRoundOrganizer(groupStageLetterFilter === 'all' ? 'A' : groupStageLetterFilter, typeof groupStageRoundFilter === 'number' ? groupStageRoundFilter : 1, matchStageFilter === 'r32' ? 'r32' : 'group')}
+                      className="px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs md:text-sm shadow-xl shadow-amber-500/20 flex items-center gap-2 transition-all cursor-pointer"
+                      title="تحديد مواجهات كل جولة ودور واختيار مين هيلاعب مين"
+                    >
+                      <Swords className="w-4 h-4" />
+                      <span>تحديد مواجهات الجولات (مين هيلاعب مين)</span>
+                    </button>
+                    <button
+                      onClick={handleResetAllMatches}
+                      className="px-4 py-3 rounded-2xl bg-rose-500/10 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 hover:border-rose-600 font-bold text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-lg"
+                      title="تصفير كل الماتشات والنتائج وإعادة النقاط لصفر"
+                    >
+                      <RotateCcw className="w-4 h-4 text-rose-400" />
+                      صفر كل الماتشات
+                    </button>
+                    <button
+                      onClick={() => setIsAddingMatch(true)}
+                      className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs md:text-sm shadow-xl shadow-emerald-500/20 flex items-center gap-2 transition-all cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      إضافة مباراة مخصصة
+                    </button>
+                  </>
+                ) : (
+                  <div className="px-4 py-3 rounded-2xl bg-slate-900/90 border border-emerald-500/40 text-emerald-300 font-bold text-xs md:text-sm flex items-center gap-2 shadow-lg">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>جدول المباريات والنتائج الرسمية المعتمدة 📅</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -2078,42 +2561,57 @@ export default function App() {
                     )}
 
                     {/* Card Actions */}
-                    <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => handleOpenScheduleModal(match)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                            match.isScheduled
-                              ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700'
-                              : 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black shadow-md shadow-amber-500/20'
-                          }`}
-                          title={match.isScheduled ? 'تعديل تاريخ وملعب المباراة' : 'تحديد الموعد والملعب وتنزيل المباراة في الجدول'}
-                        >
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>{match.isScheduled ? 'تعديل الميعاد' : 'تحديد الميعاد وتنزيل الماتش'}</span>
-                        </button>
+                    {isAdmin ? (
+                      <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleOpenScheduleModal(match)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                              match.isScheduled
+                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700'
+                                : 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black shadow-md shadow-amber-500/20'
+                            }`}
+                            title={match.isScheduled ? 'تعديل تاريخ وملعب المباراة' : 'تحديد الموعد والملعب وتنزيل المباراة في الجدول'}
+                          >
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>{match.isScheduled ? 'تعديل الميعاد' : 'تحديد الميعاد وتنزيل الماتش'}</span>
+                          </button>
 
-                        <button
-                          onClick={() => handleOpenEditMatchup(match)}
-                          className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                          title="تعديل طرفي المباراة واختيار مين هيلاعب مين"
-                        >
-                          <ArrowRightLeft className="w-3.5 h-3.5 text-amber-400" />
-                          <span className="hidden sm:inline">مين هيلاعب مين</span>
-                        </button>
-                      </div>
+                          <button
+                            onClick={() => handleOpenEditMatchup(match)}
+                            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                            title="تعديل طرفي المباراة واختيار مين هيلاعب مين"
+                          >
+                            <ArrowRightLeft className="w-3.5 h-3.5 text-amber-400" />
+                            <span className="hidden sm:inline">مين هيلاعب مين</span>
+                          </button>
+                        </div>
 
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleOpenResultModal(match)}
-                          className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
-                          title="تسجيل أو تعديل نتيجة المباراة"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          <span>{match.status === 'finished' ? 'تعديل النتيجة' : 'تسجيل النتيجة'}</span>
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleOpenResultModal(match)}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                            title="تسجيل أو تعديل نتيجة المباراة"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>{match.status === 'finished' ? 'تعديل النتيجة' : 'تسجيل النتيجة'}</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                        <span className="flex items-center gap-1">
+                          <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>{match.isScheduled ? 'مباراة معتمدة بالجدول' : 'بانتظار اعتماد الموعد'}</span>
+                        </span>
+                        {match.status === 'finished' && (
+                          <span className="text-emerald-400 font-bold flex items-center gap-1 font-mono">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            نتيجة نهائية
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     {/* Substitutions & Cards badges on match card */}
                     {((match.substitutions && match.substitutions.length > 0) || (match.cards && match.cards.length > 0)) && (
@@ -2460,13 +2958,17 @@ export default function App() {
                                     <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 font-bold text-[10px]">
                                       مجدولة
                                     </span>
-                                  ) : (
+                                  ) : isAdmin ? (
                                     <button
                                       onClick={() => handleOpenScheduleModal(m)}
                                       className="px-2 py-0.5 rounded-full bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-bold text-[10px] border border-amber-500/30 cursor-pointer transition-colors"
                                     >
                                       تحديد الميعاد
                                     </button>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded-full bg-slate-800 text-amber-400/80 font-bold text-[10px]">
+                                      لم يُحدد بعد
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -2657,27 +3159,39 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-1 text-[11px]">
-                        <button
-                          onClick={() => handleOpenEditMatchup(m)}
-                          className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-bold border border-amber-500/30 cursor-pointer transition-all"
-                          title="تعديل الفريقين وتحديد من يلاعب من"
-                        >
-                          تحديد الفريقين
-                        </button>
-                        <button
-                          onClick={() => handleOpenScheduleModal(m)}
-                          className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold cursor-pointer"
-                        >
-                          {m.isScheduled ? 'الميعاد' : 'تحديد موعد'}
-                        </button>
-                        <button
-                          onClick={() => handleOpenResultModal(m)}
-                          className="px-2 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white font-bold cursor-pointer"
-                        >
-                          النتيجة
-                        </button>
-                      </div>
+                      {isAdmin ? (
+                        <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-1 text-[11px]">
+                          <button
+                            onClick={() => handleOpenEditMatchup(m)}
+                            className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-bold border border-amber-500/30 cursor-pointer transition-all"
+                            title="تعديل الفريقين وتحديد من يلاعب من"
+                          >
+                            تحديد الفريقين
+                          </button>
+                          <button
+                            onClick={() => handleOpenScheduleModal(m)}
+                            className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold cursor-pointer"
+                          >
+                            {m.isScheduled ? 'الميعاد' : 'تحديد موعد'}
+                          </button>
+                          <button
+                            onClick={() => handleOpenResultModal(m)}
+                            className="px-2 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white font-bold cursor-pointer"
+                          >
+                            النتيجة
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="pt-2 border-t border-slate-800 text-center text-[11px] text-slate-400 font-bold">
+                          {m.status === 'finished' ? (
+                            <span className="text-emerald-400 font-mono">انتهت النتيجة الرسمية FT</span>
+                          ) : m.isScheduled ? (
+                            <span className="text-slate-300">{m.date} • {m.time}</span>
+                          ) : (
+                            <span className="text-amber-400/80">بانتظار اكتمال المتأهلين والموعد</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -2695,6 +3209,11 @@ export default function App() {
             squads={squads}
             onUpdateSquads={setSquads}
             onUpdateMatchLineups={handleUpdateMatchLineups}
+            currentUser={{ ...currentUser, role: effectiveRole }}
+            onRequestAddPlayer={handleRequestAddPlayer}
+            onRequestEditPlayer={handleRequestEditPlayer}
+            playerRequests={playerRequests}
+            onOpenApprovalsModal={() => setIsApprovalsModalOpen(true)}
           />
         )}
 
@@ -2715,7 +3234,8 @@ export default function App() {
         {/* TAB 5: MANAGE TEAMS, GROUPS & SCOREKEEPERS */}
         {/* ========================================================================= */}
         {currentTab === 'manage' && (
-          <div className="space-y-6">
+          isAdmin ? (
+            <div className="space-y-6">
             
             {/* Manage Sub-tab switcher */}
             <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 max-w-md">
@@ -2945,7 +3465,24 @@ export default function App() {
                 </div>
               </div>
             )}
-          </div>
+            </div>
+          ) : (
+            <div className="bg-slate-900 border border-amber-500/30 rounded-3xl p-8 text-center max-w-lg mx-auto my-12 shadow-2xl space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/30">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-black text-white">لوحة تحكم الأدمن محظورة 👑</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                لوحة التحكم وإدارة الفرق ومسؤولي النتائج متاحة فقط لمسؤولي النظام (Admin).
+              </p>
+              <button
+                onClick={() => setCurrentTab(isTeamManager ? 'team_manager' : isPlayer ? 'my_team' : 'spectator_portal')}
+                className="px-5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-colors cursor-pointer shadow-lg"
+              >
+                العودة إلى صفحتك المعتمدة ➔
+              </button>
+            </div>
+          )
         )}
 
       </main>
@@ -4885,6 +5422,20 @@ export default function App() {
         initialGroup={roundOrganizerConfig.group}
         initialRound={roundOrganizerConfig.round}
         initialStage={roundOrganizerConfig.stage}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL: PLAYER REGISTRATION APPROVALS (اعتماد وقيد اللاعبين للأدمن) */}
+      {/* ========================================================================= */}
+      <PlayerApprovalsModal
+        isOpen={isApprovalsModalOpen}
+        onClose={() => setIsApprovalsModalOpen(false)}
+        requests={playerRequests}
+        teams={teams}
+        onApproveRequest={handleApprovePlayerRequest}
+        onAdminApplyPlayerEdit={handleAdminApplyPlayerEdit}
+        onRejectRequest={handleRejectPlayerRequest}
+        onApproveAllPending={handleApproveAllPending}
       />
 
       {/* ========================================================================= */}
