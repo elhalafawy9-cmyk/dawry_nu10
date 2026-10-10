@@ -24,11 +24,15 @@ import {
   GraduationCap,
   Lock,
   UserCheck,
-  XCircle
+  XCircle,
+  Bell,
+  AlertTriangle,
+  Send
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Match, Team } from '../App';
 import { Player, MatchSubstitution, MatchCardEvent, CardType, MAX_SUBS_PER_TEAM, PlayerRegistrationRequest } from '../utils/roster';
+import { MatchScheduleNotification } from '../utils/notifications';
 
 interface TeamManagerPortalPageProps {
   teams: Team[];
@@ -40,9 +44,12 @@ interface TeamManagerPortalPageProps {
   assignedTeamName?: string;
   managerName?: string;
   playerRequests?: PlayerRegistrationRequest[];
+  matchAlerts?: MatchScheduleNotification[];
+  onOpenAlertComposerForMatch?: (match: Match) => void;
   onRequestAddPlayer?: (req: Omit<PlayerRegistrationRequest, 'id' | 'requestedAt' | 'status'>) => void;
   onRequestEditPlayer?: (req: Omit<PlayerRegistrationRequest, 'id' | 'requestedAt' | 'status'>) => void;
   onOpenApprovalsModal?: () => void;
+  onOpenAllAlertsModal?: () => void;
 }
 
 export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
@@ -55,9 +62,12 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
   assignedTeamName,
   managerName,
   playerRequests = [],
+  matchAlerts = [],
+  onOpenAlertComposerForMatch,
   onRequestAddPlayer,
   onRequestEditPlayer,
   onOpenApprovalsModal,
+  onOpenAllAlertsModal,
 }) => {
   // Currently selected team that the manager is managing (locked to assignedTeamName if not admin)
   const initialTeam = (!isAdmin && assignedTeamName) ? assignedTeamName : (teams[0]?.name || 'برشلونة');
@@ -69,8 +79,8 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
     }
   }, [isAdmin, assignedTeamName]);
 
-  // Sub-tabs: 'squad_builder' | 'match_lineup' | 'bulk_paste' | 'registration_requests'
-  const [subTab, setSubTab] = useState<'squad_builder' | 'match_lineup' | 'bulk_paste' | 'registration_requests'>('squad_builder');
+  // Sub-tabs: 'squad_builder' | 'match_lineup' | 'bulk_paste' | 'registration_requests' | 'match_alerts'
+  const [subTab, setSubTab] = useState<'squad_builder' | 'match_lineup' | 'bulk_paste' | 'registration_requests' | 'match_alerts'>('squad_builder');
 
   // Modal / Inline Add Player State
   const [isAddingPlayer, setIsAddingPlayer] = useState(false);
@@ -121,6 +131,10 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
   const teamPendingRequests = useMemo(() => {
     return (playerRequests || []).filter(r => r.teamName === managedTeamName);
   }, [playerRequests, managedTeamName]);
+
+  const managedTeamAlerts = useMemo(() => {
+    return (matchAlerts || []).filter(a => a.targetTeams.includes(managedTeamName));
+  }, [matchAlerts, managedTeamName]);
 
   // Participation local state for active match
   const isTeamA = activeMatch?.teamA === managedTeamName;
@@ -584,6 +598,18 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
             {teamPendingRequests.filter(r => r.status === 'pending').length > 0 && (
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
             )}
+          </button>
+
+          <button
+            onClick={() => setSubTab('match_alerts')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              subTab === 'match_alerts'
+                ? 'bg-blue-600 text-white shadow font-black'
+                : 'text-blue-400 hover:text-white'
+            }`}
+          >
+            <Bell className="w-3.5 h-3.5" />
+            <span>تنبيهات المواعيد والملاعب ({managedTeamAlerts.length})</span>
           </button>
 
           {isAdmin && onOpenApprovalsModal && (
@@ -1410,6 +1436,192 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
         </div>
       )}
 
+      {/* SUB-TAB 5: MATCH SCHEDULE ALERTS & NOTIFICATIONS */}
+      {subTab === 'match_alerts' && (
+        <div className="space-y-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <span>إخطارات وتنبيهات المواعيد والملاعب المعتمدة ({managedTeamName})</span>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white font-mono text-xs">
+                      {managedTeamAlerts.length}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    هذه التنبيهات تصل لجميع لاعبي وإداريي فريق {managedTeamName} في واجهة المستخدم لإخطارهم بالمواعيد والملاعب الرسمية.
+                  </p>
+                </div>
+              </div>
+
+              {onOpenAllAlertsModal && (
+                <button
+                  type="button"
+                  onClick={onOpenAllAlertsModal}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto"
+                >
+                  <Bell className="w-3.5 h-3.5 text-amber-400" />
+                  <span>فتح مركز التنبيهات العام</span>
+                </button>
+              )}
+            </div>
+
+            {/* Alerts List */}
+            {managedTeamAlerts.length === 0 ? (
+              <div className="p-8 text-center bg-slate-950/60 rounded-2xl border border-dashed border-slate-800 space-y-2">
+                <Bell className="w-8 h-8 text-slate-600 mx-auto" />
+                <strong className="text-sm font-bold text-slate-300 block">لا توجد تنبيهات مرسلة لهذا الفريق حالياً</strong>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  عندما يتم اعتماد موعد أو ملعب لمباراة {managedTeamName} من قبل مسؤولي البطولة وإرسال التنبيه، سيظهر هنا مع قائمة اللاعبين المؤكدين للجاهزية.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {managedTeamAlerts.map((alert) => {
+                  const opponent = alert.teamA === managedTeamName ? alert.teamB : alert.teamA;
+                  const ackPlayers = alert.acknowledgedPlayers || [];
+
+                  return (
+                    <div
+                      key={alert.id}
+                      className="p-4 md:p-5 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-slate-700 transition-all space-y-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-900 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border flex items-center gap-1 ${
+                            alert.urgency === 'high'
+                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                              : 'bg-teal-500/20 text-teal-300 border-teal-500/30'
+                          }`}>
+                            <Bell className="w-3 h-3" />
+                            <span>{alert.urgency === 'high' ? 'عاجل وهام' : 'رسمي معتمد'}</span>
+                          </span>
+                          <strong className="text-xs font-bold text-white">
+                            مباراة ضد {opponent} ({alert.stageName})
+                          </strong>
+                        </div>
+
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          {alert.sentAt} • بواسطة: {alert.sentBy}
+                        </span>
+                      </div>
+
+                      {/* Details Row */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                        <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <div>
+                            <span className="text-[10px] text-slate-400 block">التاريخ المعتمد</span>
+                            <strong className="text-white font-mono">{alert.date}</strong>
+                          </div>
+                        </div>
+                        <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-blue-400 shrink-0" />
+                          <div>
+                            <span className="text-[10px] text-slate-400 block">توقيت الانطلاق</span>
+                            <strong className="text-white font-mono">{alert.time}</strong>
+                          </div>
+                        </div>
+                        <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-rose-400 shrink-0" />
+                          <div>
+                            <span className="text-[10px] text-slate-400 block">الملعب</span>
+                            <strong className="text-amber-300">{alert.pitch}</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Message Content */}
+                      <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800/80 text-xs text-slate-300 whitespace-pre-line leading-relaxed">
+                        {alert.message}
+                      </div>
+
+                      {/* Acknowledged Players Badge and List */}
+                      <div className="pt-2 border-t border-slate-900 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>تأكيدات حضور اللاعبين: {ackPlayers.length} لاعباً</span>
+                        </div>
+
+                        {ackPlayers.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1">
+                            {ackPlayers.map((p) => (
+                              <span key={p.userId} className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-[10px] text-slate-300">
+                                ✓ {p.userName}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Team's Scheduled Matches Overview & Send Alert Trigger */}
+            <div className="pt-4 border-t border-slate-800 space-y-3">
+              <h4 className="text-xs font-black text-slate-300 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-emerald-400" />
+                <span>حالة مباريات فريق {managedTeamName} والجدول:</span>
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {teamMatches.map((m) => {
+                  const opponent = m.teamA === managedTeamName ? m.teamB : m.teamA;
+                  const hasAlert = managedTeamAlerts.some(a => a.matchId === m.id);
+
+                  return (
+                    <div
+                      key={m.id}
+                      className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-2 text-xs"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <strong className="text-white font-bold">{m.stageName}</strong>
+                          <span className="text-slate-400">ضد</span>
+                          <strong className="text-emerald-400">{opponent}</strong>
+                        </div>
+                        <div className="text-[11px] text-slate-400 font-mono">
+                          {m.isScheduled ? `${m.date} • ${m.time} • ${m.pitch}` : 'لم يحدد الموعد بعد'}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {hasAlert ? (
+                          <span className="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
+                            <Check className="w-3 h-3" />
+                            <span>تم إرسال تنبيه</span>
+                          </span>
+                        ) : (
+                          isAdmin && onOpenAlertComposerForMatch && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenAlertComposerForMatch(m)}
+                              className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-black text-[10px] transition-all cursor-pointer flex items-center gap-1 border border-amber-500/40"
+                              title="إرسال تنبيه للمباراة"
+                            >
+                              <Send className="w-3 h-3" />
+                              <span>إرسال تنبيه للاعبين 📢</span>
+                            </button>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
+
+export default TeamManagerPortalPage;

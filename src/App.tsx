@@ -11,6 +11,14 @@ import { LoginPage } from './components/LoginPage';
 import { SignupPage } from './components/SignupPage';
 import { PlayerTeamPortalPage } from './components/PlayerTeamPortalPage';
 import { PlayerApprovalsModal } from './components/PlayerApprovalsModal';
+import { MatchAlertComposerModal } from './components/MatchAlertComposerModal';
+import { MatchAlertsListModal } from './components/MatchAlertsListModal';
+import { MatchLineupModal } from './components/MatchLineupModal';
+import { 
+  MatchScheduleNotification, 
+  loadStoredMatchAlerts, 
+  saveStoredMatchAlerts 
+} from './utils/notifications';
 import { 
   AppUser, 
   UserRole, 
@@ -78,7 +86,9 @@ import {
   LogIn,
   LogOut,
   Lock,
-  UserPlus
+  UserPlus,
+  Bell,
+  Send
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -431,7 +441,16 @@ export default function App() {
     date: '',
     time: '04:00 م',
     pitch: 'الملعب الرئيسي (A)',
+    notifyPlayers: true,
+    notifyNote: '',
+    notifyUrgency: 'high' as 'high' | 'normal',
   });
+
+  // Match Schedule & Venue Alerts State (تنبيهات المواعيد والملاعب المعتمدة للاعبين)
+  const [matchAlerts, setMatchAlerts] = useState<MatchScheduleNotification[]>(() => loadStoredMatchAlerts());
+  const [isAlertComposerOpen, setIsAlertComposerOpen] = useState<boolean>(false);
+  const [alertComposerMatch, setAlertComposerMatch] = useState<Match | null>(null);
+  const [isAlertsListOpen, setIsAlertsListOpen] = useState<boolean>(false);
 
   // Result Recording Form
   const [resultForm, setResultForm] = useState({
@@ -470,6 +489,16 @@ export default function App() {
     cardType: 'yellow',
     reason: '',
   });
+
+  // Match Lineup Modal State (تحديد الأساسيين والبدلاء للمباراة قبل انطلاقها أو في أي وقت)
+  const [editingLineupMatch, setEditingLineupMatch] = useState<Match | null>(null);
+
+  // Lineup states inside the Result Recording Modal (تحديد وتعديل الأساسيين والبدلاء أثناء بدء الماتش أو تسجيل النتيجة)
+  const [teamAStartersResult, setTeamAStartersResult] = useState<string[]>([]);
+  const [teamABenchResult, setTeamABenchResult] = useState<string[]>([]);
+  const [teamBStartersResult, setTeamBStartersResult] = useState<string[]>([]);
+  const [teamBBenchResult, setTeamBBenchResult] = useState<string[]>([]);
+  const [showLineupsInResultModal, setShowLineupsInResultModal] = useState<boolean>(true);
 
   // Add Custom Match Form
   const [newMatchForm, setNewMatchForm] = useState({
@@ -1000,6 +1029,9 @@ export default function App() {
       date: match.date || '',
       time: match.time || '04:00 م',
       pitch: match.pitch || 'الملعب الرئيسي (A)',
+      notifyPlayers: true,
+      notifyNote: '',
+      notifyUrgency: 'high',
     });
   };
 
@@ -1010,6 +1042,8 @@ export default function App() {
       alert('يرجى اختيار تاريخ ويوم إقامة المباراة أولاً!');
       return;
     }
+
+    const isReschedule = schedulingMatch.isScheduled && (schedulingMatch.date !== scheduleForm.date || schedulingMatch.pitch !== scheduleForm.pitch);
 
     setMatches(prev => prev.map(m => {
       if (m.id === schedulingMatch.id) {
@@ -1025,9 +1059,150 @@ export default function App() {
       return m;
     }));
 
+    // If admin checked notification toggle: automatically send match schedule alert to players of both teams!
+    if (scheduleForm.notifyPlayers) {
+      const alertTitle = isReschedule
+        ? `⚠️ تعديل رسمي لموعد وملعب مباراة: ${schedulingMatch.teamA} ضد ${schedulingMatch.teamB}`
+        : `📢 اعتماد رسمي لموعد وملعب مباراة: ${schedulingMatch.teamA} ضد ${schedulingMatch.teamB}`;
+
+      const customNoteSection = scheduleForm.notifyNote.trim()
+        ? `\n📌 تعليمات الإدارة: ${scheduleForm.notifyNote.trim()}\n`
+        : '\n';
+
+      const alertBody = `تعلن إدارة بطولة دوري جامعة النيل لكرة القدم 2026 عن اعتماد وتثبيت موعد المباراة رسمياً:\n` +
+        `• التاريخ المعتمد: ${scheduleForm.date}\n` +
+        `• توقيت الانطلاق: ${scheduleForm.time || '04:00 م'}\n` +
+        `• الملعب المحدد: ${scheduleForm.pitch || 'الملعب الرئيسي (A)'}\n` +
+        customNoteSection +
+        `يرجى من جميع اللاعبين الدخول وتأكيد الجاهزية للمباراة، والتواجد بالملعب قبل الموعد بـ 30 دقيقة بكارنيه الجامعة.`;
+
+      const newAlert: MatchScheduleNotification = {
+        id: `alert_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        matchId: schedulingMatch.id,
+        teamA: schedulingMatch.teamA,
+        teamB: schedulingMatch.teamB,
+        targetTeams: [schedulingMatch.teamA, schedulingMatch.teamB],
+        stageName: schedulingMatch.stageName,
+        round: schedulingMatch.round,
+        group: schedulingMatch.group,
+        date: scheduleForm.date,
+        time: scheduleForm.time || '04:00 م',
+        pitch: scheduleForm.pitch || 'الملعب الرئيسي (A)',
+        title: alertTitle,
+        message: alertBody,
+        urgency: scheduleForm.notifyUrgency,
+        sentBy: `${currentUser?.name || currentOperator.name} (إدارة البطولة)`,
+        sentAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        readByUserIds: [],
+        acknowledgedPlayers: [],
+      };
+
+      setMatchAlerts(prev => {
+        const updated = [newAlert, ...prev];
+        saveStoredMatchAlerts(updated);
+        return updated;
+      });
+    }
+
     setSchedulingMatch(null);
-    confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-    alert(`تم تحديد ميعاد المباراة (${schedulingMatch.teamA} ضد ${schedulingMatch.teamB}) وتنزيلها في جدول البطولة بنجاح! 📅`);
+    confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+    const notifyMsg = scheduleForm.notifyPlayers ? ' وتم إرسال تنبيه فوري للاعبي الفريقين عبر واجهة المستخدم 📢' : '';
+    alert(`تم تحديد ميعاد المباراة (${schedulingMatch.teamA} ضد ${schedulingMatch.teamB}) وتنزيلها في جدول البطولة بنجاح!${notifyMsg} 📅`);
+  };
+
+  // --- MATCH ALERTS & NOTIFICATION HANDLERS ---
+  const handleSendManualAlert = (alertData: Omit<MatchScheduleNotification, 'id' | 'sentAt' | 'readByUserIds' | 'acknowledgedPlayers'>) => {
+    const newAlert: MatchScheduleNotification = {
+      ...alertData,
+      id: `alert_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      sentAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      readByUserIds: [],
+      acknowledgedPlayers: [],
+    };
+
+    setMatchAlerts(prev => {
+      const updated = [newAlert, ...prev];
+      saveStoredMatchAlerts(updated);
+      return updated;
+    });
+
+    confetti({ particleCount: 70, spread: 80 });
+    alert(`تم إرسال التنبيه الرسمي بنجاح للاعبي الفريقين (${alertData.targetTeams.join(' و ')}) عبر واجهة المستخدم! 📢⚽`);
+  };
+
+  const handleAcknowledgeAlert = (alertId: string) => {
+    if (!currentUser) return;
+    setMatchAlerts(prev => {
+      const updated = prev.map(a => {
+        if (a.id === alertId) {
+          const existingAcks = a.acknowledgedPlayers || [];
+          if (!existingAcks.some(p => p.userId === currentUser.id)) {
+            const nextAcks = [
+              ...existingAcks,
+              {
+                userId: currentUser.id,
+                userName: currentUser.name,
+                teamName: currentUser.playerTeamName || currentUser.managedTeamName || 'فريق الطالب',
+                acknowledgedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+              }
+            ];
+            const nextReads = a.readByUserIds.includes(currentUser.id) ? a.readByUserIds : [...a.readByUserIds, currentUser.id];
+            return {
+              ...a,
+              acknowledgedPlayers: nextAcks,
+              readByUserIds: nextReads,
+            };
+          }
+        }
+        return a;
+      });
+      saveStoredMatchAlerts(updated);
+      return updated;
+    });
+    confetti({ particleCount: 50, spread: 60 });
+    alert('تم تأكيد جاهزيتك واطلاعك على موعد وملعب المباراة بنجاح! بالتوفيق كابتن ⚽🔥');
+  };
+
+  const handleMarkAlertAsRead = (alertId: string) => {
+    if (!currentUser) return;
+    setMatchAlerts(prev => {
+      const updated = prev.map(a => {
+        if (a.id === alertId && !a.readByUserIds.includes(currentUser.id)) {
+          return {
+            ...a,
+            readByUserIds: [...a.readByUserIds, currentUser.id],
+          };
+        }
+        return a;
+      });
+      saveStoredMatchAlerts(updated);
+      return updated;
+    });
+  };
+
+  const handleMarkAllAlertsAsRead = () => {
+    if (!currentUser) return;
+    setMatchAlerts(prev => {
+      const updated = prev.map(a => {
+        if (!a.readByUserIds.includes(currentUser.id)) {
+          return {
+            ...a,
+            readByUserIds: [...a.readByUserIds, currentUser.id],
+          };
+        }
+        return a;
+      });
+      saveStoredMatchAlerts(updated);
+      return updated;
+    });
+  };
+
+  const handleDeleteAlert = (alertId: string) => {
+    setMatchAlerts(prev => {
+      const updated = prev.filter(a => a.id !== alertId);
+      saveStoredMatchAlerts(updated);
+      return updated;
+    });
   };
 
   const handleUnscheduleMatch = (matchId: string) => {
@@ -1112,6 +1287,104 @@ export default function App() {
     setNewSubB({ minute: 60, playerOut: '', playerIn: '' });
     setNewCardA({ minute: 45, playerName: '', cardType: 'yellow', reason: '' });
     setNewCardB({ minute: 45, playerName: '', cardType: 'yellow', reason: '' });
+
+    // Initialize Lineups (الأساسيون والبدلاء) for both teams in Result Modal
+    const sA_squad = squads[match.teamA] || [];
+    const sB_squad = squads[match.teamB] || [];
+    const allNamesA = sA_squad.map(p => p.name);
+    const allNamesB = sB_squad.map(p => p.name);
+
+    if (match.lineups?.teamAStarters && match.lineups.teamAStarters.length > 0) {
+      setTeamAStartersResult(match.lineups.teamAStarters.filter(n => allNamesA.includes(n)));
+      setTeamABenchResult((match.lineups.teamABench || []).filter(n => allNamesA.includes(n)));
+    } else {
+      const defaultCountA = Math.min(7, allNamesA.length);
+      setTeamAStartersResult(allNamesA.slice(0, defaultCountA));
+      setTeamABenchResult(allNamesA.slice(defaultCountA));
+    }
+
+    if (match.lineups?.teamBStarters && match.lineups.teamBStarters.length > 0) {
+      setTeamBStartersResult(match.lineups.teamBStarters.filter(n => allNamesB.includes(n)));
+      setTeamBBenchResult((match.lineups.teamBBench || []).filter(n => allNamesB.includes(n)));
+    } else {
+      const defaultCountB = Math.min(7, allNamesB.length);
+      setTeamBStartersResult(allNamesB.slice(0, defaultCountB));
+      setTeamBBenchResult(allNamesB.slice(defaultCountB));
+    }
+  };
+
+  // Helper functions for Lineups inside Result Recording Modal
+  const handleTogglePlayerInResult = (team: 'A' | 'B', playerName: string) => {
+    if (team === 'A') {
+      if (teamAStartersResult.includes(playerName)) {
+        setTeamAStartersResult(prev => prev.filter(n => n !== playerName));
+        setTeamABenchResult(prev => [...prev, playerName]);
+      } else {
+        setTeamABenchResult(prev => prev.filter(n => n !== playerName));
+        setTeamAStartersResult(prev => [...prev, playerName]);
+      }
+    } else {
+      if (teamBStartersResult.includes(playerName)) {
+        setTeamBStartersResult(prev => prev.filter(n => n !== playerName));
+        setTeamBBenchResult(prev => [...prev, playerName]);
+      } else {
+        setTeamBBenchResult(prev => prev.filter(n => n !== playerName));
+        setTeamBStartersResult(prev => [...prev, playerName]);
+      }
+    }
+  };
+
+  const handlePresetLineupInResult = (team: 'A' | 'B', type: 'first7' | 'first9' | 'allBench' | 'invert') => {
+    if (!recordingResultMatch) return;
+    const squad = squads[team === 'A' ? recordingResultMatch.teamA : recordingResultMatch.teamB] || [];
+    const allNames = squad.map(p => p.name);
+    let newStarters: string[] = [];
+    let newBench: string[] = [];
+
+    if (type === 'first7') {
+      newStarters = allNames.slice(0, Math.min(7, allNames.length));
+      newBench = allNames.slice(Math.min(7, allNames.length));
+    } else if (type === 'first9') {
+      newStarters = allNames.slice(0, Math.min(9, allNames.length));
+      newBench = allNames.slice(Math.min(9, allNames.length));
+    } else if (type === 'allBench') {
+      newStarters = [];
+      newBench = [...allNames];
+    } else if (type === 'invert') {
+      const currentStarters = team === 'A' ? teamAStartersResult : teamBStartersResult;
+      newStarters = allNames.filter(n => !currentStarters.includes(n));
+      newBench = allNames.filter(n => currentStarters.includes(n));
+    }
+
+    if (team === 'A') {
+      setTeamAStartersResult(newStarters);
+      setTeamABenchResult(newBench);
+    } else {
+      setTeamBStartersResult(newStarters);
+      setTeamBBenchResult(newBench);
+    }
+  };
+
+  // Save Lineup Handler (before match or at any time)
+  const handleSaveMatchLineup = (
+    matchId: string, 
+    lineups: {
+      teamAStarters: string[];
+      teamABench: string[];
+      teamBStarters: string[];
+      teamBBench: string[];
+    }
+  ) => {
+    setMatches(prev => prev.map(m => {
+      if (m.id === matchId) {
+        return {
+          ...m,
+          lineups,
+        };
+      }
+      return m;
+    }));
+    alert('تم حفظ واعتماد تشكيل المباراة (الأساسيون والبدلاء) لكلا الفريقين بنجاح! 📋⚽');
   };
 
   // Helper functions for per-team scorers & assists (مع التحديث الفوري للنتيجة)
@@ -1351,6 +1624,12 @@ export default function App() {
           minute: resultForm.status === 'live' ? Number(resultForm.minute) : undefined,
           scorersSummary: summary.trim() || undefined,
           recordedBy: currentOperator.name,
+          lineups: {
+            teamAStarters: teamAStartersResult,
+            teamABench: teamABenchResult,
+            teamBStarters: teamBStartersResult,
+            teamBBench: teamBBenchResult,
+          },
           substitutions: [...teamASubs, ...teamBSubs],
           cards: [...teamACards, ...teamBCards],
         };
@@ -1753,6 +2032,16 @@ export default function App() {
   const scheduledMatchesCount = useMemo(() => matches.filter(m => m.isScheduled).length, [matches]);
   const unscheduledMatchesCount = useMemo(() => matches.filter(m => !m.isScheduled).length, [matches]);
 
+  // Unread Match Schedule Alerts for current user
+  const userUnreadAlertsCount = useMemo(() => {
+    if (!currentUser) return 0;
+    const userTeam = currentUser.playerTeamName || currentUser.managedTeamName || '';
+    return matchAlerts.filter(a => {
+      const isTarget = !userTeam || a.targetTeams.includes(userTeam) || isAdmin;
+      return isTarget && !a.readByUserIds.includes(currentUser.id);
+    }).length;
+  }, [matchAlerts, currentUser, isAdmin]);
+
   // LOCKED APP / AUTH GATE: Must log in first to access tournament
   if (!currentUser) {
     if (authView === 'signup') {
@@ -1900,6 +2189,25 @@ export default function App() {
               </div>
 
               <div className="flex items-center gap-1.5 border-r border-slate-800 pr-2">
+                {/* Match Schedule & Venue Alerts Bell Button */}
+                <button
+                  onClick={() => setIsAlertsListOpen(true)}
+                  className={`relative px-3 py-1.5 rounded-xl border font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-sm ${
+                    userUnreadAlertsCount > 0
+                      ? 'bg-blue-600/20 hover:bg-blue-600/30 border-blue-500/50 text-blue-300'
+                      : 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
+                  }`}
+                  title="تنبيهات المواعيد والملاعب المعتمدة للمباريات"
+                >
+                  <Bell className={`w-3.5 h-3.5 ${userUnreadAlertsCount > 0 ? 'text-amber-400 animate-bounce' : 'text-slate-300'}`} />
+                  <span className="hidden sm:inline">التنبيهات</span>
+                  {userUnreadAlertsCount > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-black text-[10px] animate-pulse">
+                      {userUnreadAlertsCount}
+                    </span>
+                  )}
+                </button>
+
                 {/* Admin Player Approvals Quick Button */}
                 {isAdmin && (
                   <button
@@ -2095,6 +2403,8 @@ export default function App() {
             matches={matches}
             teams={teams}
             squads={squads}
+            matchAlerts={matchAlerts}
+            onOpenAllAlertsModal={() => setIsAlertsListOpen(true)}
             onSelectTeamForSquadView={(teamName) => {
               setCurrentTab('teams_roster');
             }}
@@ -2114,6 +2424,9 @@ export default function App() {
             teams={teams}
             matches={matches}
             squads={squads}
+            matchAlerts={matchAlerts}
+            onAcknowledgeAlert={handleAcknowledgeAlert}
+            onOpenAllAlertsModal={() => setIsAlertsListOpen(true)}
             onSelectTeamForMatches={(teamName) => setSelectedTeamNameForMatches(teamName)}
             onNavigateToSpectatorPortal={() => setCurrentTab('spectator_portal')}
             onNavigateToGroups={() => setCurrentTab('groups')}
@@ -2135,9 +2448,15 @@ export default function App() {
               assignedTeamName={currentUser.managedTeamName}
               managerName={currentUser.name}
               playerRequests={playerRequests}
+              matchAlerts={matchAlerts}
+              onOpenAlertComposerForMatch={(m) => {
+                setAlertComposerMatch(m);
+                setIsAlertComposerOpen(true);
+              }}
               onRequestAddPlayer={handleRequestAddPlayer}
               onRequestEditPlayer={handleRequestEditPlayer}
               onOpenApprovalsModal={() => setIsApprovalsModalOpen(true)}
+              onOpenAllAlertsModal={() => setIsAlertsListOpen(true)}
             />
           ) : (
             <div className="bg-slate-900 border border-emerald-500/30 rounded-3xl p-8 text-center max-w-lg mx-auto my-12 shadow-2xl space-y-4">
@@ -2585,6 +2904,33 @@ export default function App() {
                             <ArrowRightLeft className="w-3.5 h-3.5 text-amber-400" />
                             <span className="hidden sm:inline">مين هيلاعب مين</span>
                           </button>
+
+                          {/* Admin Send Match Alert button */}
+                          <button
+                            onClick={() => {
+                              setAlertComposerMatch(match);
+                              setIsAlertComposerOpen(true);
+                            }}
+                            className="px-2.5 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                            title="إرسال تنبيه رسمي للاعبي الفريقين عبر واجهة المستخدم"
+                          >
+                            <Bell className="w-3.5 h-3.5 text-blue-400" />
+                            <span>تنبيه للاعبين 📢</span>
+                          </button>
+
+                          {/* Match Lineup Button: تحديد الأساسيين والبدلاء قبل كل ماتش */}
+                          <button
+                            onClick={() => setEditingLineupMatch(match)}
+                            className="px-2.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                            title="تحديد الأساسيين والبدلاء لكلا الفريقين قبل المباراة أو في أي وقت (مخصص لكل ماتش)"
+                          >
+                            <Shirt className="w-3.5 h-3.5 text-purple-400" />
+                            <span>
+                              {match.lineups?.teamAStarters?.length 
+                                ? `التشكيل (${match.lineups.teamAStarters.length} ضد ${match.lineups.teamBStarters?.length || 0}) 📋` 
+                                : 'تشكيل المباراة 📋'}
+                            </span>
+                          </button>
                         </div>
 
                         <div className="flex items-center gap-1">
@@ -2604,12 +2950,43 @@ export default function App() {
                           <Shield className="w-3.5 h-3.5 text-emerald-400" />
                           <span>{match.isScheduled ? 'مباراة معتمدة بالجدول' : 'بانتظار اعتماد الموعد'}</span>
                         </span>
-                        {match.status === 'finished' && (
-                          <span className="text-emerald-400 font-bold flex items-center gap-1 font-mono">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            نتيجة نهائية
-                          </span>
-                        )}
+                        
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setEditingLineupMatch(match)}
+                            className="px-2 py-1 rounded-lg bg-purple-950/40 hover:bg-purple-900/50 text-purple-300 border border-purple-500/30 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                            title="عرض التشكيل الأساسي والبدلاء"
+                          >
+                            <Shirt className="w-3 h-3 text-purple-400" />
+                            <span>{match.lineups?.teamAStarters?.length ? 'عرض التشكيل والبدلاء 📋' : 'تشكيل المباراة 📋'}</span>
+                          </button>
+
+                          {match.status === 'finished' && (
+                            <span className="text-emerald-400 font-bold flex items-center gap-1 font-mono">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              نهائية
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Match Lineup Badge if configured */}
+                    {match.lineups?.teamAStarters && match.lineups.teamAStarters.length > 0 && (
+                      <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-purple-950/30 border border-purple-500/20 text-[10px] text-purple-300">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <Shirt className="w-3 h-3 text-purple-400 shrink-0" />
+                          <span className="font-bold text-slate-300">تشكيل الماتش:</span>
+                          <span className="font-mono text-emerald-300">{match.teamA}: {match.lineups.teamAStarters.length} أساسي</span>
+                          <span className="text-slate-500">•</span>
+                          <span className="font-mono text-blue-300">{match.teamB}: {match.lineups.teamBStarters?.length || 0} أساسي</span>
+                        </div>
+                        <button
+                          onClick={() => setEditingLineupMatch(match)}
+                          className="text-[10px] text-purple-400 hover:text-white font-bold underline cursor-pointer shrink-0 mr-1"
+                        >
+                          تعديل ⤢
+                        </button>
                       </div>
                     )}
 
@@ -3563,6 +3940,65 @@ export default function App() {
                 </select>
               </div>
 
+              {/* Send Notification to Players Option */}
+              <div className="p-3.5 bg-slate-950 rounded-2xl border border-blue-500/30 space-y-2.5">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={scheduleForm.notifyPlayers}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, notifyPlayers: e.target.checked })}
+                    className="w-4 h-4 rounded text-blue-600 bg-slate-900 border-slate-700 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="text-xs font-black text-blue-300 flex items-center gap-1.5">
+                    <Bell className="w-4 h-4 text-amber-400" />
+                    <span>إرسال تنبيه فوري عبر واجهة المستخدم للاعبي ({schedulingMatch.teamA} و {schedulingMatch.teamB}) 📢</span>
+                  </span>
+                </label>
+
+                {scheduleForm.notifyPlayers && (
+                  <div className="space-y-2 pt-2 border-t border-slate-900 animate-in fade-in duration-150">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-400 block mb-1">
+                        ملاحظات أو تعليمات إضافية في التنبيه (اختياري):
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="مثل: الحضور بالزي الرسمي قبل المباراة بنصف ساعة بكارنيه الجامعة..."
+                        value={scheduleForm.notifyNote}
+                        onChange={(e) => setScheduleForm({ ...scheduleForm, notifyNote: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400">درجة الأهمية:</span>
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="scheduleUrgency"
+                            checked={scheduleForm.notifyUrgency === 'high'}
+                            onChange={() => setScheduleForm({ ...scheduleForm, notifyUrgency: 'high' })}
+                            className="text-rose-600"
+                          />
+                          <span className="text-rose-400 font-bold">عاجل وهام 🚨</span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="scheduleUrgency"
+                            checked={scheduleForm.notifyUrgency === 'normal'}
+                            onChange={() => setScheduleForm({ ...scheduleForm, notifyUrgency: 'normal' })}
+                            className="text-teal-600"
+                          />
+                          <span className="text-teal-400 font-bold">عادي 📢</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-800">
                 {schedulingMatch.isScheduled && (
                   <button
@@ -3784,6 +4220,37 @@ export default function App() {
                   ))}
                 </datalist>
 
+                {/* ========================================================================= */}
+                {/* 📋 تشكيل المباراة: الأساسيون والبدلاء لكلا الفريقين أثناء بدء الماتش أو تسجيل النتيجة */}
+                {/* ========================================================================= */}
+                <div className="bg-slate-950 p-3.5 rounded-2xl border border-purple-500/40 flex flex-wrap items-center justify-between gap-3 shadow-md">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30">
+                      <Shirt className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-white flex items-center gap-2">
+                        <span>تشكيل المباراة (الأساسيون والبدلاء) لكلا الفريقين</span>
+                        <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-mono text-[10px] border border-purple-500/30">
+                          {recordingResultMatch.teamA}: {teamAStartersResult.length} أساسي • {recordingResultMatch.teamB}: {teamBStartersResult.length} أساسي
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-slate-400">
+                        حدد من سيلعب أساسياً ومن على الدكة لهذه المباراة تحديداً؛ تتحدث وتُحفظ تلقائياً مع النتيجة!
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowLineupsInResultModal(!showLineupsInResultModal)}
+                    className="px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/30 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    <span>{showLineupsInResultModal ? 'إخفاء تفاصيل التشكيل' : 'عرض وتعديل التشكيل الأساسي والبدلاء 📋'}</span>
+                  </button>
+                </div>
+
                 {/* TWO TEAMS DEDICATED SECTIONS: TEAM A vs TEAM B */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* TEAM A CARD */}
@@ -3810,12 +4277,119 @@ export default function App() {
                           <span>⚽</span>
                           <span>{totalGoalsA} أهداف</span>
                         </span>
-                        <span className="px-2 py-1 rounded-xl text-xs font-black bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 flex items-center gap-1 font-mono">
+                        <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 flex items-center gap-1 font-mono">
                           <span>🎯</span>
                           <span>{teamAAssists.reduce((sum, a) => sum + (Number(a.assists) || 0), 0)} أسيست</span>
                         </span>
                       </div>
                     </div>
+
+                    {/* ======================= */}
+                    {/* 📋 تشكيل فريق A: الأساسيون والبدلاء */}
+                    {/* ======================= */}
+                    {showLineupsInResultModal && (
+                      <div className="space-y-2.5 bg-slate-900/70 p-3 rounded-xl border border-blue-500/30">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-black text-emerald-400 flex items-center gap-1.5">
+                              <Shirt className="w-3.5 h-3.5" />
+                              <span>تشكيل {recordingResultMatch.teamA}</span>
+                            </span>
+                            <span className="text-[10px] text-emerald-300 font-bold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
+                              {teamAStartersResult.length} أساسي
+                            </span>
+                            <span className="text-[10px] text-slate-300 font-bold bg-slate-800 px-2 py-0.5 rounded-full font-mono">
+                              {teamABenchResult.length} بديل
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handlePresetLineupInResult('A', 'first7')}
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition-colors cursor-pointer"
+                              title="تحديد أول 7 لاعبين كأساسيين"
+                            >
+                              أول 7
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePresetLineupInResult('A', 'invert')}
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold transition-colors cursor-pointer flex items-center gap-0.5"
+                              title="عكس التشكيل (تبديل الأساسيين بالبدلاء)"
+                            >
+                              <ArrowRightLeft className="w-2.5 h-2.5" />
+                              <span>عكس</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* All Players List categorized into Starters & Bench */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                          {/* 🟢 Starters Column */}
+                          <div className="p-2 bg-slate-950/80 rounded-xl border border-emerald-500/30 space-y-1.5">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-emerald-400 pb-1 border-b border-emerald-500/20">
+                              <span>🟢 الأساسيون ({teamAStartersResult.length})</span>
+                              <span className="text-[9px] text-slate-400">انقر للدكة</span>
+                            </div>
+                            <div className="space-y-1 max-h-[160px] overflow-y-auto pr-0.5">
+                              {teamAStartersResult.length === 0 ? (
+                                <p className="text-[10px] text-slate-500 py-1 text-center">لا يوجد أساسيون محددون</p>
+                              ) : (
+                                teamAStartersResult.map(pName => {
+                                  const pObj = squadA.find(p => p.name === pName);
+                                  return (
+                                    <div
+                                      key={pName}
+                                      onClick={() => handleTogglePlayerInResult('A', pName)}
+                                      className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/30 hover:border-amber-500/50 flex items-center justify-between cursor-pointer transition-colors"
+                                      title="انقر لنقل اللاعب إلى دكة البدلاء"
+                                    >
+                                      <div className="flex items-center gap-1.5 truncate">
+                                        <span className="text-emerald-300 font-mono font-bold text-[10px]">#{pObj?.number || '—'}</span>
+                                        <span className="text-white text-xs font-bold truncate">{pName}</span>
+                                      </div>
+                                      <span className="text-[9px] text-amber-300 bg-amber-950/40 px-1 rounded">دكة ←</span>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 🟡 Bench Column */}
+                          <div className="p-2 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1.5">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 pb-1 border-b border-slate-800">
+                              <span>🟡 البدلاء ({teamABenchResult.length})</span>
+                              <span className="text-[9px] text-slate-400">انقر للأساسي</span>
+                            </div>
+                            <div className="space-y-1 max-h-[160px] overflow-y-auto pr-0.5">
+                              {teamABenchResult.length === 0 ? (
+                                <p className="text-[10px] text-slate-500 py-1 text-center">لا يوجد بدلاء</p>
+                              ) : (
+                                teamABenchResult.map(pName => {
+                                  const pObj = squadA.find(p => p.name === pName);
+                                  return (
+                                    <div
+                                      key={pName}
+                                      onClick={() => handleTogglePlayerInResult('A', pName)}
+                                      className="px-2 py-1 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 flex items-center justify-between cursor-pointer transition-colors"
+                                      title="انقر لنقل اللاعب إلى التشكيل الأساسي"
+                                    >
+                                      <div className="flex items-center gap-1.5 truncate">
+                                        <span className="text-slate-400 font-mono text-[10px]">#{pObj?.number || '—'}</span>
+                                        <span className="text-slate-300 text-xs truncate">{pName}</span>
+                                      </div>
+                                      <span className="text-[9px] text-emerald-300 bg-emerald-950/40 px-1 rounded">أساسي ←</span>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* ======================= */}
                     {/* ⚽ مكان كتابة الأهداف لـ Team A */}
@@ -4309,6 +4883,113 @@ export default function App() {
                         </span>
                       </div>
                     </div>
+
+                    {/* ======================= */}
+                    {/* 📋 تشكيل فريق B: الأساسيون والبدلاء */}
+                    {/* ======================= */}
+                    {showLineupsInResultModal && (
+                      <div className="space-y-2.5 bg-slate-900/70 p-3 rounded-xl border border-emerald-500/30">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-black text-emerald-400 flex items-center gap-1.5">
+                              <Shirt className="w-3.5 h-3.5" />
+                              <span>تشكيل {recordingResultMatch.teamB}</span>
+                            </span>
+                            <span className="text-[10px] text-emerald-300 font-bold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
+                              {teamBStartersResult.length} أساسي
+                            </span>
+                            <span className="text-[10px] text-slate-300 font-bold bg-slate-800 px-2 py-0.5 rounded-full font-mono">
+                              {teamBBenchResult.length} بديل
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handlePresetLineupInResult('B', 'first7')}
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition-colors cursor-pointer"
+                              title="تحديد أول 7 لاعبين كأساسيين"
+                            >
+                              أول 7
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePresetLineupInResult('B', 'invert')}
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold transition-colors cursor-pointer flex items-center gap-0.5"
+                              title="عكس التشكيل (تبديل الأساسيين بالبدلاء)"
+                            >
+                              <ArrowRightLeft className="w-2.5 h-2.5" />
+                              <span>عكس</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* All Players List categorized into Starters & Bench */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                          {/* 🟢 Starters Column */}
+                          <div className="p-2 bg-slate-950/80 rounded-xl border border-emerald-500/30 space-y-1.5">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-emerald-400 pb-1 border-b border-emerald-500/20">
+                              <span>🟢 الأساسيون ({teamBStartersResult.length})</span>
+                              <span className="text-[9px] text-slate-400">انقر للدكة</span>
+                            </div>
+                            <div className="space-y-1 max-h-[160px] overflow-y-auto pr-0.5">
+                              {teamBStartersResult.length === 0 ? (
+                                <p className="text-[10px] text-slate-500 py-1 text-center">لا يوجد أساسيون محددون</p>
+                              ) : (
+                                teamBStartersResult.map(pName => {
+                                  const pObj = squadB.find(p => p.name === pName);
+                                  return (
+                                    <div
+                                      key={pName}
+                                      onClick={() => handleTogglePlayerInResult('B', pName)}
+                                      className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/30 hover:border-amber-500/50 flex items-center justify-between cursor-pointer transition-colors"
+                                      title="انقر لنقل اللاعب إلى دكة البدلاء"
+                                    >
+                                      <div className="flex items-center gap-1.5 truncate">
+                                        <span className="text-emerald-300 font-mono font-bold text-[10px]">#{pObj?.number || '—'}</span>
+                                        <span className="text-white text-xs font-bold truncate">{pName}</span>
+                                      </div>
+                                      <span className="text-[9px] text-amber-300 bg-amber-950/40 px-1 rounded">دكة ←</span>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 🟡 Bench Column */}
+                          <div className="p-2 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1.5">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 pb-1 border-b border-slate-800">
+                              <span>🟡 البدلاء ({teamBBenchResult.length})</span>
+                              <span className="text-[9px] text-slate-400">انقر للأساسي</span>
+                            </div>
+                            <div className="space-y-1 max-h-[160px] overflow-y-auto pr-0.5">
+                              {teamBBenchResult.length === 0 ? (
+                                <p className="text-[10px] text-slate-500 py-1 text-center">لا يوجد بدلاء</p>
+                              ) : (
+                                teamBBenchResult.map(pName => {
+                                  const pObj = squadB.find(p => p.name === pName);
+                                  return (
+                                    <div
+                                      key={pName}
+                                      onClick={() => handleTogglePlayerInResult('B', pName)}
+                                      className="px-2 py-1 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 flex items-center justify-between cursor-pointer transition-colors"
+                                      title="انقر لنقل اللاعب إلى التشكيل الأساسي"
+                                    >
+                                      <div className="flex items-center gap-1.5 truncate">
+                                        <span className="text-slate-400 font-mono text-[10px]">#{pObj?.number || '—'}</span>
+                                        <span className="text-slate-300 text-xs truncate">{pName}</span>
+                                      </div>
+                                      <span className="text-[9px] text-emerald-300 bg-emerald-950/40 px-1 rounded">أساسي ←</span>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* ======================= */}
                     {/* ⚽ مكان كتابة الأهداف لـ Team B */}
@@ -5436,6 +6117,55 @@ export default function App() {
         onAdminApplyPlayerEdit={handleAdminApplyPlayerEdit}
         onRejectRequest={handleRejectPlayerRequest}
         onApproveAllPending={handleApproveAllPending}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL: MATCH LINEUP (تحديد الأساسيين والبدلاء للمباراة قبل بدئها أو أثنائها) */}
+      {/* ========================================================================= */}
+      <MatchLineupModal
+        isOpen={Boolean(editingLineupMatch)}
+        onClose={() => setEditingLineupMatch(null)}
+        match={editingLineupMatch}
+        teams={teams}
+        squads={squads}
+        onSaveLineup={handleSaveMatchLineup}
+        readOnly={!isAdmin && currentUser?.role !== 'team_manager'}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL: MATCH ALERT COMPOSER (إرسال تنبيه رسمي للاعبين للأدمن) */}
+      {/* ========================================================================= */}
+      <MatchAlertComposerModal
+        isOpen={isAlertComposerOpen}
+        onClose={() => {
+          setIsAlertComposerOpen(false);
+          setAlertComposerMatch(null);
+        }}
+        match={alertComposerMatch}
+        teams={teams}
+        squads={squads}
+        adminName={currentUser?.name || 'مدير البطولة'}
+        onSendAlert={handleSendManualAlert}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL: MATCH ALERTS LIST & NOTIFICATION CENTER (مركز التنبيهات والإشعارات) */}
+      {/* ========================================================================= */}
+      <MatchAlertsListModal
+        isOpen={isAlertsListOpen}
+        onClose={() => setIsAlertsListOpen(false)}
+        alerts={matchAlerts}
+        currentUser={currentUser}
+        isAdmin={isAdmin}
+        onAcknowledgeAlert={handleAcknowledgeAlert}
+        onMarkAsRead={handleMarkAlertAsRead}
+        onMarkAllAsRead={handleMarkAllAlertsAsRead}
+        onDeleteAlert={handleDeleteAlert}
+        onComposeNewAlert={() => {
+          const defaultMatch = matches.find(m => m.isScheduled) || matches[0];
+          setAlertComposerMatch(defaultMatch);
+          setIsAlertComposerOpen(true);
+        }}
       />
 
       {/* ========================================================================= */}

@@ -13,17 +13,26 @@ import {
   GraduationCap,
   Eye,
   ArrowRightLeft,
-  Lock
+  Lock,
+  Bell,
+  Check,
+  AlertTriangle,
+  ChevronLeft
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { AppUser } from '../utils/auth';
 import { Match, Team } from '../App';
 import { Player } from '../utils/roster';
+import { MatchScheduleNotification } from '../utils/notifications';
 
 interface PlayerTeamPortalPageProps {
   currentUser: AppUser;
   teams: Team[];
   matches: Match[];
   squads: Record<string, Player[]>;
+  matchAlerts?: MatchScheduleNotification[];
+  onAcknowledgeAlert?: (alertId: string) => void;
+  onOpenAllAlertsModal?: () => void;
   onSelectTeamForMatches?: (teamName: string) => void;
   onNavigateToSpectatorPortal?: () => void;
   onNavigateToGroups?: () => void;
@@ -34,6 +43,9 @@ export const PlayerTeamPortalPage: React.FC<PlayerTeamPortalPageProps> = ({
   teams,
   matches,
   squads,
+  matchAlerts = [],
+  onAcknowledgeAlert,
+  onOpenAllAlertsModal,
   onSelectTeamForMatches,
   onNavigateToSpectatorPortal,
   onNavigateToGroups,
@@ -65,8 +77,179 @@ export const PlayerTeamPortalPage: React.FC<PlayerTeamPortalPageProps> = ({
     return myTeamMatches.find(m => m.status === 'upcoming') || myTeamMatches[0];
   }, [myTeamMatches]);
 
+  // Alerts targeting this player's team
+  const myTeamAlerts = useMemo(() => {
+    return matchAlerts.filter(a => a.targetTeams.includes(playerTeamName));
+  }, [matchAlerts, playerTeamName]);
+
   return (
     <div className="space-y-6 animate-fade-in" dir="rtl">
+      {/* ========================================================================= */}
+      {/* 🔔 OFFICIAL MATCH SCHEDULE & VENUE ALERTS FOR PLAYER'S TEAM */}
+      {/* ========================================================================= */}
+      {myTeamAlerts.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center border border-amber-500/30">
+                <Bell className="w-4 h-4 animate-bounce" />
+              </div>
+              <h3 className="text-base font-black text-white flex items-center gap-2">
+                <span>تنبيهات المواعيد والملاعب المعتمدة لفريق {playerTeamName}</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-xs">
+                  {myTeamAlerts.length} إخطار
+                </span>
+              </h3>
+            </div>
+
+            {onOpenAllAlertsModal && (
+              <button
+                type="button"
+                onClick={onOpenAllAlertsModal}
+                className="text-xs text-amber-300 hover:text-white font-bold flex items-center gap-1 cursor-pointer hover:underline"
+              >
+                <span>عرض سجل التنبيهات بالكامل</span>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            {myTeamAlerts.map((alert) => {
+              const isMeAcknowledged = (alert.acknowledgedPlayers || []).some(p => p.userId === currentUser.id);
+              const opponent = alert.teamA === playerTeamName ? alert.teamB : alert.teamA;
+
+              return (
+                <div
+                  key={alert.id}
+                  className={`p-4 md:p-5 rounded-3xl border transition-all shadow-xl space-y-3.5 relative overflow-hidden ${
+                    alert.urgency === 'high'
+                      ? 'bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border-amber-500/50 ring-1 ring-amber-500/20'
+                      : 'bg-slate-900 border-blue-500/40'
+                  }`}
+                >
+                  {/* Top Bar of Alert Card */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black border flex items-center gap-1 ${
+                        alert.urgency === 'high'
+                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                          : 'bg-teal-500/20 text-teal-300 border-teal-500/30'
+                      }`}>
+                        {alert.urgency === 'high' ? <AlertTriangle className="w-3.5 h-3.5 text-rose-400" /> : <Bell className="w-3.5 h-3.5 text-teal-400" />}
+                        <span>{alert.urgency === 'high' ? 'تنبيه عاجل للاعبي الفريق 🚨' : 'إخطار رسمي معتمد 📢'}</span>
+                      </span>
+
+                      <span className="text-xs font-bold text-slate-300">
+                        {alert.stageName} • ضد <strong className="text-white">{opponent}</strong>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono">
+                      <span>إدارة البطولة • {alert.sentAt}</span>
+                    </div>
+                  </div>
+
+                  {/* Title & Core Date/Pitch Information Grid */}
+                  <div className="space-y-2.5">
+                    <h4 className="text-sm md:text-base font-black text-white">
+                      {alert.title}
+                    </h4>
+
+                    {/* Highly Visual Match Approved Metrics */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div className="p-3 bg-slate-950/80 rounded-2xl border border-emerald-500/30 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                          <Calendar className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-bold">تاريخ المباراة المعتمد</span>
+                          <strong className="text-white text-xs md:text-sm font-black font-mono">{alert.date}</strong>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-slate-950/80 rounded-2xl border border-blue-500/30 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                          <Clock className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-bold">توقيت الانطلاق</span>
+                          <strong className="text-white text-xs md:text-sm font-black font-mono">{alert.time}</strong>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-slate-950/80 rounded-2xl border border-amber-500/30 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                          <MapPin className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-bold">الملعب والموقع</span>
+                          <strong className="text-amber-300 text-xs md:text-sm font-black">{alert.pitch}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Message from Admin */}
+                    <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800 text-xs text-slate-300 leading-relaxed whitespace-pre-line font-sans">
+                      {alert.message}
+                    </div>
+                  </div>
+
+                  {/* Player Readiness Confirmation & Teammates List */}
+                  <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">
+                        المرسل: <strong className="text-slate-200">{alert.sentBy}</strong>
+                      </span>
+                      {(alert.acknowledgedPlayers || []).length > 0 && (
+                        <span className="text-[11px] text-emerald-400 font-bold bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                          {alert.acknowledgedPlayers?.length} من زملائك أكدوا الحضور
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      {isMeAcknowledged ? (
+                        <div className="px-3.5 py-2 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 text-xs font-black flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span>أنت جاهز ومؤكد حضورك للمباراة بنجاح ✅</span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onAcknowledgeAlert) {
+                              onAcknowledgeAlert(alert.id);
+                              confetti({ particleCount: 50, spread: 60 });
+                            }
+                          }}
+                          className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-lg shadow-emerald-600/30 cursor-pointer flex items-center gap-2 transition-all hover:scale-105 active:scale-95"
+                        >
+                          <Check className="w-4 h-4" />
+                          <span>تأكيد الاطلاع والجاهزية للمباراة ⚽</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Confirmed Teammates Names */}
+                  {(alert.acknowledgedPlayers || []).length > 0 && (
+                    <div className="pt-2 border-t border-slate-900 text-[11px] text-slate-400 flex flex-wrap items-center gap-1.5">
+                      <span className="font-bold text-slate-300">اللاعبون المؤكدون للجاهزية:</span>
+                      {alert.acknowledgedPlayers?.map((p) => (
+                        <span key={p.userId} className="px-2 py-0.5 rounded-lg bg-slate-950 text-slate-300 border border-slate-800 text-[10px]">
+                          ✓ {p.userName}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Player Header Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-500/40 p-6 md:p-8 shadow-2xl">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -309,6 +492,42 @@ export const PlayerTeamPortalPage: React.FC<PlayerTeamPortalPageProps> = ({
                       <span>{m.scorersSummary}</span>
                     </div>
                   )}
+
+                  {/* Match Lineup status for this player & team */}
+                  {m.lineups && (() => {
+                    const isTeamA = m.teamA === playerTeamName;
+                    const starters = isTeamA ? (m.lineups.teamAStarters || []) : (m.lineups.teamBStarters || []);
+                    const bench = isTeamA ? (m.lineups.teamABench || []) : (m.lineups.teamBBench || []);
+                    const qName = currentUser.name.trim().toLowerCase();
+                    const isMeStarter = starters.some(n => n.trim().toLowerCase().includes(qName) || qName.includes(n.trim().toLowerCase()));
+                    const isMeBench = bench.some(n => n.trim().toLowerCase().includes(qName) || qName.includes(n.trim().toLowerCase()));
+
+                    return (
+                      <div className="p-2.5 rounded-xl bg-purple-950/30 border border-purple-500/30 space-y-1.5 text-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-1.5">
+                          <div className="flex items-center gap-1.5 font-bold">
+                            <Shirt className="w-3.5 h-3.5 text-purple-400" />
+                            <span className="text-white">تشكيل المباراة:</span>
+                            <span className="text-emerald-300 font-mono">{starters.length} أساسي</span>
+                            <span className="text-slate-400">•</span>
+                            <span className="text-slate-300 font-mono">{bench.length} بديل</span>
+                          </div>
+
+                          {isMeStarter && (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>أنت لاعب أساسي 🟢</span>
+                            </span>
+                          )}
+                          {isMeBench && (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black flex items-center gap-1">
+                              <span>🟡 أنت على دكة البدلاء</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}
