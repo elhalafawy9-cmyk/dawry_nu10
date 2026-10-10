@@ -27,12 +27,15 @@ import {
   XCircle,
   Bell,
   AlertTriangle,
-  Send
+  Send,
+  Camera,
+  Image as ImageIcon
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Match, Team } from '../App';
 import { Player, MatchSubstitution, MatchCardEvent, CardType, MAX_SUBS_PER_TEAM, PlayerRegistrationRequest } from '../utils/roster';
 import { MatchScheduleNotification } from '../utils/notifications';
+import { ImageUploadModal } from './ImageUploadModal';
 
 interface TeamManagerPortalPageProps {
   teams: Team[];
@@ -50,6 +53,8 @@ interface TeamManagerPortalPageProps {
   onRequestEditPlayer?: (req: Omit<PlayerRegistrationRequest, 'id' | 'requestedAt' | 'status'>) => void;
   onOpenApprovalsModal?: () => void;
   onOpenAllAlertsModal?: () => void;
+  onUpdateTeamLogo?: (teamName: string, newLogoUrl: string) => void;
+  onUpdatePlayerPhoto?: (teamName: string, playerId: string, newPhotoUrl: string) => void;
 }
 
 export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
@@ -68,6 +73,8 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
   onRequestEditPlayer,
   onOpenApprovalsModal,
   onOpenAllAlertsModal,
+  onUpdateTeamLogo,
+  onUpdatePlayerPhoto,
 }) => {
   // Currently selected team that the manager is managing (locked to assignedTeamName if not admin)
   const initialTeam = (!isAdmin && assignedTeamName) ? assignedTeamName : (teams[0]?.name || 'برشلونة');
@@ -82,6 +89,23 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
   // Sub-tabs: 'squad_builder' | 'match_lineup' | 'bulk_paste' | 'registration_requests' | 'match_alerts'
   const [subTab, setSubTab] = useState<'squad_builder' | 'match_lineup' | 'bulk_paste' | 'registration_requests' | 'match_alerts'>('squad_builder');
 
+  // Photo & Logo Upload Modal Configuration
+  const [uploadModalConfig, setUploadModalConfig] = useState<{
+    isOpen: boolean;
+    type: 'player' | 'team';
+    title: string;
+    subtitle?: string;
+    currentImageUrl?: string;
+    entityName: string;
+    badgeNumberOrGroup?: string;
+    targetPlayerId?: string;
+  }>({
+    isOpen: false,
+    type: 'team',
+    title: '',
+    entityName: '',
+  });
+
   // Modal / Inline Add Player State
   const [isAddingPlayer, setIsAddingPlayer] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
@@ -91,6 +115,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
     number: number;
     position: 'GK' | 'DEF' | 'MID' | 'FWD';
     isCaptain: boolean;
+    photoUrl: string;
     editReason: string;
   }>({
     name: '',
@@ -98,6 +123,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
     number: 10,
     position: 'MID',
     isCaptain: false,
+    photoUrl: '',
     editReason: '',
   });
 
@@ -262,6 +288,31 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
     alert(`تم اعتماد وحفظ تشكيل وتبديلات وبطاقات ${managedTeamName} لمباراة ${activeMatch.teamA} ضد ${activeMatch.teamB} بنجاح! 📋✨`);
   };
 
+  // Photo Modal Save Handler
+  const handleSaveModalImage = (newUrl: string) => {
+    if (uploadModalConfig.type === 'team') {
+      if (onUpdateTeamLogo) {
+        onUpdateTeamLogo(managedTeamName, newUrl);
+      } else {
+        const updatedTeams = teams.map(t => t.name === managedTeamName ? { ...t, logoUrl: newUrl || undefined } : t);
+        try {
+          localStorage.setItem('dawry_teams_custom_v1', JSON.stringify(updatedTeams));
+        } catch {}
+      }
+      confetti({ particleCount: 30, spread: 50 });
+      alert(`تم تحديث شعار فريق (${managedTeamName}) بنجاح! 🏆✨`);
+    } else if (uploadModalConfig.type === 'player' && uploadModalConfig.targetPlayerId) {
+      if (onUpdatePlayerPhoto) {
+        onUpdatePlayerPhoto(managedTeamName, uploadModalConfig.targetPlayerId, newUrl);
+      } else {
+        const updated = currentSquad.map(p => p.id === uploadModalConfig.targetPlayerId ? { ...p, photoUrl: newUrl || undefined } : p);
+        onUpdateSquads({ ...squads, [managedTeamName]: updated });
+      }
+      confetti({ particleCount: 30, spread: 50 });
+      alert(`تم تحديث صورة اللاعب بنجاح! 📸✅`);
+    }
+  };
+
   // Player Save
   const handleSavePlayer = (e: React.FormEvent) => {
     e.preventDefault();
@@ -269,7 +320,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
 
     if (editingPlayer) {
       if (isAdmin) {
-        // ADMIN DIRECT EDIT: Admin can directly edit name, student ID, number, position, and captain status!
+        // ADMIN DIRECT EDIT: Admin can directly edit name, student ID, number, position, photo, and captain status!
         const updated = currentSquad.map(p => {
           if (p.id === editingPlayer.id) {
             return {
@@ -279,6 +330,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
               number: Number(playerForm.number),
               position: playerForm.position,
               isCaptain: playerForm.isCaptain,
+              photoUrl: playerForm.photoUrl || p.photoUrl,
               isIdentityLocked: true, // محمي ومقفل
             };
           }
@@ -287,9 +339,9 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
         onUpdateSquads({ ...squads, [managedTeamName]: updated });
         setIsAddingPlayer(false);
         setEditingPlayer(null);
-        setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, editReason: '' });
+        setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
         confetti({ particleCount: 30, spread: 40 });
-        alert(`تم تعديل بيانات اللاعب (${playerForm.name.trim()}) مباشرة بصلاحية الأدمن 👑🔒`);
+        alert(`تم تعديل بيانات وصورة اللاعب (${playerForm.name.trim()}) مباشرة بصلاحية الأدمن 👑🔒`);
       } else {
         // TEAM MANAGER / NON-ADMIN:
         // Must send an Edit Request to Admin for approval!
@@ -303,6 +355,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
             playerNumber: Number(playerForm.number),
             playerPosition: playerForm.position,
             isCaptain: playerForm.isCaptain,
+            photoUrl: playerForm.photoUrl || editingPlayer.photoUrl,
             editReason: playerForm.editReason.trim() || 'طلب تعديل بيانات اللاعب الرسمية',
             originalPlayer: {
               name: editingPlayer.name,
@@ -310,13 +363,14 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
               number: editingPlayer.number,
               position: editingPlayer.position,
               isCaptain: editingPlayer.isCaptain,
+              photoUrl: editingPlayer.photoUrl,
             },
             requestedBy: managerName || `مسؤول فريق ${managedTeamName}`,
           });
         }
         setIsAddingPlayer(false);
         setEditingPlayer(null);
-        setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, editReason: '' });
+        setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
       }
     } else {
       // Adding new player:
@@ -336,12 +390,13 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
             playerPosition: playerForm.position,
             isCaptain: playerForm.isCaptain,
             studentId: playerForm.studentId.trim(),
+            photoUrl: playerForm.photoUrl || undefined,
             requestedBy: managerName || `مسؤول فريق ${managedTeamName}`,
           });
         }
         setIsAddingPlayer(false);
         setEditingPlayer(null);
-        setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, editReason: '' });
+        setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
         alert(`تم إرسال طلب قيد اللاعب (${playerForm.name}) والـ ID (${playerForm.studentId}) لمدير البطولة (Admin) للموافقة عليه واعتماده رسمياً! ⏳🔒`);
       } else {
         // ADMIN: Can directly add and lock identity
@@ -352,12 +407,13 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
           number: Number(playerForm.number),
           position: playerForm.position,
           isCaptain: playerForm.isCaptain,
+          photoUrl: playerForm.photoUrl || undefined,
           isIdentityLocked: true,
         };
         onUpdateSquads({ ...squads, [managedTeamName]: [...currentSquad, newP] });
         setIsAddingPlayer(false);
         setEditingPlayer(null);
-        setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, editReason: '' });
+        setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
         confetti({ particleCount: 40, spread: 50 });
         alert(`تمت إضافة اللاعب (${newP.name}) واعتماد رقمه الجامعي (${newP.studentId}) رسمياً مع قفل الهوية 🔒✅`);
       }
@@ -536,15 +592,42 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
             </div>
           )}
 
-          {/* Active Team Badge */}
+          {/* Active Team Badge & Change Logo Button */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-            <div className={`w-3.5 h-3.5 rounded-full bg-gradient-to-tr ${managedTeam.logoColor}`} />
+            <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${managedTeam.logoColor} flex items-center justify-center overflow-hidden shrink-0 border border-white/10 shadow-sm`}>
+              {managedTeam.logoUrl ? (
+                <img src={managedTeam.logoUrl} alt={managedTeam.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[11px] font-black text-white">{managedTeam.name.charAt(0)}</span>
+              )}
+            </div>
             <span className="text-slate-400">المجموعة:</span>
             <strong className="text-emerald-400 font-mono">{managedTeam.group}</strong>
             <span className="text-slate-600">|</span>
-            <span className="text-slate-400">اللاعبين المسجلين:</span>
+            <span className="text-slate-400">اللاعبين:</span>
             <strong className="text-white font-mono">{currentSquad.length}</strong>
           </div>
+
+          {/* Edit Team Logo Button (Admin or Team Manager can do it!) */}
+          <button
+            type="button"
+            onClick={() => {
+              setUploadModalConfig({
+                isOpen: true,
+                type: 'team',
+                title: `شعار وصورة فريق: ${managedTeamName}`,
+                subtitle: 'رفع شعار أو صورة رسمية للفريق لعرضها في جداول المباريات وترتيب المجموعات',
+                currentImageUrl: managedTeam.logoUrl || '',
+                entityName: managedTeamName,
+                badgeNumberOrGroup: `المجموعة ${managedTeam.group}`,
+              });
+            }}
+            className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-bold text-xs flex items-center gap-1.5 border border-amber-500/40 transition-all cursor-pointer shadow-sm"
+            title="إضافة أو تعديل شعار وصورة الفريق"
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span>شعار الفريق 📷</span>
+          </button>
         </div>
 
         {/* Sub-Tabs Switcher */}
@@ -774,6 +857,66 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                   </label>
                 </div>
 
+                {/* Player Photo Section in Form */}
+                <div className="md:col-span-4 bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-teal-300 flex items-center gap-1.5">
+                      <Camera className="w-4 h-4 text-teal-400" />
+                      <span>صورة اللاعب الرسمية (اختياري):</span>
+                    </label>
+                    {playerForm.photoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setPlayerForm(prev => ({ ...prev, photoUrl: '' }))}
+                        className="text-[11px] text-rose-400 hover:text-rose-300 font-bold cursor-pointer"
+                      >
+                        إزالة الصورة ✕
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-full bg-slate-900 border-2 border-slate-700 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                      {playerForm.photoUrl ? (
+                        <img src={playerForm.photoUrl} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <Shirt className="w-6 h-6 text-slate-500" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUploadModalConfig({
+                            isOpen: true,
+                            type: 'player',
+                            title: `صورة اللاعب: ${playerForm.name || 'لاعب جديد'}`,
+                            subtitle: 'رفع صورة شخصية أو اختيار نموذج مقترح',
+                            currentImageUrl: playerForm.photoUrl || '',
+                            entityName: playerForm.name || 'لاعب جديد',
+                            badgeNumberOrGroup: `#${playerForm.number}`,
+                            targetPlayerId: '__FORM__',
+                          });
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl bg-teal-500/20 hover:bg-teal-500 text-teal-300 hover:text-slate-950 font-bold text-xs flex items-center gap-1.5 border border-teal-500/40 transition-colors cursor-pointer shadow-sm"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>{playerForm.photoUrl ? 'تغيير الصورة 📷' : 'رفع / اختيار صورة للاعب 📷'}</span>
+                      </button>
+
+                      <input
+                        type="url"
+                        placeholder="أو الصق رابط صورة (URL) مباشر..."
+                        value={playerForm.photoUrl}
+                        onChange={(e) => setPlayerForm(prev => ({ ...prev, photoUrl: e.target.value }))}
+                        className="flex-1 min-w-[200px] bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 font-mono text-left"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Reason for modification (When editing and not admin) */}
                 {editingPlayer && !isAdmin && (
                   <div className="md:col-span-4 space-y-1 bg-slate-950/60 p-3 rounded-xl border border-indigo-500/30">
@@ -864,9 +1007,23 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                   className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-md transition-all group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center font-mono font-black text-emerald-400 text-base shadow-inner">
-                      {player.number}
+                    {/* Player Photo Avatar */}
+                    <div className="relative shrink-0">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden shadow-inner ring-1 ring-slate-800">
+                        {player.photoUrl ? (
+                          <img src={player.photoUrl} alt={player.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-emerald-400 font-mono font-black text-xs">
+                            <Shirt className="w-4 h-4 text-emerald-500/60 mb-0.5" />
+                            <span>{player.number}</span>
+                          </div>
+                        )}
+                      </div>
+                      <span className="absolute -bottom-1 -right-1 px-1.5 py-0.2 rounded-md bg-emerald-500 text-slate-950 font-mono font-black text-[9px] shadow">
+                        #{player.number}
+                      </span>
                     </div>
+
                     <div>
                       <strong className="text-sm font-bold text-white block group-hover:text-emerald-300 transition-colors">
                         {player.name}
@@ -904,6 +1061,27 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1">
+                    {/* Quick Player Photo Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUploadModalConfig({
+                          isOpen: true,
+                          type: 'player',
+                          title: `صورة اللاعب: ${player.name}`,
+                          subtitle: `فريق ${managedTeamName} • رقم #${player.number} (${player.position})`,
+                          currentImageUrl: player.photoUrl || '',
+                          entityName: player.name,
+                          badgeNumberOrGroup: `#${player.number}`,
+                          targetPlayerId: player.id,
+                        });
+                      }}
+                      className="p-2 rounded-xl text-teal-400 hover:text-white hover:bg-teal-950/50 transition-all cursor-pointer border border-teal-500/20"
+                      title="إضافة أو تغيير صورة اللاعب 📷"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                    </button>
+
                     <button
                       onClick={() => {
                         setEditingPlayer(player);
@@ -913,6 +1091,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                           number: player.number,
                           position: player.position,
                           isCaptain: !!player.isCaptain,
+                          photoUrl: player.photoUrl || '',
                           editReason: '',
                         });
                         setIsAddingPlayer(true);
@@ -1619,6 +1798,25 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Photo & Logo Upload Modal (For Team Logo or Player Photo) */}
+      <ImageUploadModal
+        isOpen={uploadModalConfig.isOpen}
+        onClose={() => setUploadModalConfig(prev => ({ ...prev, isOpen: false }))}
+        type={uploadModalConfig.type}
+        title={uploadModalConfig.title}
+        subtitle={uploadModalConfig.subtitle}
+        currentImageUrl={uploadModalConfig.currentImageUrl}
+        entityName={uploadModalConfig.entityName}
+        badgeNumberOrGroup={uploadModalConfig.badgeNumberOrGroup}
+        onSave={(newUrl) => {
+          if (uploadModalConfig.targetPlayerId === '__FORM__') {
+            setPlayerForm(prev => ({ ...prev, photoUrl: newUrl }));
+          } else {
+            handleSaveModalImage(newUrl);
+          }
+        }}
+      />
 
     </div>
   );

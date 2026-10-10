@@ -18,7 +18,10 @@ import {
   ArrowRightLeft,
   Edit3,
   Shirt,
-  Lock
+  Lock,
+  X,
+  Eye,
+  Info
 } from 'lucide-react';
 import { Match, Team } from '../App';
 import { Player } from '../utils/roster';
@@ -57,6 +60,7 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
   const [statusFilter, setStatusFilter] = useState<'all' | 'live' | 'upcoming' | 'finished'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>('all');
+  const [selectedMatchForDetails, setSelectedMatchForDetails] = useState<Match | null>(null);
   const [myFavoriteTeams, setMyFavoriteTeams] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('my_fav_teams');
@@ -177,6 +181,31 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
         <div className="absolute bottom-0 left-1/4 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
       </div>
 
+      {/* Exclusive Admin Notice Banner (Only shown to Admin) */}
+      {isAdmin && (
+        <div className="bg-gradient-to-r from-amber-950/60 via-slate-900 to-amber-950/40 border-2 border-amber-500/60 rounded-2xl p-4 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/25 text-amber-300 flex items-center justify-center shrink-0 border border-amber-500/40 shadow-inner">
+              <Shield className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <strong className="text-white font-black text-sm">أنت مسجل بصفتك الأدمن (Admin 👑)</strong>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px]">
+                  صلاحيات التحكم الكاملة
+                </span>
+              </div>
+              <p className="text-slate-300 mt-1 leading-relaxed text-xs">
+                أنت فقط بصفتك الأدمن يمكنك من صفحة المتفرجين الدخول على أي ماتش وتعديل النتيجة، تسجيل الأهداف، وتعديل المواعيد والتشكيلات. المشجعون واللاعبون يرون الصفحة للعرض والمتابعة فقط 🔒
+              </p>
+            </div>
+          </div>
+          <div className="px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-[11px] font-bold shrink-0">
+            🔒 تعديل النتائج حصري للأدمن
+          </div>
+        </div>
+      )}
+
       {/* Official Schedule & Venue Alerts Announcements for Spectators */}
       {matchAlerts.length > 0 && (
         <div className="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-3.5 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
@@ -252,6 +281,18 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
                   <p className="text-[11px] text-amber-300/90 text-center mt-2 bg-slate-950/60 py-1 px-2 rounded-lg border border-slate-800 line-clamp-1">
                     ⚽ {m.scorersSummary}
                   </p>
+                )}
+
+                {isAdmin && onEditResult && (
+                  <button
+                    type="button"
+                    onClick={() => onEditResult(m)}
+                    className="mt-3 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-emerald-600/30 hover:scale-[1.02]"
+                    title="تعديل النتيجة المباشرة وتسجيل الأهداف"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>تعديل النتيجة المباشرة والأهداف ⚽ (أدمن 👑)</span>
+                  </button>
                 )}
               </div>
             ))}
@@ -415,19 +456,28 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
                       {match.group && <span className="text-slate-500 font-mono">(المجموعة {match.group})</span>}
                     </span>
 
-                    {match.status === 'live' ? (
-                      <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white font-bold text-[10px] animate-pulse">
-                        مباشر {match.minute ? `(${match.minute}')` : ''}
-                      </span>
-                    ) : match.status === 'finished' ? (
-                      <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-bold text-[10px] border border-slate-700">
-                        انتهت ✅
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/30 font-bold text-[10px]">
-                        مباراة قادمة ⏳
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {isAdmin && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black flex items-center gap-1">
+                          <Shield className="w-2.5 h-2.5 text-amber-400" />
+                          <span>تحكم أدمن 👑</span>
+                        </span>
+                      )}
+
+                      {match.status === 'live' ? (
+                        <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white font-bold text-[10px] animate-pulse">
+                          مباشر {match.minute ? `(${match.minute}')` : ''}
+                        </span>
+                      ) : match.status === 'finished' ? (
+                        <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-bold text-[10px] border border-slate-700">
+                          انتهت ✅
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/30 font-bold text-[10px]">
+                          مباراة قادمة ⏳
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Middle Match Body: Teams & Score */}
@@ -447,29 +497,37 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
                       {/* Score or VS */}
                       <div 
                         onClick={() => {
-                          if (isAdmin && onEditResult) onEditResult(match);
+                          if (isAdmin && onEditResult) {
+                            onEditResult(match);
+                          } else {
+                            setSelectedMatchForDetails(match);
+                          }
                         }}
-                        className={`shrink-0 text-center px-2 ${isAdmin ? 'cursor-pointer group' : ''}`}
-                        title={isAdmin ? 'اضغط لتعديل نتيجة المباراة وتسجيل الأهداف كـ Admin 👑' : undefined}
+                        className="shrink-0 text-center px-2 cursor-pointer group"
+                        title={isAdmin ? 'اضغط لتعديل نتيجة المباراة وتسجيل الأهداف كـ Admin 👑' : 'اضغط لعرض تفاصيل المباراة'}
                       >
                         {match.status === 'finished' || match.status === 'live' ? (
                           <div className={`px-4 py-2 bg-slate-950 rounded-2xl border font-mono font-black text-2xl shadow-inner transition-all ${
                             isAdmin 
-                              ? 'border-amber-500/50 group-hover:border-emerald-400 group-hover:bg-slate-900 text-emerald-400' 
-                              : 'border-slate-800 text-emerald-400'
+                              ? 'border-amber-500/60 group-hover:border-emerald-400 group-hover:bg-slate-900 text-emerald-400 ring-1 ring-amber-500/30' 
+                              : 'border-slate-800 group-hover:border-sky-500/50 text-emerald-400'
                           }`}>
                             <div>{match.scoreA ?? 0} - {match.scoreB ?? 0}</div>
-                            {isAdmin && (
+                            {isAdmin ? (
                               <span className="block text-[9px] text-amber-400 font-sans font-bold group-hover:text-emerald-300">
-                                تعديل النتيجة ✎
+                                تعديل النتيجة ✎ (أدمن)
+                              </span>
+                            ) : (
+                              <span className="block text-[8px] text-slate-500 font-sans group-hover:text-sky-300">
+                                تفاصيل الماتش 👁️
                               </span>
                             )}
                           </div>
                         ) : (
                           <div className={`w-10 h-10 rounded-2xl bg-slate-950 border flex items-center justify-center font-black text-xs shadow-inner transition-all ${
                             isAdmin 
-                              ? 'border-amber-500/50 text-amber-400 group-hover:border-emerald-400 group-hover:text-emerald-300' 
-                              : 'border-slate-800 text-slate-400'
+                              ? 'border-amber-500/60 text-amber-400 group-hover:border-emerald-400 group-hover:text-emerald-300 ring-1 ring-amber-500/30' 
+                              : 'border-slate-800 text-slate-400 group-hover:border-sky-500/50 group-hover:text-white'
                           }`}>
                             {isAdmin ? '✎' : 'VS'}
                           </div>
@@ -615,8 +673,8 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
                   </div>
 
                   {/* EXCLUSIVE ADMIN CONTROLS (Only visible to Admin) */}
-                  {isAdmin && (
-                    <div className="p-3 bg-slate-950 border-t border-amber-500/40 flex flex-wrap items-center justify-between gap-2 bg-gradient-to-r from-amber-950/25 via-slate-950 to-slate-950">
+                  {isAdmin ? (
+                    <div className="p-3 bg-slate-950 border-t border-amber-500/40 flex flex-wrap items-center justify-between gap-2 bg-gradient-to-r from-amber-950/30 via-slate-950 to-slate-950">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black flex items-center gap-1">
                           <Shield className="w-3 h-3 text-amber-400" />
@@ -658,19 +716,44 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
                             <span>تنبيه 📢</span>
                           </button>
                         )}
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMatchForDetails(match)}
+                          className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer border border-slate-700"
+                          title="عرض تفاصيل التشكيل والبطاقات والأحداث"
+                        >
+                          <Eye className="w-3 h-3 text-sky-400" />
+                          <span>تفاصيل</span>
+                        </button>
                       </div>
 
                       {onEditResult && (
                         <button
                           type="button"
                           onClick={() => onEditResult(match)}
-                          className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-emerald-600/30 hover:scale-105"
-                          title="تسجيل أو تعديل نتيجة المباراة والأهداف والأسيستات"
+                          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-emerald-600/40 hover:scale-105 ring-1 ring-emerald-400/50"
+                          title="الدخول للمباراة وتعديل النتيجة والأهداف"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
-                          <span>{match.status === 'finished' ? 'تعديل النتيجة ✎' : 'تسجيل النتيجة ⚽'}</span>
+                          <span>{match.status === 'finished' ? 'الدخول وتعديل النتيجة ✎ (أدمن 👑)' : 'الدخول وتسجيل النتيجة ⚽ (أدمن 👑)'}</span>
                         </button>
                       )}
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-slate-950/70 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+                        <Lock className="w-3 h-3 text-slate-500" />
+                        <span>متابعة المشجعين • معتمدة</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedMatchForDetails(match)}
+                        className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-sky-400 hover:text-sky-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-800"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>عرض تفاصيل الماتش</span>
+                      </button>
                     </div>
                   )}
 
@@ -680,6 +763,306 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
           </div>
         )}
       </div>
+
+      {/* MATCH DETAILS MODAL (Available to view for everyone, editable ONLY by Admin) */}
+      {selectedMatchForDetails && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+            {/* Modal Header */}
+            <div className="p-4 md:p-5 border-b border-slate-800 flex items-center justify-between gap-3 bg-slate-950/60 sticky top-0 z-10 backdrop-blur-md">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm md:text-base font-black text-white flex items-center gap-2">
+                    <span>{selectedMatchForDetails.stageName}</span>
+                    {selectedMatchForDetails.group && (
+                      <span className="text-xs text-slate-400 font-mono">(المجموعة {selectedMatchForDetails.group})</span>
+                    )}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    بطاقة المباراة وتفاصيل التشكيل والنتائج المعتمدة
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedMatchForDetails(null)}
+                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-5">
+              {/* Scoreboard Banner */}
+              <div className="bg-gradient-to-b from-slate-950 to-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
+                <div className="flex items-center justify-around gap-4 py-2">
+                  <div className="flex-1 text-center space-y-1">
+                    <strong className="text-base font-black text-white block">{selectedMatchForDetails.teamA}</strong>
+                    <span className="text-[10px] text-slate-400">الفريق الأول</span>
+                  </div>
+
+                  <div className="shrink-0 px-5 py-2.5 bg-slate-950 border border-emerald-500/40 rounded-2xl font-mono font-black text-2xl text-emerald-400 shadow-inner">
+                    {selectedMatchForDetails.status === 'upcoming' 
+                      ? 'VS' 
+                      : `${selectedMatchForDetails.scoreA ?? 0} - ${selectedMatchForDetails.scoreB ?? 0}`}
+                  </div>
+
+                  <div className="flex-1 text-center space-y-1">
+                    <strong className="text-base font-black text-white block">{selectedMatchForDetails.teamB}</strong>
+                    <span className="text-[10px] text-slate-400">الفريق الثاني</span>
+                  </div>
+                </div>
+
+                {/* Match Status & Timing */}
+                <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-300">
+                  <span className="flex items-center gap-1 text-sky-400 font-bold">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {selectedMatchForDetails.date || 'سيحدد لاحقاً'}
+                  </span>
+                  <span className="flex items-center gap-1 text-amber-400 font-bold">
+                    <Clock className="w-3.5 h-3.5" />
+                    {selectedMatchForDetails.time || '—'}
+                  </span>
+                  <span className="flex items-center gap-1 text-emerald-400 font-bold">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {selectedMatchForDetails.pitch || 'الملعب الرئيسي'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-bold">
+                    {selectedMatchForDetails.status === 'live' 
+                      ? `مباشر (${selectedMatchForDetails.minute || 45}')` 
+                      : selectedMatchForDetails.status === 'finished' 
+                      ? 'انتهت رسمياً ✅' 
+                      : 'قادمة ⏳'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Scorers Summary if any */}
+              {selectedMatchForDetails.scorersSummary && (
+                <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-1 text-xs">
+                  <strong className="text-amber-400 flex items-center gap-1 font-black">
+                    ⚽ مسجلو الأهداف وصناع اللعب:
+                  </strong>
+                  <p className="text-slate-300 leading-relaxed text-xs">
+                    {selectedMatchForDetails.scorersSummary}
+                  </p>
+                </div>
+              )}
+
+              {/* Cards & Substitutions */}
+              {((selectedMatchForDetails.cards && selectedMatchForDetails.cards.length > 0) || 
+                (selectedMatchForDetails.substitutions && selectedMatchForDetails.substitutions.length > 0)) && (
+                <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-3 text-xs">
+                  <strong className="text-slate-300 font-black flex items-center gap-1">
+                    ⚡ وقائع وأحداث المباراة:
+                  </strong>
+
+                  {/* Cards */}
+                  {selectedMatchForDetails.cards && selectedMatchForDetails.cards.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] text-slate-400 font-bold">الإنذارات والبطاقات:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedMatchForDetails.cards.map(c => (
+                          <span
+                            key={c.id}
+                            className={`px-2 py-1 rounded-lg border text-xs font-bold flex items-center gap-1.5 ${
+                              c.cardType === 'yellow'
+                                ? 'bg-amber-400/15 text-amber-300 border-amber-400/30'
+                                : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                            }`}
+                          >
+                            <span>{c.cardType === 'yellow' ? '🟨' : c.cardType === 'second_yellow' ? '🟨🟥' : '🟥'}</span>
+                            <span>{c.playerName} ({c.team})</span>
+                            <span className="font-mono text-slate-400">د{c.minute}'</span>
+                            {c.reason && <span className="text-slate-400 text-[10px]">[{c.reason}]</span>}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Substitutions */}
+                  {selectedMatchForDetails.substitutions && selectedMatchForDetails.substitutions.length > 0 && (
+                    <div className="space-y-1.5 pt-2 border-t border-slate-800/60">
+                      <span className="text-[11px] text-slate-400 font-bold">التبديلات الرسمية:</span>
+                      <div className="space-y-1">
+                        {selectedMatchForDetails.substitutions.map(sub => (
+                          <div key={sub.id} className="flex items-center justify-between text-xs bg-slate-900/60 px-2.5 py-1.5 rounded-lg">
+                            <span className="font-mono text-amber-400 font-bold">د{sub.minute}' ({sub.team})</span>
+                            <div className="flex items-center gap-2 font-bold">
+                              <span className="text-emerald-400">🟢 {sub.playerIn}</span>
+                              <span className="text-slate-500">⮂</span>
+                              <span className="text-rose-400">🔴 {sub.playerOut}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Lineups if available */}
+              {selectedMatchForDetails.lineups && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {/* Team A Lineup */}
+                  <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 space-y-2">
+                    <strong className="text-sky-400 block font-black border-b border-slate-800 pb-1">
+                      تشكيل {selectedMatchForDetails.teamA}
+                    </strong>
+                    <div>
+                      <span className="text-[10px] text-emerald-400 font-bold block mb-1">الأساسيون (🟢):</span>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedMatchForDetails.lineups.teamAStarters?.map(name => (
+                          <span key={name} className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-200 text-[11px]">
+                            {name}
+                          </span>
+                        )) || <span className="text-slate-500 text-[10px]">لم يحدد بعد</span>}
+                      </div>
+                    </div>
+                    {selectedMatchForDetails.lineups.teamABench && selectedMatchForDetails.lineups.teamABench.length > 0 && (
+                      <div className="pt-1.5 border-t border-slate-800/60">
+                        <span className="text-[10px] text-slate-400 font-bold block mb-1">البدلاء (🟡):</span>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedMatchForDetails.lineups.teamABench.map(name => (
+                            <span key={name} className="px-1.5 py-0.5 rounded bg-slate-900/60 text-slate-400 text-[10px]">
+                              {name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Team B Lineup */}
+                  <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 space-y-2">
+                    <strong className="text-emerald-400 block font-black border-b border-slate-800 pb-1">
+                      تشكيل {selectedMatchForDetails.teamB}
+                    </strong>
+                    <div>
+                      <span className="text-[10px] text-emerald-400 font-bold block mb-1">الأساسيون (🟢):</span>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedMatchForDetails.lineups.teamBStarters?.map(name => (
+                          <span key={name} className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-200 text-[11px]">
+                            {name}
+                          </span>
+                        )) || <span className="text-slate-500 text-[10px]">لم يحدد بعد</span>}
+                      </div>
+                    </div>
+                    {selectedMatchForDetails.lineups.teamBBench && selectedMatchForDetails.lineups.teamBBench.length > 0 && (
+                      <div className="pt-1.5 border-t border-slate-800/60">
+                        <span className="text-[10px] text-slate-400 font-bold block mb-1">البدلاء (🟡):</span>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedMatchForDetails.lineups.teamBBench.map(name => (
+                            <span key={name} className="px-1.5 py-0.5 rounded bg-slate-900/60 text-slate-400 text-[10px]">
+                              {name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* EXCLUSIVE ADMIN CONTROLS IN MODAL (Only for Admin) */}
+              {isAdmin ? (
+                <div className="p-4 bg-gradient-to-r from-amber-950/40 via-slate-950 to-amber-950/30 border-2 border-amber-500/50 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-amber-400" />
+                      <strong className="text-white text-xs font-black">تحكم الأدمن 👑 (أنت فقط صاحب الصلاحية)</strong>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+                      صلاحيات التعديل
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {onEditResult && (
+                      <button
+                        onClick={() => {
+                          const m = selectedMatchForDetails;
+                          setSelectedMatchForDetails(null);
+                          onEditResult(m);
+                        }}
+                        className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                        <span>تعديل النتيجة وتسجيل الأهداف ⚽</span>
+                      </button>
+                    )}
+
+                    {onEditSchedule && (
+                      <button
+                        onClick={() => {
+                          const m = selectedMatchForDetails;
+                          setSelectedMatchForDetails(null);
+                          onEditSchedule(m);
+                        }}
+                        className="py-2.5 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer border border-slate-700"
+                      >
+                        <Clock className="w-3.5 h-3.5 text-sky-400" />
+                        <span>تعديل الميعاد</span>
+                      </button>
+                    )}
+
+                    {onEditLineup && (
+                      <button
+                        onClick={() => {
+                          const m = selectedMatchForDetails;
+                          setSelectedMatchForDetails(null);
+                          onEditLineup(m);
+                        }}
+                        className="py-2.5 px-3.5 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer border border-purple-500/30"
+                      >
+                        <Shirt className="w-3.5 h-3.5 text-purple-400" />
+                        <span>التشكيل</span>
+                      </button>
+                    )}
+
+                    {onSendAlert && (
+                      <button
+                        onClick={() => {
+                          const m = selectedMatchForDetails;
+                          setSelectedMatchForDetails(null);
+                          onSendAlert(m);
+                        }}
+                        className="py-2.5 px-3.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer border border-blue-500/30"
+                      >
+                        <Bell className="w-3.5 h-3.5 text-blue-400" />
+                        <span>إرسال تنبيه</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-3.5 h-3.5 text-slate-500" />
+                    <span>وضع المشاهدة فقط • تعديل النتائج والأهداف متاح حصرياً للأدمن (Admin 👑)</span>
+                  </div>
+                  <span className="text-[11px] text-emerald-400 font-mono">البيانات معتمدة</span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-end">
+              <button
+                onClick={() => setSelectedMatchForDetails(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                إغلاق النافذة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

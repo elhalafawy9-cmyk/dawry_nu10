@@ -46,7 +46,9 @@ import {
   generateInitialSquads,
   PlayerRegistrationRequest,
   loadStoredPlayerRequests,
-  saveStoredPlayerRequests
+  saveStoredPlayerRequests,
+  loadStoredSquads,
+  saveStoredSquads
 } from './utils/roster';
 import { 
   Trophy, 
@@ -105,6 +107,7 @@ export interface Team {
   gd: number;
   points: number;
   logoColor: string;
+  logoUrl?: string; // رابط أو صورة شعار الفريق
 }
 
 export interface Match {
@@ -376,13 +379,22 @@ export default function App() {
   const isSpectator = effectiveRole === 'spectator';
 
   // Data States
-  const [teams, setTeams] = useState<Team[]>(INITIAL_TEAMS);
+  const [teams, setTeams] = useState<Team[]>(() => {
+    try {
+      const raw = localStorage.getItem('dawry_teams_custom_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_TEAMS;
+  });
   const [matches, setMatches] = useState<Match[]>(INITIAL_MATCHES);
   const [scorekeepers, setScorekeepers] = useState<Scorekeeper[]>(INITIAL_SCOREKEEPERS);
 
   // Squads State (all 48 teams players)
   const [squads, setSquads] = useState<Record<string, Player[]>>(() => {
-    return generateInitialSquads(INITIAL_TEAMS.map(t => t.name));
+    return loadStoredSquads(INITIAL_TEAMS.map(t => t.name));
   });
 
   // Player Registration Requests State (طلبات قيد وتسجيل اللاعبين من مسؤولي الفرق)
@@ -885,6 +897,32 @@ export default function App() {
 
     confetti({ particleCount: 70, spread: 80 });
     alert(`تم اعتماد وقبول جميع الطلبات المعلقة (${pending.length} طلبات) رسمياً مع قفل الهوية والـ ID 🔒🎉`);
+  };
+
+  // --- PHOTO & LOGO MANAGEMENT HANDLERS (ADMIN & TEAM MANAGER) ---
+  const handleUpdateTeamLogo = (teamName: string, newLogoUrl: string) => {
+    setTeams(prev => {
+      const updated = prev.map(t => t.name === teamName ? { ...t, logoUrl: newLogoUrl.trim() || undefined } : t);
+      try {
+        localStorage.setItem('dawry_teams_custom_v1', JSON.stringify(updated));
+      } catch (err) {
+        console.warn('Failed to save team logo to storage', err);
+      }
+      return updated;
+    });
+    confetti({ particleCount: 40, spread: 60 });
+    alert(`تم تحديث شعار وصورة فريق (${teamName}) بنجاح! 🏆✨`);
+  };
+
+  const handleUpdatePlayerPhoto = (teamName: string, playerId: string, newPhotoUrl: string) => {
+    setSquads(prev => {
+      const teamSquad = prev[teamName] || [];
+      const updatedSquad = teamSquad.map(p => p.id === playerId ? { ...p, photoUrl: newPhotoUrl.trim() || undefined } : p);
+      const next = { ...prev, [teamName]: updatedSquad };
+      saveStoredSquads(next);
+      return next;
+    });
+    confetti({ particleCount: 30, spread: 50 });
   };
 
   // Open Round Matchup Organizer
@@ -2404,6 +2442,14 @@ export default function App() {
             teams={teams}
             squads={squads}
             matchAlerts={matchAlerts}
+            isAdmin={isAdmin}
+            onEditResult={(match) => handleOpenResultModal(match)}
+            onEditSchedule={(match) => handleOpenScheduleModal(match)}
+            onEditLineup={(match) => setEditingLineupMatch(match)}
+            onSendAlert={(match) => {
+              setAlertComposerMatch(match);
+              setIsAlertComposerOpen(true);
+            }}
             onOpenAllAlertsModal={() => setIsAlertsListOpen(true)}
             onSelectTeamForSquadView={(teamName) => {
               setCurrentTab('teams_roster');
