@@ -28,6 +28,7 @@ import { Match, Team } from '../App';
 import { AppUser } from '../utils/auth';
 import { Player, MatchSubstitution, MatchCardEvent, CardType, MAX_SUBS_PER_TEAM, PlayerRegistrationRequest } from '../utils/roster';
 import { ImageUploadModal } from './ImageUploadModal';
+import { TeamLogo } from '../utils/teamLogos';
 
 interface TeamsRosterPageProps {
   teams: Team[];
@@ -558,13 +559,7 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className={`w-8 h-8 rounded-xl bg-gradient-to-tr ${t.logoColor} flex items-center justify-center font-black text-xs text-white shadow overflow-hidden shrink-0 border border-white/10`}>
-                        {t.logoUrl ? (
-                          <img src={t.logoUrl} alt={t.name} className="w-full h-full object-cover" />
-                        ) : (
-                          t.name.charAt(0)
-                        )}
-                      </div>
+                      <TeamLogo teamName={t.name} logoUrl={t.logoUrl} size="md" />
                       <div>
                         <strong className="text-xs md:text-sm font-bold text-white block">{t.name}</strong>
                         <span className="text-[10px] text-slate-400">المجموعة {t.group} • {squadCount} لاعبين</span>
@@ -587,13 +582,7 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
           {/* Active Team Header Bar */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
-              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-tr ${activeTeam?.logoColor || 'from-emerald-600 to-teal-500'} flex items-center justify-center font-black text-2xl text-white shadow-xl ring-2 ring-white/10 overflow-hidden shrink-0`}>
-                {activeTeam?.logoUrl ? (
-                  <img src={activeTeam.logoUrl} alt={activeTeam?.name} className="w-full h-full object-cover" />
-                ) : (
-                  activeTeam?.name.charAt(0)
-                )}
-              </div>
+              <TeamLogo teamName={activeTeam?.name || ''} logoUrl={activeTeam?.logoUrl} size="xl" className="ring-2 ring-white/10" />
               <div>
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-xs font-bold border border-teal-500/30">

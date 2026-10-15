@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Match, Team } from '../App';
 import { calculateTournamentTopScorers, PlayerScorer } from '../utils/scorers';
+import { TeamLogo } from '../utils/teamLogos';
 
 interface TopScorersTabProps {
   matches: Match[];
@@ -202,7 +203,10 @@ export const TopScorersTab: React.FC<TopScorersTabProps> = ({
                 <h4 className="text-lg font-black text-white hover:text-amber-300 transition-colors cursor-pointer" onClick={() => setExpandedPlayerName(scorers[0].name)}>
                   {scorers[0].name}
                 </h4>
-                <p className="text-xs text-slate-400 mt-0.5">{scorers[0].team}</p>
+                <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 mt-0.5">
+                  <TeamLogo teamName={scorers[0].team} size="xs" />
+                  <span>{scorers[0].team}</span>
+                </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-around">
                   <div>
@@ -229,7 +233,10 @@ export const TopScorersTab: React.FC<TopScorersTabProps> = ({
                 <h4 className="text-base font-black text-white hover:text-emerald-300 transition-colors cursor-pointer" onClick={() => setExpandedPlayerName(scorers[1].name)}>
                   {scorers[1].name}
                 </h4>
-                <p className="text-xs text-slate-400 mt-0.5">{scorers[1].team}</p>
+                <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 mt-0.5">
+                  <TeamLogo teamName={scorers[1].team} size="xs" />
+                  <span>{scorers[1].team}</span>
+                </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-around">
                   <div>
@@ -256,7 +263,10 @@ export const TopScorersTab: React.FC<TopScorersTabProps> = ({
                 <h4 className="text-base font-black text-white hover:text-amber-300 transition-colors cursor-pointer" onClick={() => setExpandedPlayerName(scorers[2].name)}>
                   {scorers[2].name}
                 </h4>
-                <p className="text-xs text-slate-400 mt-0.5">{scorers[2].team}</p>
+                <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 mt-0.5">
+                  <TeamLogo teamName={scorers[2].team} size="xs" />
+                  <span>{scorers[2].team}</span>
+                </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-around">
                   <div>
@@ -455,9 +465,7 @@ export const TopScorersTab: React.FC<TopScorersTabProps> = ({
                             className="inline-flex items-center gap-1.5 text-slate-300 hover:text-emerald-300 font-medium transition-colors cursor-pointer group"
                             title={`عرض مباريات فريق ${player.team}`}
                           >
-                            <div className={`w-5 h-5 rounded-md bg-gradient-to-tr ${player.teamLogoColor || 'from-emerald-600 to-teal-500'} flex items-center justify-center font-bold text-[9px] text-white shrink-0`}>
-                              {player.team.charAt(0)}
-                            </div>
+                            <TeamLogo teamName={player.team} size="xs" />
                             <span className="group-hover:underline underline-offset-4">{player.team}</span>
                           </button>
                         </td>

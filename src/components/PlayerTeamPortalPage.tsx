@@ -24,6 +24,7 @@ import { AppUser } from '../utils/auth';
 import { Match, Team } from '../App';
 import { Player } from '../utils/roster';
 import { MatchScheduleNotification } from '../utils/notifications';
+import { TeamLogo } from '../utils/teamLogos';
 
 interface PlayerTeamPortalPageProps {
   currentUser: AppUser;
@@ -306,9 +307,7 @@ export const PlayerTeamPortalPage: React.FC<PlayerTeamPortalPageProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Team Card */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex items-center gap-3.5">
-          <div className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${myTeam.logoColor} flex items-center justify-center font-black text-lg text-white shadow-md shrink-0`}>
-            {myTeam.name.charAt(0)}
-          </div>
+          <TeamLogo teamName={myTeam.name} size="xl" />
           <div>
             <span className="text-[11px] text-slate-400 block">فريقك</span>
             <strong className="text-white text-base font-black">{myTeam.name}</strong>
@@ -425,9 +424,7 @@ export const PlayerTeamPortalPage: React.FC<PlayerTeamPortalPageProps> = ({
                   <div className="flex items-center justify-between py-1 px-2">
                     {/* My Team */}
                     <div className="flex-1 flex items-center gap-2">
-                      <div className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${myTeam.logoColor} flex items-center justify-center font-black text-xs text-white shrink-0`}>
-                        {playerTeamName.charAt(0)}
-                      </div>
+                      <TeamLogo teamName={playerTeamName} size="md" />
                       <div>
                         <strong className="text-white text-sm font-black block">{playerTeamName}</strong>
                         <span className="text-[10px] text-blue-400 font-bold">فريقك ⚽</span>
@@ -451,9 +448,7 @@ export const PlayerTeamPortalPage: React.FC<PlayerTeamPortalPageProps> = ({
                         <strong className="text-white text-sm font-black block">{opponent}</strong>
                         <span className="text-[10px] text-slate-400 font-medium">المنافس</span>
                       </div>
-                      <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center font-black text-xs text-slate-300 shrink-0">
-                        {opponent.charAt(0)}
-                      </div>
+                      <TeamLogo teamName={opponent} size="md" />
                     </div>
                   </div>
 

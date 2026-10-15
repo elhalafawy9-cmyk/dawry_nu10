@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Match, Team } from '../App';
 import { calculateTournamentStatsLeaders, PlayerScorer, PlayerPlaymaker, PlayerContribution } from '../utils/scorers';
+import { TeamLogo } from '../utils/teamLogos';
 
 interface StatsLeadersPageProps {
   matches: Match[];

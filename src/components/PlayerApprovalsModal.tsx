@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { PlayerRegistrationRequest } from '../utils/roster';
 import { Team } from '../App';
+import { TeamLogo } from '../utils/teamLogos';
 
 interface PlayerApprovalsModalProps {
   isOpen: boolean;
@@ -336,9 +337,7 @@ export const PlayerApprovalsModal: React.FC<PlayerApprovalsModalProps> = ({
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
                     {/* Team & Requester Info */}
                     <div className="flex items-center gap-2.5">
-                      <div className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${teamObj?.logoColor || 'from-emerald-500 to-teal-500'} flex items-center justify-center text-white font-black text-xs shadow shrink-0`}>
-                        {req.teamName.charAt(0)}
-                      </div>
+                      <TeamLogo teamName={req.teamName} size="md" />
                       <div>
                         <div className="flex items-center gap-2">
                           <strong className="text-white text-sm font-black">{req.teamName}</strong>

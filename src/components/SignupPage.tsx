@@ -63,6 +63,21 @@ export const SignupPage: React.FC<SignupPageProps> = ({
     'هيئة التدريس والموظفين',
   ];
 
+  // Set of teams that already have an approved or pending manager
+  const takenManagerTeams = new Set<string>();
+  users.forEach(u => {
+    if (u.role === 'team_manager' && u.managedTeamName) {
+      takenManagerTeams.add(u.managedTeamName.trim().toLowerCase());
+    }
+    if (u.requestedTeamName && u.managerApprovalStatus === 'pending') {
+      takenManagerTeams.add(u.requestedTeamName.trim().toLowerCase());
+    }
+  });
+
+  const availableTeamsForManager = teams.filter(
+    t => !takenManagerTeams.has(t.name.trim().toLowerCase())
+  );
+
   const filteredTeams = teams.filter(t => 
     t.name.toLowerCase().includes(teamSearch.toLowerCase()) || 
     `المجموعة ${t.group}`.includes(teamSearch)
@@ -119,7 +134,16 @@ export const SignupPage: React.FC<SignupPageProps> = ({
       return;
     }
 
-    if ((role === 'team_manager' || role === 'player') && !selectedTeam) {
+    if (role === 'team_manager') {
+      if (!selectedTeam) {
+        setError('يرجى اختيار الفريق التابع له');
+        return;
+      }
+      if (takenManagerTeams.has(selectedTeam.trim().toLowerCase())) {
+        setError(`عذراً، فريق [${selectedTeam}] محجوز بالفعل لمسؤول آخر! لا يمكن اختيار نفس الفريق لأكثر من مسؤول.`);
+        return;
+      }
+    } else if (role === 'player' && !selectedTeam) {
       setError('يرجى اختيار الفريق التابع له');
       return;
     }
@@ -365,12 +389,23 @@ export const SignupPage: React.FC<SignupPageProps> = ({
 
             {/* Team Picker for Player or Team Manager */}
             {(role === 'team_manager' || role === 'player') && (
-              <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-emerald-500/30 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <label className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-                    <Trophy className="w-3.5 h-3.5" />
-                    <span>اختر الفريق التابع له (من الـ 48 فريقاً) *</span>
-                  </label>
+              <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-emerald-500/30 space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      <Trophy className="w-3.5 h-3.5" />
+                      <span>
+                        {role === 'team_manager'
+                          ? 'اختر الفريق الذي ستقوم بإدارته (لا يمكن اختيار نفس الفريق لمسؤولَين) *'
+                          : 'اختر الفريق التابع له (من الـ 48 فريقاً) *'}
+                      </span>
+                    </label>
+                    {role === 'team_manager' && (
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        ⚡ اختر فريقاً متاحاً. يمكنك فور التسجيل تعديل وتغيير أسماء وبيانات اللاعبين بالكامل!
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     placeholder="بحث في الفرق..."
@@ -380,26 +415,54 @@ export const SignupPage: React.FC<SignupPageProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 max-h-32 overflow-y-auto p-1 border border-slate-800 rounded-xl">
-                  {filteredTeams.map(t => (
-                    <button
-                      key={t.name}
-                      type="button"
-                      onClick={() => setSelectedTeam(t.name)}
-                      className={`p-2 rounded-lg text-xs font-bold text-right flex items-center justify-between transition-colors cursor-pointer ${
-                        selectedTeam === t.name
-                          ? 'bg-emerald-600 text-white shadow-sm'
-                          : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
-                      }`}
-                    >
-                      <span className="truncate">{t.name}</span>
-                      <span className="text-[9px] opacity-70">مج {t.group}</span>
-                    </button>
-                  ))}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 max-h-40 overflow-y-auto p-1.5 border border-slate-800 rounded-xl bg-slate-900/40">
+                  {filteredTeams.map(t => {
+                    const isTaken = role === 'team_manager' && takenManagerTeams.has(t.name.trim().toLowerCase());
+                    const isSelected = selectedTeam === t.name;
+
+                    if (isTaken) {
+                      return (
+                        <div
+                          key={t.name}
+                          className="p-2 rounded-lg text-xs font-bold text-right flex items-center justify-between bg-slate-950/70 border border-slate-800/80 text-slate-500 opacity-60 cursor-not-allowed select-none"
+                          title="هذا الفريق محجوز بالفعل لمسؤول آخر ولا يمكن اختياره"
+                        >
+                          <span className="truncate line-through">{t.name}</span>
+                          <span className="text-[9px] text-rose-400/90 font-mono">محجوز 🔒</span>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={t.name}
+                        type="button"
+                        onClick={() => setSelectedTeam(t.name)}
+                        className={`p-2 rounded-lg text-xs font-bold text-right flex items-center justify-between transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white shadow-md ring-1 ring-emerald-400 font-black'
+                            : 'bg-slate-900 text-slate-200 hover:bg-slate-800 border border-slate-800'
+                        }`}
+                      >
+                        <span className="truncate">{t.name}</span>
+                        <span className={`text-[9px] ${isSelected ? 'text-emerald-200' : 'text-emerald-400/80'}`}>
+                          متاح 🟢
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-                <p className="text-[11px] text-slate-400">
-                  الفريق المختار: <strong className="text-emerald-400">{selectedTeam}</strong>
-                </p>
+
+                <div className="flex items-center justify-between text-[11px] pt-1">
+                  <span className="text-slate-400">
+                    الفريق المختار: <strong className="text-emerald-400 text-xs font-black">{selectedTeam || 'لم يتم الاختيار بعد'}</strong>
+                  </span>
+                  {role === 'team_manager' && (
+                    <span className="text-amber-400/90 font-medium text-[10px]">
+                      {availableTeamsForManager.length} فريقاً متاحاً للإدارة
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 

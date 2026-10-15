@@ -37,6 +37,7 @@ import { Match, Team } from '../App';
 import { Player, MatchSubstitution, MatchCardEvent, CardType, MAX_SUBS_PER_TEAM, PlayerRegistrationRequest } from '../utils/roster';
 import { MatchScheduleNotification } from '../utils/notifications';
 import { ImageUploadModal } from './ImageUploadModal';
+import { TeamLogo } from '../utils/teamLogos';
 
 interface TeamManagerPortalPageProps {
   teams: Team[];
@@ -608,13 +609,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
 
           {/* Active Team Badge & Change Logo Button */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-            <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${managedTeam.logoColor} flex items-center justify-center overflow-hidden shrink-0 border border-white/10 shadow-sm`}>
-              {managedTeam.logoUrl ? (
-                <img src={managedTeam.logoUrl} alt={managedTeam.name} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-[11px] font-black text-white">{managedTeam.name.charAt(0)}</span>
-              )}
-            </div>
+            <TeamLogo teamName={managedTeam.name} logoUrl={managedTeam.logoUrl} size="sm" />
             <span className="text-slate-400">المجموعة:</span>
             <strong className="text-emerald-400 font-mono">{managedTeam.group}</strong>
             <span className="text-slate-600">|</span>

@@ -26,6 +26,7 @@ import {
 import { Match, Team } from '../App';
 import { Player } from '../utils/roster';
 import { MatchScheduleNotification } from '../utils/notifications';
+import { TeamLogo } from '../utils/teamLogos';
 
 interface SpectatorPortalPageProps {
   matches: Match[];
@@ -486,9 +487,7 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
                       
                       {/* Team A */}
                       <div className="flex-1 text-center space-y-1.5">
-                        <div className={`w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr ${teamAObj?.logoColor || 'from-blue-600 to-indigo-600'} flex items-center justify-center text-white font-black text-sm shadow-md`}>
-                          {match.teamA.slice(0, 2)}
-                        </div>
+                        <TeamLogo teamName={match.teamA} size="xl" className="mx-auto" />
                         <strong className="text-sm font-black text-white block truncate" title={match.teamA}>
                           {match.teamA}
                         </strong>
@@ -536,9 +535,7 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
 
                       {/* Team B */}
                       <div className="flex-1 text-center space-y-1.5">
-                        <div className={`w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr ${teamBObj?.logoColor || 'from-emerald-600 to-teal-600'} flex items-center justify-center text-white font-black text-sm shadow-md`}>
-                          {match.teamB.slice(0, 2)}
-                        </div>
+                        <TeamLogo teamName={match.teamB} size="xl" className="mx-auto" />
                         <strong className="text-sm font-black text-white block truncate" title={match.teamB}>
                           {match.teamB}
                         </strong>
@@ -800,7 +797,8 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
               {/* Scoreboard Banner */}
               <div className="bg-gradient-to-b from-slate-950 to-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
                 <div className="flex items-center justify-around gap-4 py-2">
-                  <div className="flex-1 text-center space-y-1">
+                  <div className="flex-1 text-center space-y-1.5">
+                    <TeamLogo teamName={selectedMatchForDetails.teamA} size="xl" className="mx-auto" />
                     <strong className="text-base font-black text-white block">{selectedMatchForDetails.teamA}</strong>
                     <span className="text-[10px] text-slate-400">الفريق الأول</span>
                   </div>
@@ -811,7 +809,8 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
                       : `${selectedMatchForDetails.scoreA ?? 0} - ${selectedMatchForDetails.scoreB ?? 0}`}
                   </div>
 
-                  <div className="flex-1 text-center space-y-1">
+                  <div className="flex-1 text-center space-y-1.5">
+                    <TeamLogo teamName={selectedMatchForDetails.teamB} size="xl" className="mx-auto" />
                     <strong className="text-base font-black text-white block">{selectedMatchForDetails.teamB}</strong>
                     <span className="text-[10px] text-slate-400">الفريق الثاني</span>
                   </div>

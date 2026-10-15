@@ -16,16 +16,130 @@ app.use(express.json({ limit: '10mb' }));
 const DATA_DIR = path.resolve(__dirname, 'data');
 const USERS_FILE = path.resolve(DATA_DIR, 'users.json');
 const SETTINGS_FILE = path.resolve(DATA_DIR, 'settings.json');
+const APPLICATIONS_FILE = path.resolve(DATA_DIR, 'applications.json');
+const SEASONS_FILE = path.resolve(DATA_DIR, 'seasons.json');
+const ARCHIVED_SEASONS_FILE = path.resolve(DATA_DIR, 'archived_seasons.json');
 
 interface AppSettings {
   isPlayerEditingOpen: boolean;
+  isRegistrationVisibleToPublic: boolean;
+  registrationDeadline?: string;
+  activeSeasonId: string;
+  currentSeasonName: string;
+  currentAcademicYear: string;
   updatedAt?: string;
   updatedBy?: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
-  isPlayerEditingOpen: true, // Default open as requested!
+  isPlayerEditingOpen: true,
+  isRegistrationVisibleToPublic: true, // Visible for registration by default!
+  registrationDeadline: '2026-11-30',
+  activeSeasonId: 'season_2026',
+  currentSeasonName: 'دوري جامعة النيل 2026 - النسخة الخامسة',
+  currentAcademicYear: '2025 / 2026',
 };
+
+export interface TeamApplication {
+  id: string;
+  teamName: string;
+  faculty: string;
+  captainName: string;
+  captainStudentId: string;
+  email: string;
+  phone: string;
+  playerCount: number;
+  primaryColor: string;
+  secondaryColor?: string;
+  logoUrl?: string;
+  notes?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+}
+
+export interface TournamentSeason {
+  id: string;
+  name: string;
+  year: string;
+  teamsCount: number;
+  status: 'active' | 'archived' | 'upcoming';
+  champion?: string;
+  runnerUp?: string;
+  createdAt: string;
+  archivedAt?: string;
+}
+
+const DEFAULT_SEASONS: TournamentSeason[] = [
+  {
+    id: 'season_2025',
+    name: 'دوري جامعة النيل 2025 - النسخة الرابعة',
+    year: '2024 / 2025',
+    teamsCount: 32,
+    status: 'archived',
+    champion: 'برشلونة (هندسة النيل)',
+    runnerUp: 'الاهلي (حاسبات ومعلومات)',
+    createdAt: '2024-10-01',
+    archivedAt: '2025-05-20',
+  },
+  {
+    id: 'season_2026',
+    name: 'دوري جامعة النيل 2026 - النسخة الخامسة (48 فريقاً)',
+    year: '2025 / 2026',
+    teamsCount: 48,
+    status: 'active',
+    createdAt: '2025-10-01',
+  },
+];
+
+const DEFAULT_APPLICATIONS: TeamApplication[] = [
+  {
+    id: 'app_101',
+    teamName: 'نسور الذكاء الاصطناعي (AI Eagles)',
+    faculty: 'كلية تكنولوجيا المعلومات وعلوم الحاسب',
+    captainName: 'ياسين كريم طارق',
+    captainStudentId: '20230912',
+    email: 'y.kareem@nu.edu.eg',
+    phone: '01023456789',
+    playerCount: 14,
+    primaryColor: '#0ea5e9',
+    secondaryColor: '#0369a1',
+    notes: 'فريق قسم الذكاء الاصطناعي وعلوم البيانات - جاهزون للمنافسة بالزي الكامل والكارنيهات الجامعية.',
+    status: 'pending',
+    submittedAt: '2026-10-12T14:30:00.000Z',
+  },
+  {
+    id: 'app_102',
+    teamName: 'رواد الأعمال (FinTech Tigers)',
+    faculty: 'كلية إدارة الأعمال والمالية',
+    captainName: 'عمر شريف الجابري',
+    captainStudentId: '20220411',
+    email: 'o.sherif@nu.edu.eg',
+    phone: '01122334455',
+    playerCount: 15,
+    primaryColor: '#f59e0b',
+    secondaryColor: '#1e293b',
+    notes: 'فريق طلاب إدارة الأعمال - متفرغون لمواعيد الملاعب الرسمية.',
+    status: 'pending',
+    submittedAt: '2026-10-13T09:15:00.000Z',
+  },
+  {
+    id: 'app_103',
+    teamName: 'محاربو الميكاترونكس (Mecha Warriors)',
+    faculty: 'كلية الهندسة والعلوم التطبيقية',
+    captainName: 'حازم ماجد عبد الله',
+    captainStudentId: '20210777',
+    email: 'h.maged@nu.edu.eg',
+    phone: '01298765432',
+    playerCount: 16,
+    primaryColor: '#10b981',
+    secondaryColor: '#064e3b',
+    notes: 'وصيف بطولة كليات الهندسة العام الماضي، نتعهد بالالتزام باللوائح والروح الرياضية.',
+    status: 'pending',
+    submittedAt: '2026-10-14T11:45:00.000Z',
+  },
+];
 
 function readSettings(): AppSettings {
   ensureDataDir();
@@ -49,6 +163,116 @@ function writeSettings(settings: AppSettings): void {
     console.error('Failed to write settings.json', e);
   }
 }
+
+function readApplications(): TeamApplication[] {
+  ensureDataDir();
+  try {
+    if (fs.existsSync(APPLICATIONS_FILE)) {
+      const raw = fs.readFileSync(APPLICATIONS_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn('Could not read applications.json', e);
+  }
+  writeApplications(DEFAULT_APPLICATIONS);
+  return DEFAULT_APPLICATIONS;
+}
+
+function writeApplications(apps: TeamApplication[]): void {
+  ensureDataDir();
+  try {
+    fs.writeFileSync(APPLICATIONS_FILE, JSON.stringify(apps, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to write applications.json', e);
+  }
+}
+
+function readSeasons(): TournamentSeason[] {
+  ensureDataDir();
+  try {
+    if (fs.existsSync(SEASONS_FILE)) {
+      const raw = fs.readFileSync(SEASONS_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn('Could not read seasons.json', e);
+  }
+  writeSeasons(DEFAULT_SEASONS);
+  return DEFAULT_SEASONS;
+}
+
+function writeSeasons(seasons: TournamentSeason[]): void {
+  ensureDataDir();
+  try {
+    fs.writeFileSync(SEASONS_FILE, JSON.stringify(seasons, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to write seasons.json', e);
+  }
+}
+
+export interface ArchivedSeasonSnapshot {
+  id: string;
+  seasonId: string;
+  seasonName: string;
+  year: string;
+  archivedAt: string;
+  archivedBy?: string;
+  champion?: string;
+  runnerUp?: string;
+  teamsCount: number;
+  matchesCount: number;
+  teams: any[];
+  matches?: any[];
+  scorersSummary?: string;
+}
+
+function readArchivedSnapshots(): ArchivedSeasonSnapshot[] {
+  ensureDataDir();
+  try {
+    if (fs.existsSync(ARCHIVED_SEASONS_FILE)) {
+      const raw = fs.readFileSync(ARCHIVED_SEASONS_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn('Could not read archived_seasons.json', e);
+  }
+  const defaultSnapshots: ArchivedSeasonSnapshot[] = [
+    {
+      id: 'snap_2025',
+      seasonId: 'season_2025',
+      seasonName: 'دوري جامعة النيل 2025 - النسخة الرابعة',
+      year: '2024 / 2025',
+      archivedAt: '2025-05-20T18:00:00.000Z',
+      champion: 'برشلونة (هندسة النيل)',
+      runnerUp: 'الاهلي (حاسبات ومعلومات)',
+      teamsCount: 32,
+      matchesCount: 64,
+      teams: [
+        { name: 'برشلونة (هندسة النيل)', points: 15, played: 5, won: 5, gf: 14, ga: 2, gd: 12 },
+        { name: 'الاهلي (حاسبات ومعلومات)', points: 13, played: 5, won: 4, gf: 11, ga: 3, gd: 8 },
+        { name: 'ريال مدريد (إدارة أعمال)', points: 10, played: 5, won: 3, gf: 9, ga: 5, gd: 4 },
+        { name: 'بايرن (تكنولوجيا حيوية)', points: 9, played: 5, won: 3, gf: 8, ga: 6, gd: 2 },
+      ],
+      scorersSummary: 'هداف البطولة: عمر النجار (8 أهداف) • أفضل صانع: زياد طارق (6 صناعات)',
+    },
+  ];
+  writeArchivedSnapshots(defaultSnapshots);
+  return defaultSnapshots;
+}
+
+function writeArchivedSnapshots(snapshots: ArchivedSeasonSnapshot[]): void {
+  ensureDataDir();
+  try {
+    fs.writeFileSync(ARCHIVED_SEASONS_FILE, JSON.stringify(snapshots, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to write archived_seasons.json', e);
+  }
+}
+
+
 
 const PERMANENT_ADMIN_EMAIL = 's.mohamed2442@nu.edu.eg';
 
@@ -623,9 +847,202 @@ app.post('/api/settings', (req: Request, res: Response) => {
     updatedAt: new Date().toISOString(),
   };
   writeSettings(updated);
-  console.log(`[SETTINGS] Updated settings: isPlayerEditingOpen = ${updated.isPlayerEditingOpen}`);
+  console.log(`[SETTINGS] Updated settings: isPlayerEditingOpen = ${updated.isPlayerEditingOpen}, isRegistrationVisibleToPublic = ${updated.isRegistrationVisibleToPublic}`);
   res.json({ success: true, settings: updated });
 });
+
+// 10. GET /api/applications - List all team registration applications
+app.get('/api/applications', (_req: Request, res: Response) => {
+  const apps = readApplications();
+  res.json({ success: true, applications: apps });
+});
+
+// 11. POST /api/applications - Submit a new team registration application
+app.post('/api/applications', (req: Request, res: Response) => {
+  const { 
+    teamName, 
+    faculty, 
+    captainName, 
+    captainStudentId, 
+    email, 
+    phone, 
+    playerCount, 
+    primaryColor, 
+    secondaryColor, 
+    logoUrl, 
+    notes 
+  } = req.body;
+
+  if (!teamName || !captainName || !email) {
+    return res.status(400).json({ success: false, error: 'اسم الفريق، اسم الكابتن، والبريد الإلكتروني مطلوبة' });
+  }
+
+  const apps = readApplications();
+  
+  // Check if team name already applied
+  const existing = apps.find(a => a.teamName.trim().toLowerCase() === teamName.trim().toLowerCase() && a.status !== 'rejected');
+  if (existing) {
+    return res.status(400).json({ success: false, error: 'يوجد استمارة تقديم سابقة مسجلة بهذا الاسم بالفعل' });
+  }
+
+  const newApp: TeamApplication = {
+    id: `app_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    teamName: teamName.trim(),
+    faculty: faculty?.trim() || 'كلية عامة / طلاب جامعة النيل',
+    captainName: captainName.trim(),
+    captainStudentId: captainStudentId?.trim() || '',
+    email: email.trim().toLowerCase(),
+    phone: phone?.trim() || '',
+    playerCount: Number(playerCount) || 12,
+    primaryColor: primaryColor || '#10b981',
+    secondaryColor: secondaryColor || '#064e3b',
+    logoUrl: logoUrl?.trim() || undefined,
+    notes: notes?.trim() || '',
+    status: 'pending',
+    submittedAt: new Date().toISOString(),
+  };
+
+  apps.unshift(newApp);
+  writeApplications(apps);
+  console.log(`[APPLICATION] New team application submitted: ${newApp.teamName} by ${newApp.captainName}`);
+  res.json({ success: true, application: newApp, applications: apps });
+});
+
+// 12. PATCH /api/applications/:id - Review and update application status (approve/reject)
+app.patch('/api/applications/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { status, reviewNotes } = req.body;
+
+  const apps = readApplications();
+  const index = apps.findIndex(a => a.id === id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, error: 'الاستمارة غير موجودة' });
+  }
+
+  if (status && ['pending', 'approved', 'rejected'].includes(status)) {
+    apps[index].status = status;
+    apps[index].reviewedAt = new Date().toISOString();
+    if (reviewNotes !== undefined) {
+      apps[index].reviewNotes = reviewNotes;
+    }
+  }
+
+  writeApplications(apps);
+  console.log(`[APPLICATION] Application ${id} (${apps[index].teamName}) updated to status: ${status}`);
+  res.json({ success: true, application: apps[index], applications: apps });
+});
+
+// 13. GET /api/seasons - List tournament seasons
+app.get('/api/seasons', (_req: Request, res: Response) => {
+  const seasons = readSeasons();
+  const settings = readSettings();
+  res.json({ success: true, seasons, activeSeasonId: settings.activeSeasonId });
+});
+
+// 14. POST /api/seasons - Create a new tournament season / league edition
+app.post('/api/seasons', (req: Request, res: Response) => {
+  const { name, year, teamsCount, archivePrevious } = req.body;
+
+  if (!name || !year) {
+    return res.status(400).json({ success: false, error: 'اسم الموسم والعام الأكاديمي مطلوبان' });
+  }
+
+  const seasons = readSeasons();
+  const settings = readSettings();
+
+  // If archiving previous season
+  if (archivePrevious) {
+    seasons.forEach(s => {
+      if (s.id === settings.activeSeasonId) {
+        s.status = 'archived';
+        s.archivedAt = new Date().toISOString();
+      }
+    });
+  }
+
+  const newSeason: TournamentSeason = {
+    id: `season_${Date.now()}`,
+    name: name.trim(),
+    year: year.trim(),
+    teamsCount: Number(teamsCount) || 48,
+    status: 'active',
+    createdAt: new Date().toISOString(),
+  };
+
+  seasons.unshift(newSeason);
+  writeSeasons(seasons);
+
+  // Update active season in settings
+  settings.activeSeasonId = newSeason.id;
+  settings.currentSeasonName = newSeason.name;
+  settings.currentAcademicYear = newSeason.year;
+  writeSettings(settings);
+
+  console.log(`[SEASON] New season launched: ${newSeason.name} (${newSeason.year})`);
+  res.json({ success: true, season: newSeason, seasons, settings });
+});
+
+// 15. POST /api/seasons/switch - Switch active season
+app.post('/api/seasons/switch', (req: Request, res: Response) => {
+  const { seasonId } = req.body;
+  const seasons = readSeasons();
+  const target = seasons.find(s => s.id === seasonId);
+  if (!target) {
+    return res.status(404).json({ success: false, error: 'الموسم غير موجود' });
+  }
+
+  const settings = readSettings();
+  settings.activeSeasonId = target.id;
+  settings.currentSeasonName = target.name;
+  settings.currentAcademicYear = target.year;
+  writeSettings(settings);
+
+  res.json({ success: true, activeSeason: target, settings });
+});
+
+// 16. GET /api/seasons/archive - Get all archived season snapshots
+app.get('/api/seasons/archive', (_req: Request, res: Response) => {
+  const snapshots = readArchivedSnapshots();
+  res.json({ success: true, snapshots });
+});
+
+// 17. POST /api/seasons/archive - Save a complete snapshot of the season in the database
+app.post('/api/seasons/archive', (req: Request, res: Response) => {
+  const { 
+    seasonId, 
+    seasonName, 
+    year, 
+    champion, 
+    runnerUp, 
+    teams, 
+    matches, 
+    scorersSummary, 
+    archivedBy 
+  } = req.body;
+
+  const snapshots = readArchivedSnapshots();
+  const newSnapshot: ArchivedSeasonSnapshot = {
+    id: `snap_${Date.now()}`,
+    seasonId: seasonId || `season_${Date.now()}`,
+    seasonName: seasonName || 'موسم مؤرشف',
+    year: year || '2025 / 2026',
+    archivedAt: new Date().toISOString(),
+    archivedBy: archivedBy || 'admin',
+    champion: champion || 'لم يحدد بعد',
+    runnerUp: runnerUp || 'لم يحدد بعد',
+    teamsCount: Array.isArray(teams) ? teams.length : 48,
+    matchesCount: Array.isArray(matches) ? matches.length : 152,
+    teams: Array.isArray(teams) ? teams : [],
+    matches: Array.isArray(matches) ? matches : [],
+    scorersSummary: scorersSummary || '',
+  };
+
+  snapshots.unshift(newSnapshot);
+  writeArchivedSnapshots(snapshots);
+  console.log(`[SEASON] Archived snapshot saved for season: ${newSnapshot.seasonName} (${newSnapshot.year})`);
+  res.json({ success: true, snapshot: newSnapshot, snapshots });
+});
+
 
 // -------------------------------------------------------------
 // VITE DEV SERVER / STATIC PRODUCTION SERVING

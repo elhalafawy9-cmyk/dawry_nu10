@@ -1,0 +1,47 @@
+[
+  {
+    "id": "app_101",
+    "teamName": "نسور الذكاء الاصطناعي (AI Eagles)",
+    "faculty": "كلية تكنولوجيا المعلومات وعلوم الحاسب",
+    "captainName": "ياسين كريم طارق",
+    "captainStudentId": "20230912",
+    "email": "y.kareem@nu.edu.eg",
+    "phone": "01023456789",
+    "playerCount": 14,
+    "primaryColor": "#0ea5e9",
+    "secondaryColor": "#0369a1",
+    "notes": "فريق قسم الذكاء الاصطناعي وعلوم البيانات - جاهزون للمنافسة بالزي الكامل والكارنيهات الجامعية.",
+    "status": "pending",
+    "submittedAt": "2026-10-12T14:30:00.000Z"
+  },
+  {
+    "id": "app_102",
+    "teamName": "رواد الأعمال (FinTech Tigers)",
+    "faculty": "كلية إدارة الأعمال والمالية",
+    "captainName": "عمر شريف الجابري",
+    "captainStudentId": "20220411",
+    "email": "o.sherif@nu.edu.eg",
+    "phone": "01122334455",
+    "playerCount": 15,
+    "primaryColor": "#f59e0b",
+    "secondaryColor": "#1e293b",
+    "notes": "فريق طلاب إدارة الأعمال - متفرغون لمواعيد الملاعب الرسمية.",
+    "status": "pending",
+    "submittedAt": "2026-10-13T09:15:00.000Z"
+  },
+  {
+    "id": "app_103",
+    "teamName": "محاربو الميكاترونكس (Mecha Warriors)",
+    "faculty": "كلية الهندسة والعلوم التطبيقية",
+    "captainName": "حازم ماجد عبد الله",
+    "captainStudentId": "20210777",
+    "email": "h.maged@nu.edu.eg",
+    "phone": "01298765432",
+    "playerCount": 16,
+    "primaryColor": "#10b981",
+    "secondaryColor": "#064e3b",
+    "notes": "وصيف بطولة كليات الهندسة العام الماضي، نتعهد بالالتزام باللوائح والروح الرياضية.",
+    "status": "pending",
+    "submittedAt": "2026-10-14T11:45:00.000Z"
+  }
+]

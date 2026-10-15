@@ -33,6 +33,7 @@ import confetti from 'canvas-confetti';
 import { AppUser } from '../utils/auth';
 import { Team } from '../App';
 import { formatTimeAgoArabic } from '../utils/apiSync';
+import { TeamLogo } from '../utils/teamLogos';
 
 interface AssignTeamManagersPageProps {
   teams: Team[];
@@ -585,9 +586,7 @@ export const AssignTeamManagersPage: React.FC<AssignTeamManagersPageProps> = ({
                   >
                     <div className="flex items-center justify-between gap-1">
                       <div className="flex items-center gap-1.5 truncate">
-                        <div className={`w-5 h-5 rounded-md bg-gradient-to-tr ${t.logoColor} flex items-center justify-center font-black text-[9px] text-white shrink-0`}>
-                          {t.name.charAt(0)}
-                        </div>
+                        <TeamLogo teamName={t.name} size="xs" />
                         <span className={`text-xs font-black truncate ${isSelected ? 'text-emerald-300' : 'text-white'}`}>
                           {t.name}
                         </span>
@@ -760,9 +759,7 @@ export const AssignTeamManagersPage: React.FC<AssignTeamManagersPageProps> = ({
                     {/* Team Name & Logo */}
                     <td className="p-3.5 pr-5">
                       <div className="flex items-center gap-2.5">
-                        <div className={`w-8 h-8 rounded-xl bg-gradient-to-tr ${team.logoColor} flex items-center justify-center font-black text-xs text-white shadow-sm shrink-0`}>
-                          {team.name.charAt(0)}
-                        </div>
+                        <TeamLogo teamName={team.name} size="md" />
                         <div>
                           <strong className="text-white text-xs md:text-sm font-black block">{team.name}</strong>
                           <span className="text-[10px] text-slate-400 font-bold bg-slate-950 px-1.5 py-0.2 rounded border border-slate-800">

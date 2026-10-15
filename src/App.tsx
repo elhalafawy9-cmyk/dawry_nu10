@@ -15,6 +15,7 @@ import { MatchAlertComposerModal } from './components/MatchAlertComposerModal';
 import { MatchAlertsListModal } from './components/MatchAlertsListModal';
 import { MatchLineupModal } from './components/MatchLineupModal';
 import { AssignTeamManagersPage } from './components/AssignTeamManagersPage';
+import { LeagueRegistrationPage } from './components/LeagueRegistrationPage';
 import { 
   fetchServerUsers, 
   recordUserEnter, 
@@ -28,8 +29,21 @@ import {
   getLocalSettings,
   saveLocalSettings,
   fetchServerSettings,
-  updateServerSettings
+  updateServerSettings,
+  getLocalApplications,
+  fetchServerApplications,
+  getLocalSeasons,
+  fetchServerSeasons,
+  TeamApplication,
+  TournamentSeason,
+  ArchivedSeasonSnapshot,
+  fetchServerArchivedSnapshots,
+  getLocalArchivedSnapshots,
+  saveLocalArchivedSnapshots,
+  archiveSeasonOnServer,
+  createServerSeason,
 } from './utils/apiSync';
+import { TeamLogo, getTeamLogoUrl } from './utils/teamLogos';
 import { 
   MatchScheduleNotification, 
   loadStoredMatchAlerts, 
@@ -165,7 +179,7 @@ export interface Scorekeeper {
 }
 
 // Initial 48 Teams across 8 groups (A to H) - 6 teams in each group
-const INITIAL_TEAMS: Team[] = [
+const RAW_INITIAL_TEAMS: Team[] = [
 // Group A (المجموعة A)
   { id: 't1', name: 'برشلونة', group: 'A', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-blue-600 to-red-600' },
   { id: 't2', name: 'انجلترا', group: 'A', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-red-600 to-slate-200' },
@@ -230,6 +244,11 @@ const INITIAL_TEAMS: Team[] = [
   { id: 't47', name: 'المكسيك', group: 'H', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-emerald-700 to-red-600' },
   { id: 't48', name: 'البرتغال', group: 'H', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-red-600 to-emerald-600' },
 ];
+
+export const INITIAL_TEAMS: Team[] = RAW_INITIAL_TEAMS.map(t => ({
+  ...t,
+  logoUrl: t.logoUrl || getTeamLogoUrl(t.name) || undefined,
+}));
 
 // Helper to build all 120 group stage matches (15 matches across 5 rounds for each of the 8 groups)
 // Every team plays exactly 5 matches within its group
@@ -374,7 +393,7 @@ const INITIAL_SCOREKEEPERS: Scorekeeper[] = [
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<
-    'matches_control' | 'spectator_portal' | 'team_manager' | 'my_team' | 'users_directory' | 'assign_managers' | 'groups' | 'bracket' | 'teams_roster' | 'stats_leaders' | 'manage'
+    'matches_control' | 'spectator_portal' | 'team_manager' | 'my_team' | 'users_directory' | 'assign_managers' | 'groups' | 'bracket' | 'teams_roster' | 'stats_leaders' | 'manage' | 'league_registration'
   >('matches_control');
   
   // Auth & Nile University Users State
@@ -404,10 +423,40 @@ export default function App() {
     return getLocalSettings().isPlayerEditingOpen;
   });
 
+  // League Registration Portal & Annual Season Management State
+  const [isLeagueRegistrationVisible, setIsLeagueRegistrationVisible] = useState<boolean>(() => {
+    return getLocalSettings().isRegistrationVisibleToPublic !== false;
+  });
+  const [isLeagueRegistrationOpen, setIsLeagueRegistrationOpen] = useState<boolean>(() => {
+    return getLocalSettings().isRegistrationOpen !== false;
+  });
+  const [applications, setApplications] = useState<TeamApplication[]>(() => getLocalApplications());
+  const [seasons, setSeasons] = useState<TournamentSeason[]>(() => getLocalSeasons());
+  const [activeSeasonId, setActiveSeasonId] = useState<string>(() => getLocalSettings().activeSeasonId || 'season_2026');
+  const [currentSeasonName, setCurrentSeasonName] = useState<string>(() => getLocalSettings().currentSeasonName || 'دوري جامعة النيل 2026/2027 (48 فريقاً)');
+  const [currentAcademicYear, setCurrentAcademicYear] = useState<string>(() => getLocalSettings().currentAcademicYear || '2026 / 2027');
+
+  // Archived Seasons Snapshots in Database
+  const [archivedSnapshots, setArchivedSnapshots] = useState<ArchivedSeasonSnapshot[]>(() => getLocalArchivedSnapshots());
+
+  // Admin New Season & Archive Modals
+  const [isAdminNewSeasonModalOpen, setIsAdminNewSeasonModalOpen] = useState<boolean>(false);
+  const [isAdminArchiveModalOpen, setIsAdminArchiveModalOpen] = useState<boolean>(false);
+  const [adminNewSeasonForm, setAdminNewSeasonForm] = useState({
+    name: `دوري جامعة النيل ${new Date().getFullYear() + 1} - النسخة السادسة`,
+    year: `${new Date().getFullYear()} / ${new Date().getFullYear() + 1}`,
+    teamsCount: 48,
+    archivePrevious: true,
+    champion: '',
+    runnerUp: '',
+  });
+  const [isStartingSeasonInAdmin, setIsStartingSeasonInAdmin] = useState<boolean>(false);
+
   const handleTogglePlayerEditing = async (nextState?: boolean) => {
     const updatedValue = typeof nextState === 'boolean' ? nextState : !isPlayerEditingOpen;
     setIsPlayerEditingOpen(updatedValue);
     saveLocalSettings({
+      ...getLocalSettings(),
       isPlayerEditingOpen: updatedValue,
       updatedBy: currentUser?.email || 'admin',
       updatedAt: new Date().toISOString(),
@@ -421,6 +470,267 @@ export default function App() {
       console.warn('Failed to sync settings to server', e);
     }
     confetti({ particleCount: 35, spread: 45 });
+  };
+
+  const handleToggleRegistrationVisible = async (nextState?: boolean) => {
+    const updatedValue = typeof nextState === 'boolean' ? nextState : !isLeagueRegistrationVisible;
+    setIsLeagueRegistrationVisible(updatedValue);
+    saveLocalSettings({
+      ...getLocalSettings(),
+      isRegistrationVisibleToPublic: updatedValue,
+      updatedBy: currentUser?.email || 'admin',
+      updatedAt: new Date().toISOString(),
+    });
+    try {
+      await updateServerSettings({
+        isRegistrationVisibleToPublic: updatedValue,
+        updatedBy: currentUser?.email || 'admin',
+      });
+    } catch (e) {
+      console.warn('Failed to sync registration visibility to server', e);
+    }
+    confetti({ particleCount: 35, spread: 45 });
+  };
+
+  const handleToggleRegistrationOpen = async (nextState?: boolean) => {
+    const updatedValue = typeof nextState === 'boolean' ? nextState : !isLeagueRegistrationOpen;
+    setIsLeagueRegistrationOpen(updatedValue);
+    saveLocalSettings({
+      ...getLocalSettings(),
+      isRegistrationOpen: updatedValue,
+      updatedBy: currentUser?.email || 'admin',
+      updatedAt: new Date().toISOString(),
+    });
+    try {
+      await updateServerSettings({
+        isRegistrationOpen: updatedValue,
+        updatedBy: currentUser?.email || 'admin',
+      });
+    } catch (e) {
+      console.warn('Failed to sync registration open state to server', e);
+    }
+    confetti({ particleCount: 35, spread: 45 });
+  };
+
+  const handleRefreshApplications = async () => {
+    try {
+      const serverApps = await fetchServerApplications();
+      if (serverApps) setApplications(serverApps);
+    } catch (e) {
+      console.warn('Failed to refresh applications', e);
+    }
+  };
+
+  const handleRefreshSeasons = async () => {
+    try {
+      const res = await fetchServerSeasons();
+      if (res && res.seasons) {
+        setSeasons(res.seasons);
+        if (res.activeSeasonId) setActiveSeasonId(res.activeSeasonId);
+      }
+    } catch (e) {
+      console.warn('Failed to refresh seasons', e);
+    }
+  };
+
+  const handleAddTeamToTournament = (teamData: { name: string; group: string; logoColor?: string }) => {
+    setTeams((prev) => {
+      if (prev.some((t) => t.name.trim().toLowerCase() === teamData.name.trim().toLowerCase())) {
+        return prev;
+      }
+      const newTeam: Team = {
+        id: `t_${Date.now()}`,
+        name: teamData.name.trim(),
+        group: teamData.group || 'A',
+        played: 0,
+        won: 0,
+        drawn: 0,
+        lost: 0,
+        gf: 0,
+        ga: 0,
+        gd: 0,
+        points: 0,
+        logoColor: teamData.logoColor || 'from-emerald-600 to-teal-500',
+      };
+      const updated = [...prev, newTeam];
+      try {
+        localStorage.setItem('dawry_teams_custom_v1', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    setSquads((prev) => {
+      if (prev[teamData.name]) return prev;
+      const updated = {
+        ...prev,
+        [teamData.name]: [
+          {
+            id: `p_${Date.now()}_1`,
+            name: `كابتن ${teamData.name}`,
+            number: 10,
+            position: 'وسط' as any,
+            studentId: '20240001',
+            isCaptain: true,
+            isIdentityLocked: true,
+          },
+        ],
+      };
+      saveStoredSquads(updated);
+      return updated;
+    });
+  };
+
+  const handleAssignTeamManagerFromApplication = (userEmail: string, teamName: string) => {
+    const targetUser = users.find((u) => u.email.toLowerCase() === userEmail.toLowerCase());
+    if (targetUser) {
+      const updated = users.map((u) =>
+        u.id === targetUser.id
+          ? { ...u, role: 'team_manager' as UserRole, managedTeamName: teamName }
+          : u
+      );
+      setUsers(updated);
+      saveStoredUsers(updated);
+      try {
+        assignTeamManagerOnServer({ email: targetUser.email, teamName });
+      } catch {}
+    }
+  };
+
+  const handleRefreshArchivedSnapshots = async () => {
+    try {
+      const serverSnaps = await fetchServerArchivedSnapshots();
+      if (serverSnaps) setArchivedSnapshots(serverSnaps);
+    } catch (e) {
+      console.warn('Failed to refresh archived snapshots', e);
+    }
+  };
+
+  const handleUpdateSquadFromRegistration = (teamName: string, updatedSquad: Player[]) => {
+    setSquads((prev) => {
+      const updated = {
+        ...prev,
+        [teamName]: updatedSquad,
+      };
+      saveStoredSquads(updated);
+      return updated;
+    });
+  };
+
+  const handleStartNewSeasonZeroPoints = async (seasonData: {
+    name: string;
+    year: string;
+    teamsCount: number;
+    archivePrevious: boolean;
+    champion?: string;
+    runnerUp?: string;
+  }) => {
+    setIsStartingSeasonInAdmin(true);
+    try {
+      // 1. If archivePrevious is requested, archive current season
+      if (seasonData.archivePrevious) {
+        const finalMatch = matches.find(m => m.id === 'fin');
+        let detectedChamp = seasonData.champion?.trim();
+        let detectedRunner = seasonData.runnerUp?.trim();
+        if (!detectedChamp && finalMatch && finalMatch.scoreA !== null && finalMatch.scoreB !== null) {
+          if (finalMatch.scoreA > finalMatch.scoreB) {
+            detectedChamp = finalMatch.teamA;
+            detectedRunner = finalMatch.teamB;
+          } else if (finalMatch.scoreB > finalMatch.scoreA) {
+            detectedChamp = finalMatch.teamB;
+            detectedRunner = finalMatch.teamA;
+          }
+        }
+
+        try {
+          await archiveSeasonOnServer({
+            seasonId: activeSeasonId,
+            seasonName: currentSeasonName,
+            year: currentAcademicYear,
+            champion: detectedChamp || 'لم يحدد بعد',
+            runnerUp: detectedRunner || 'لم يحدد بعد',
+            teams: teams,
+            matches: matches,
+            scorersSummary: `${tournamentStatsData.topScorers.slice(0, 3).map(s => `${s.name} (${s.teamName}) - ${s.goals} أهداف`).join(' · ')}`,
+            archivedBy: currentUser?.email || 'admin',
+          });
+          await handleRefreshArchivedSnapshots();
+        } catch (e) {
+          console.warn('Failed to archive season on server', e);
+        }
+      }
+
+      // 2. Create new season on server
+      try {
+        const res = await createServerSeason({
+          name: seasonData.name,
+          year: seasonData.year,
+          teamsCount: seasonData.teamsCount,
+          archivePrevious: seasonData.archivePrevious,
+        });
+        if (res && res.season) {
+          setActiveSeasonId(res.season.id);
+        }
+      } catch (e) {
+        console.warn('Failed to create server season', e);
+      }
+
+      // 3. Update current season name and academic year
+      setCurrentSeasonName(seasonData.name);
+      setCurrentAcademicYear(seasonData.year);
+      saveLocalSettings({
+        ...getLocalSettings(),
+        activeSeasonId: `season_${Date.now()}`,
+        currentSeasonName: seasonData.name,
+        currentAcademicYear: seasonData.year,
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentUser?.email || 'admin',
+      });
+
+      // 4. Reset all teams to ZERO points, 0 wins, 0 draws, 0 losses, 0 goals
+      const resetTeamsList: Team[] = teams.map(t => ({
+        ...t,
+        played: 0,
+        won: 0,
+        drawn: 0,
+        lost: 0,
+        gf: 0,
+        ga: 0,
+        gd: 0,
+        points: 0,
+      }));
+      setTeams(resetTeamsList);
+      try {
+        localStorage.setItem('dawry_teams_custom_v1', JSON.stringify(resetTeamsList));
+      } catch {}
+
+      // 5. Reset all matches to upcoming and zero/null scores
+      const freshMatches: Match[] = INITIAL_MATCHES.map(m => ({
+        ...m,
+        scoreA: null,
+        scoreB: null,
+        status: 'upcoming' as const,
+        minute: undefined,
+        scorersSummary: undefined,
+        recordedBy: undefined,
+        events: [],
+        lineups: undefined,
+        substitutions: [],
+        cards: [],
+      }));
+      setMatches(freshMatches);
+      try {
+        localStorage.setItem('dawry_matches_storage_v1', JSON.stringify(freshMatches));
+      } catch {}
+
+      await handleRefreshSeasons();
+      setIsAdminNewSeasonModalOpen(false);
+      confetti({ particleCount: 100, spread: 80 });
+      alert(`تم إطلاق ${seasonData.name} بنجاح بصفر نقاط لجميع الفرق! 🏆⚡`);
+    } catch (err: any) {
+      alert(err.message || 'حدث خطأ أثناء إطلاق الموسم الجديد');
+    } finally {
+      setIsStartingSeasonInAdmin(false);
+    }
   };
 
   // Explicit sync function
@@ -476,11 +786,37 @@ export default function App() {
         }
       }
 
-      // 3.5. Fetch tournament settings (isPlayerEditingOpen)
+      // 3.5. Fetch tournament settings (isPlayerEditingOpen, isRegistrationVisibleToPublic, isRegistrationOpen)
       const serverSettings = await fetchServerSettings();
-      if (serverSettings && typeof serverSettings.isPlayerEditingOpen === 'boolean' && isMounted) {
-        setIsPlayerEditingOpen(serverSettings.isPlayerEditingOpen);
+      if (serverSettings && isMounted) {
+        if (typeof serverSettings.isPlayerEditingOpen === 'boolean') {
+          setIsPlayerEditingOpen(serverSettings.isPlayerEditingOpen);
+        }
+        if (typeof serverSettings.isRegistrationVisibleToPublic === 'boolean') {
+          setIsLeagueRegistrationVisible(serverSettings.isRegistrationVisibleToPublic);
+        }
+        if (typeof serverSettings.isRegistrationOpen === 'boolean') {
+          setIsLeagueRegistrationOpen(serverSettings.isRegistrationOpen);
+        }
+        if (serverSettings.activeSeasonId) setActiveSeasonId(serverSettings.activeSeasonId);
+        if (serverSettings.currentSeasonName) setCurrentSeasonName(serverSettings.currentSeasonName);
+        if (serverSettings.currentAcademicYear) setCurrentAcademicYear(serverSettings.currentAcademicYear);
       }
+
+      // 3.6. Fetch applications, seasons, and archived snapshots
+      try {
+        const [apps, seas, snaps] = await Promise.all([
+          fetchServerApplications(),
+          fetchServerSeasons(),
+          fetchServerArchivedSnapshots(),
+        ]);
+        if (apps && isMounted) setApplications(apps);
+        if (seas && seas.seasons && isMounted) {
+          setSeasons(seas.seasons);
+          if (seas.activeSeasonId) setActiveSeasonId(seas.activeSeasonId);
+        }
+        if (snaps && isMounted) setArchivedSnapshots(snaps);
+      } catch {}
 
       if (isMounted) {
         setLastSyncTime(new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
@@ -499,9 +835,22 @@ export default function App() {
         }
       });
       fetchServerSettings().then(st => {
-        if (st && typeof st.isPlayerEditingOpen === 'boolean' && isMounted) {
-          setIsPlayerEditingOpen(st.isPlayerEditingOpen);
+        if (st && isMounted) {
+          if (typeof st.isPlayerEditingOpen === 'boolean') {
+            setIsPlayerEditingOpen(st.isPlayerEditingOpen);
+          }
+          if (typeof st.isRegistrationVisibleToPublic === 'boolean') {
+            setIsLeagueRegistrationVisible(st.isRegistrationVisibleToPublic);
+          }
+          if (typeof st.isRegistrationOpen === 'boolean') {
+            setIsLeagueRegistrationOpen(st.isRegistrationOpen);
+          }
+          if (st.activeSeasonId) setActiveSeasonId(st.activeSeasonId);
+          if (st.currentSeasonName) setCurrentSeasonName(st.currentSeasonName);
         }
+      });
+      fetchServerApplications().then(apps => {
+        if (apps && isMounted) setApplications(apps);
       });
     }, 5000);
 
@@ -526,7 +875,12 @@ export default function App() {
       const raw = localStorage.getItem('dawry_teams_custom_v1');
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((t: Team) => ({
+            ...t,
+            logoUrl: t.logoUrl || getTeamLogoUrl(t.name) || undefined,
+          }));
+        }
       }
     } catch {}
     return INITIAL_TEAMS;
@@ -665,8 +1019,8 @@ export default function App() {
     pitch: 'الملعب الرئيسي (A)',
   });
 
-  // Manage Sub-tab: teams | scorekeepers
-  const [manageSubTab, setManageSubTab] = useState<'teams' | 'scorekeepers'>('teams');
+  // Manage Sub-tab: teams | scorekeepers | seasons_archive
+  const [manageSubTab, setManageSubTab] = useState<'teams' | 'scorekeepers' | 'seasons_archive'>('teams');
 
   // New Scorekeeper Form
   const [newScorekeeperForm, setNewScorekeeperForm] = useState({
@@ -2371,19 +2725,17 @@ export default function App() {
                 <Trophy className="w-6 h-6 text-slate-950" />
               </div>
               <div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 font-medium">
                   <h1 className="font-black text-lg md:text-xl text-white tracking-wide">
-                    دوري جامعة النيل 2026
+                    {currentSeasonName}
                   </h1>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold">
-                    48 فريقاً • 8 مجموعات
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-mono">
-                    @nu.edu.eg
-                  </span>
+                  <span aria-hidden="true" className="text-slate-600">·</span>
+                  <span className="text-emerald-400 font-bold">48 فريقاً / 8 مجموعات</span>
+                  <span aria-hidden="true" className="text-slate-600">·</span>
+                  <span className="text-amber-400/90 font-mono text-[11px]">{currentAcademicYear}</span>
                 </div>
                 <p className="text-[11px] text-slate-400 font-medium">
-                  بوابة المتفرجين • بوابة مسؤولي الفرق • دليل المستخدمين والصلاحيات • تحكم الأدمن
+                  بطولة كرة القدم الرسمية لجامعة النيل الأهلية · المنصة التفاعلية المعتمدة
                 </p>
               </div>
             </div>
@@ -2678,6 +3030,38 @@ export default function App() {
               الهداف والصانع ({tournamentStatsData.scorers.length + tournamentStatsData.playmakers.length})
             </button>
 
+            {/* Tab: League Season Application (Visible to all when isLeagueRegistrationVisible, or only Admin when hidden) */}
+            {(isLeagueRegistrationVisible || isAdmin) && (
+              <button
+                onClick={() => setCurrentTab('league_registration')}
+                className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  currentTab === 'league_registration'
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/30 font-black'
+                    : isLeagueRegistrationVisible
+                    ? 'bg-slate-900/80 text-emerald-300 hover:bg-slate-800 border border-emerald-500/30'
+                    : 'bg-slate-900/60 text-slate-400 hover:bg-slate-800 border border-dashed border-amber-500/40'
+                }`}
+                title={
+                  !isLeagueRegistrationVisible
+                    ? 'صفحة التقديم في الدوري (مخفية عن الجمهور - تظهر للمشرف فقط)'
+                    : 'التقديم في الدوري وتسجيل الفرق'
+                }
+              >
+                <Trophy className="w-4 h-4 text-emerald-400" />
+                <span>التقديم في الدوري 🏆</span>
+                {!isLeagueRegistrationVisible && (
+                  <span className="text-[10px] text-amber-300 font-bold bg-amber-500/20 px-1.5 py-0.2 rounded border border-amber-500/30">
+                    مخفي 👁️
+                  </span>
+                )}
+                {isAdmin && applications.filter(a => a.status === 'pending').length > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-rose-600 text-white text-[10px] flex items-center justify-center font-black">
+                    {applications.filter(a => a.status === 'pending').length}
+                  </span>
+                )}
+              </button>
+            )}
+
             {/* Admin Control Panel (Admin Only) */}
             {isAdmin && (
               <button
@@ -2698,6 +3082,36 @@ export default function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+
+        {/* ========================================================================= */}
+        {/* TAB: LEAGUE REGISTRATION & ANNUAL SEASON PORTAL (التقديم في الدوري) */}
+        {/* ========================================================================= */}
+        {currentTab === 'league_registration' && (
+          <LeagueRegistrationPage
+            currentUser={currentUser}
+            isAdmin={isAdmin}
+            isLeagueRegistrationVisible={isLeagueRegistrationVisible}
+            onToggleRegistrationVisible={handleToggleRegistrationVisible}
+            isLeagueRegistrationOpen={isLeagueRegistrationOpen}
+            onToggleRegistrationOpen={handleToggleRegistrationOpen}
+            applications={applications}
+            onRefreshApplications={handleRefreshApplications}
+            seasons={seasons}
+            activeSeasonId={activeSeasonId}
+            onRefreshSeasons={handleRefreshSeasons}
+            currentSeasonName={currentSeasonName}
+            currentAcademicYear={currentAcademicYear}
+            teams={teams}
+            squads={squads}
+            users={users}
+            archivedSnapshots={archivedSnapshots}
+            onRefreshArchivedSnapshots={handleRefreshArchivedSnapshots}
+            onAddTeamToTournament={handleAddTeamToTournament}
+            onAssignTeamManager={handleAssignTeamManagerFromApplication}
+            onUpdateSquad={handleUpdateSquadFromRegistration}
+            onStartNewSeasonZeroPoints={handleStartNewSeasonZeroPoints}
+          />
+        )}
 
         {/* ========================================================================= */}
         {/* TAB: SPECTATORS & PLAYERS PORTAL (صفحة المتفرجين واللاعبين لمعرفة الماتشات) */}
@@ -3186,10 +3600,11 @@ export default function App() {
                       <div className="flex-1 text-center font-bold text-white text-xs md:text-sm">
                         <button
                           onClick={() => setSelectedTeamNameForMatches(displayTeamA)}
-                          className="hover:text-emerald-300 transition-colors cursor-pointer truncate max-w-full hover:underline font-bold inline-block"
+                          className="hover:text-emerald-300 transition-colors cursor-pointer truncate max-w-full hover:underline font-bold inline-flex flex-col items-center justify-center group/team"
                           title={`اضغط لعرض مباريات ${displayTeamA}`}
                         >
-                          {displayTeamA}
+                          <TeamLogo teamName={displayTeamA} size="lg" className="mx-auto mb-1.5 group-hover/team:scale-105 transition-transform" />
+                          <span className="truncate max-w-[130px]">{displayTeamA}</span>
                         </button>
                         {r32Info && (
                           <span className="block mt-1 px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-[10px] font-bold border border-emerald-500/30 mx-auto w-fit">
@@ -3213,10 +3628,11 @@ export default function App() {
                       <div className="flex-1 text-center font-bold text-white text-xs md:text-sm">
                         <button
                           onClick={() => setSelectedTeamNameForMatches(displayTeamB)}
-                          className="hover:text-emerald-300 transition-colors cursor-pointer truncate max-w-full hover:underline font-bold inline-block"
+                          className="hover:text-emerald-300 transition-colors cursor-pointer truncate max-w-full hover:underline font-bold inline-flex flex-col items-center justify-center group/team"
                           title={`اضغط لعرض مباريات ${displayTeamB}`}
                         >
-                          {displayTeamB}
+                          <TeamLogo teamName={displayTeamB} size="lg" className="mx-auto mb-1.5 group-hover/team:scale-105 transition-transform" />
+                          <span className="truncate max-w-[130px]">{displayTeamB}</span>
                         </button>
                         {r32Info && (
                           <span className="block mt-1 px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-[10px] font-bold border border-emerald-500/30 mx-auto w-fit">
@@ -3556,9 +3972,7 @@ export default function App() {
                                   className="flex items-center gap-2 text-right hover:text-emerald-300 transition-colors cursor-pointer group"
                                   title="اضغط لعرض جميع مباريات هذا الفريق (5 مباريات)"
                                 >
-                                  <div className={`w-6 h-6 rounded-md bg-gradient-to-tr ${team.logoColor} flex items-center justify-center font-black text-[10px] text-white shrink-0 group-hover:scale-110 transition-transform`}>
-                                    {team.name.charAt(0)}
-                                  </div>
+                                  <TeamLogo teamName={team.name} size="sm" className="group-hover:scale-110 transition-transform" />
                                   <span className="group-hover:underline underline-offset-4">{team.name}</span>
                                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 group-hover:bg-emerald-500/20 group-hover:text-emerald-300 border border-slate-700 flex items-center gap-1 transition-colors">
                                     <Eye className="w-3 h-3" />
@@ -3709,20 +4123,22 @@ export default function App() {
                                 <div className="flex items-center justify-between text-xs font-bold text-white">
                                   <button
                                     onClick={() => setSelectedTeamNameForMatches(m.teamA)}
-                                    className="truncate hover:text-emerald-300 transition-colors cursor-pointer hover:underline text-right"
+                                    className="truncate hover:text-emerald-300 transition-colors cursor-pointer hover:underline text-right flex items-center gap-1.5"
                                     title={`اضغط لعرض مباريات ${m.teamA}`}
                                   >
-                                    {m.teamA}
+                                    <TeamLogo teamName={m.teamA} size="xs" />
+                                    <span className="truncate">{m.teamA}</span>
                                   </button>
                                   <span className="font-mono text-emerald-400 text-sm">{m.scoreA !== null ? m.scoreA : '-'}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-xs font-bold text-white">
                                   <button
                                     onClick={() => setSelectedTeamNameForMatches(m.teamB)}
-                                    className="truncate hover:text-emerald-300 transition-colors cursor-pointer hover:underline text-right"
+                                    className="truncate hover:text-emerald-300 transition-colors cursor-pointer hover:underline text-right flex items-center gap-1.5"
                                     title={`اضغط لعرض مباريات ${m.teamB}`}
                                   >
-                                    {m.teamB}
+                                    <TeamLogo teamName={m.teamB} size="xs" />
+                                    <span className="truncate">{m.teamB}</span>
                                   </button>
                                   <span className="font-mono text-emerald-400 text-sm">{m.scoreB !== null ? m.scoreB : '-'}</span>
                                 </div>
@@ -3774,6 +4190,7 @@ export default function App() {
                                   <span className={`w-5 h-5 rounded-md text-[10px] font-black flex items-center justify-center border ${badgeColor}`}>
                                     {rank}
                                   </span>
+                                  <TeamLogo teamName={team.name} size="xs" />
                                   <span className="font-bold text-white truncate group-hover:text-emerald-300 transition-colors">{team.name}</span>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
@@ -3882,11 +4299,17 @@ export default function App() {
 
                       <div className="space-y-2">
                         <div className="p-2 bg-slate-950 rounded-xl flex items-center justify-between text-xs font-bold text-white">
-                          <button onClick={() => setSelectedTeamNameForMatches(tA)} className="hover:text-emerald-300 truncate cursor-pointer">{tA}</button>
+                          <button onClick={() => setSelectedTeamNameForMatches(tA)} className="hover:text-emerald-300 truncate cursor-pointer flex items-center gap-1.5">
+                            <TeamLogo teamName={tA} size="xs" />
+                            <span className="truncate">{tA}</span>
+                          </button>
                           <span className="font-mono text-emerald-400">{m.scoreA !== null ? m.scoreA : '-'}</span>
                         </div>
                         <div className="p-2 bg-slate-950 rounded-xl flex items-center justify-between text-xs font-bold text-white">
-                          <button onClick={() => setSelectedTeamNameForMatches(tB)} className="hover:text-emerald-300 truncate cursor-pointer">{tB}</button>
+                          <button onClick={() => setSelectedTeamNameForMatches(tB)} className="hover:text-emerald-300 truncate cursor-pointer flex items-center gap-1.5">
+                            <TeamLogo teamName={tB} size="xs" />
+                            <span className="truncate">{tB}</span>
+                          </button>
                           <span className="font-mono text-emerald-400">{m.scoreB !== null ? m.scoreB : '-'}</span>
                         </div>
                       </div>
@@ -4049,11 +4472,121 @@ export default function App() {
               </div>
             </div>
 
+            {/* League Registration & Annual Tournament Admin Control Card */}
+            <div className="p-5 md:p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+                <div className="flex items-start md:items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                    <Trophy className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-amber-400">إدارة التقديم والمواسم السنوية 🏆</span>
+                      <span aria-hidden="true" className="text-slate-600">·</span>
+                      <span className="text-xs text-slate-400 font-mono">{currentAcademicYear}</span>
+                    </div>
+                    <h3 className="text-base md:text-lg font-black text-white">
+                      التحكم في صفحة التقديم في الدوري واستقبال الفرق الجديدة
+                    </h3>
+                    <p className="text-xs text-slate-400 leading-relaxed max-w-2xl">
+                      حدد إذا كانت صفحة التقديم تظهر في القائمة العامة لجميع الزوار أو تختفي، وافتح أو أغلق استقبال الاستمارات، وأنشئ دوري جديد لكل عام مع أرشفة المواسم السابقة.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsAdminNewSeasonModalOpen(true)}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-amber-500/20"
+                    title="إنشاء موسم وبطولة جديدة كلياً وتصفير جميع النقاط مع أرشفة الموسم الحالي"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>إنشاء موسم جديد (0 نقاط) ⚡</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAdminArchiveModalOpen(true)}
+                    className="px-3.5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-amber-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-amber-500/30"
+                    title="سجل وأرشيف المواسم السابقة والنتائج التاريخية"
+                  >
+                    <Archive className="w-3.5 h-3.5 text-amber-400" />
+                    <span>أرشيف المواسم ({archivedSnapshots.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentTab('league_registration')}
+                    className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-700"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>لوحة التقديم والطلبات ➔</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Toggles Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                {/* Switch 1: Public Visibility */}
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-bold text-slate-300 block mb-0.5">
+                      ظهور صفحة التقديم في القائمة العامة للجميع:
+                    </span>
+                    <span className="text-[11px] text-slate-400 block">
+                      {isLeagueRegistrationVisible
+                        ? '🟢 ظاهرة لجميع الطلاب والزوار في شريط التنقل العلوي.'
+                        : '🔒 مخفية عن الزوار والجمهور (تظهر فقط للأدمن في القائمة).'}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleRegistrationVisible()}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-black transition-colors shrink-0 cursor-pointer ${
+                      isLeagueRegistrationVisible
+                        ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30'
+                        : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
+                    }`}
+                  >
+                    {isLeagueRegistrationVisible ? 'إخفاء عن الجمهور 👁️' : 'إظهار للجميع 🟢'}
+                  </button>
+                </div>
+
+                {/* Switch 2: Open/Close Submissions */}
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-bold text-slate-300 block mb-0.5">
+                      حالة استقبال طلبات واستمارات الفرق:
+                    </span>
+                    <span className="text-[11px] text-slate-400 block">
+                      {isLeagueRegistrationOpen
+                        ? '🟢 باب التقديم مفتوح حالياً لاستقبال الفرق الجديدة.'
+                        : '🔒 باب التقديم مقفل مؤقتاً بقرار من اللجنة المنظمة.'}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleRegistrationOpen()}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-black transition-colors shrink-0 cursor-pointer ${
+                      isLeagueRegistrationOpen
+                        ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30'
+                        : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
+                    }`}
+                  >
+                    {isLeagueRegistrationOpen ? 'إغلاق باب التقديم 🔒' : 'فتح باب التقديم ⚡'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Manage Sub-tab switcher */}
-            <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 max-w-md">
+            <div className="flex flex-wrap items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 max-w-2xl">
               <button
                 onClick={() => setManageSubTab('teams')}
-                className={`flex-1 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`flex-1 py-2 px-3 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   manageSubTab === 'teams'
                     ? 'bg-emerald-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white'
@@ -4064,7 +4597,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setManageSubTab('scorekeepers')}
-                className={`flex-1 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`flex-1 py-2 px-3 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   manageSubTab === 'scorekeepers'
                     ? 'bg-amber-500 text-slate-950 font-black shadow-md'
                     : 'text-slate-400 hover:text-white'
@@ -4072,6 +4605,17 @@ export default function App() {
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 مسؤولو النتائج
+              </button>
+              <button
+                onClick={() => setManageSubTab('seasons_archive')}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  manageSubTab === 'seasons_archive'
+                    ? 'bg-amber-500 text-slate-950 font-black shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Trophy className="w-4 h-4" />
+                المواسم والأرشيف
               </button>
             </div>
 
@@ -4159,9 +4703,7 @@ export default function App() {
                             className="flex items-center gap-3 truncate cursor-pointer flex-1"
                             title="اضغط لعرض مباريات هذا الفريق بالكامل"
                           >
-                            <div className={`w-11 h-11 rounded-xl bg-gradient-to-tr ${team.logoColor} flex items-center justify-center font-black text-sm text-white shrink-0 shadow-md group-hover:scale-105 transition-transform`}>
-                              {team.name.charAt(0)}
-                            </div>
+                            <TeamLogo teamName={team.name} size="lg" className="group-hover:scale-105 transition-transform" />
                             <div className="truncate">
                               <strong className="text-xs md:text-sm font-bold text-white block truncate group-hover:text-emerald-400 transition-colors">{team.name}</strong>
                               <div className="flex items-center gap-2 mt-0.5">
@@ -4274,6 +4816,409 @@ export default function App() {
                       )}
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Seasons & Archive Sub-Tab */}
+            {manageSubTab === 'seasons_archive' && (
+              <div className="space-y-6">
+                {/* Active Season Banner */}
+                <div className="p-6 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 border border-amber-500/30 shadow-2xl space-y-4">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/40 shrink-0">
+                        <Trophy className="w-7 h-7" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black border border-emerald-500/30">
+                            🟢 الموسم النشط حالياً
+                          </span>
+                          <span className="text-xs text-slate-400 font-mono">{currentAcademicYear}</span>
+                        </div>
+                        <h2 className="text-xl md:text-2xl font-black text-white">{currentSeasonName}</h2>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          البطولة تعمل بنظام 48 فريقاً مقسمين على 8 مجموعات (A-H)، بإجمالي 152 مباراة.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setIsAdminNewSeasonModalOpen(true)}
+                        className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-amber-500/20"
+                      >
+                        <PlusCircle className="w-4 h-4" />
+                        <span>إطلاق موسم جديد كلياً (0 نقاط) ⚡</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Season Metrics */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                    <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-center">
+                      <span className="text-[11px] text-slate-400 block mb-0.5">عدد الفرق</span>
+                      <strong className="text-xl font-black text-white">{teams.length}</strong>
+                      <span className="text-[10px] text-emerald-400 block">فريقاً مسجلاً</span>
+                    </div>
+                    <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-center">
+                      <span className="text-[11px] text-slate-400 block mb-0.5">المباريات الإجمالية</span>
+                      <strong className="text-xl font-black text-amber-400">{matches.length}</strong>
+                      <span className="text-[10px] text-slate-500 block">120 مجموعات + 32 إقصائي</span>
+                    </div>
+                    <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-center">
+                      <span className="text-[11px] text-slate-400 block mb-0.5">المباريات الملعوبة</span>
+                      <strong className="text-xl font-black text-emerald-400">
+                        {matches.filter((m) => m.status === 'finished').length}
+                      </strong>
+                      <span className="text-[10px] text-slate-500 block">مباراة منتهية</span>
+                    </div>
+                    <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-center">
+                      <span className="text-[11px] text-slate-400 block mb-0.5">المواسم المؤرشفة</span>
+                      <strong className="text-xl font-black text-sky-400">{archivedSnapshots.length}</strong>
+                      <span className="text-[10px] text-slate-500 block">نسخة تاريخية</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Archived Seasons Snapshots List */}
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                    <div>
+                      <h3 className="text-base md:text-lg font-black text-white flex items-center gap-2">
+                        <Archive className="w-5 h-5 text-amber-400" />
+                        <span>سجل وأرشيف المواسم السابقة في قاعدة البيانات</span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        جميع نتائج الفرق والمباريات والأبطال المحفوظة من المواسم السابقة.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleRefreshArchivedSnapshots()}
+                      className="px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-bold border border-slate-800 flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>تحديث الأرشيف</span>
+                    </button>
+                  </div>
+
+                  {archivedSnapshots.length === 0 ? (
+                    <div className="p-10 text-center rounded-2xl bg-slate-950/60 border border-dashed border-slate-800 space-y-2">
+                      <Archive className="w-10 h-10 text-slate-600 mx-auto" />
+                      <h4 className="text-sm font-bold text-slate-400">لا توجد مواسم مؤرشفة بعد</h4>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                        عند إطلاق موسم جديد وتفعيل خيار "أرشفة الموسم الحالي"، سيتم حفظ النتائج والفرق هنا في قاعدة البيانات تلقائياً.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {archivedSnapshots.map((snap) => (
+                        <div
+                          key={snap.id}
+                          className="p-4 rounded-2xl bg-slate-950 border border-slate-800/90 hover:border-amber-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                        >
+                          <div className="flex items-start sm:items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                              <Trophy className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <strong className="text-sm md:text-base font-black text-white">{snap.seasonName}</strong>
+                                <span className="text-[11px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                                  {snap.year}
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
+                                {snap.champion && (
+                                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                                    🏆 البطل: {snap.champion}
+                                  </span>
+                                )}
+                                {snap.runnerUp && (
+                                  <span className="text-slate-300 font-medium">
+                                    🥈 الوصيف: {snap.runnerUp}
+                                  </span>
+                                )}
+                                <span>· {snap.teamsCount || 48} فريقاً</span>
+                                <span>· {snap.matchesCount || 152} مباراة</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-left shrink-0">
+                            <span className="text-[11px] text-slate-500 block">
+                              تاريخ الأرشفة: {new Date(snap.archivedAt).toLocaleDateString('ar-EG')}
+                            </span>
+                            <span className="text-[10px] text-slate-600 block">
+                              بواسطة: {snap.archivedBy || 'الإدارة'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ------------------------------------------------------------- */}
+            {/* ADMIN MODAL: CREATE BRAND NEW SEASON WITH ZERO POINTS */}
+            {/* ------------------------------------------------------------- */}
+            {isAdminNewSeasonModalOpen && (
+              <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+                <div className="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl space-y-6 animate-in fade-in zoom-in-95">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/40">
+                        <Trophy className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-black text-white">إطلاق موسم جديد كلياً (0 نقاط) 🏆</h3>
+                        <p className="text-xs text-slate-400">بدء دوري جديد مع خيار أرشفة الموسم الحالي</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsAdminNewSeasonModalOpen(false)}
+                      className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      await handleStartNewSeasonZeroPoints(adminNewSeasonForm);
+                    }}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                        اسم الموسم / النسخة الجديدة *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={adminNewSeasonForm.name}
+                        onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, name: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-bold"
+                        placeholder="مثال: دوري جامعة النيل 2027 - النسخة السادسة"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                          العام الأكاديمي *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={adminNewSeasonForm.year}
+                          onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, year: e.target.value })}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-bold"
+                          placeholder="مثال: 2026 / 2027"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                          عدد فرق البطولة
+                        </label>
+                        <input
+                          type="number"
+                          value={adminNewSeasonForm.teamsCount}
+                          onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, teamsCount: Number(e.target.value) || 48 })}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-bold text-center"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Archive Previous Season Option */}
+                    <div className="p-4 rounded-2xl bg-slate-950 border border-amber-500/30 space-y-3">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={adminNewSeasonForm.archivePrevious}
+                          onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, archivePrevious: e.target.checked })}
+                          className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500 border-slate-700 bg-slate-900"
+                        />
+                        <span className="text-xs font-black text-amber-300">
+                          أرشفة وحفظ نتائج وفرق الموسم الحالي في قاعدة البيانات 📦
+                        </span>
+                      </label>
+
+                      {adminNewSeasonForm.archivePrevious && (
+                        <div className="space-y-3 pt-2 border-t border-slate-800/80">
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                              بطل الموسم الحالي (Champion)
+                            </label>
+                            <input
+                              type="text"
+                              value={adminNewSeasonForm.champion}
+                              onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, champion: e.target.value })}
+                              placeholder="مثال: برشلونة (أو يترك فارغاً ليكتشف تلقائياً من النهائي)"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                              وصيف البطولة (Runner-up)
+                            </label>
+                            <input
+                              type="text"
+                              value={adminNewSeasonForm.runnerUp}
+                              onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, runnerUp: e.target.value })}
+                              placeholder="مثال: الزمالك"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Reset points explanation banner */}
+                    <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 text-xs leading-relaxed space-y-1">
+                      <strong className="block font-black text-white">ماذا سيحدث عند الضغط على تأكيد؟</strong>
+                      <p>
+                        1. حفظ أرشيف كامل للموسم الحالي في قاعدة البيانات (الفرق والنتائج والمباريات).
+                      </p>
+                      <p>
+                        2. تصفير نقاط وجداول جميع الفرق إلى (0 نقاط، 0 لعب، 0 فوز، 0 أهداف).
+                      </p>
+                      <p>
+                        3. إعادة تهيئة جميع الـ 152 مباراة لتصبح قادمة للموسم الجديد.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-2">
+                      <button
+                        type="submit"
+                        disabled={isStartingSeasonInAdmin}
+                        className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      >
+                        {isStartingSeasonInAdmin ? (
+                          <>
+                            <RotateCcw className="w-4 h-4 animate-spin" />
+                            <span>جارٍ أرشفة وتصفير الموسم...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Trophy className="w-4 h-4" />
+                            <span>تأكيد وإطلاق الموسم الجديد بصفر نقاط 🏆</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsAdminNewSeasonModalOpen(false)}
+                        className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors cursor-pointer"
+                      >
+                        إلغاء
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* ------------------------------------------------------------- */}
+            {/* ADMIN MODAL: ARCHIVE VIEWER */}
+            {/* ------------------------------------------------------------- */}
+            {isAdminArchiveModalOpen && (
+              <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+                <div className="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl space-y-6 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-4 shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/40">
+                        <Archive className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-black text-white">سجل وأرشيف المواسم السابقة 🏛️</h3>
+                        <p className="text-xs text-slate-400">تاريخ البطولات والنتائج المحفوظة في قاعدة البيانات</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsAdminArchiveModalOpen(false)}
+                      className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                    {archivedSnapshots.length === 0 ? (
+                      <div className="p-10 text-center rounded-2xl bg-slate-950/60 border border-dashed border-slate-800 space-y-2">
+                        <Archive className="w-12 h-12 text-slate-600 mx-auto" />
+                        <h4 className="text-sm font-bold text-slate-300">لا توجد مواسم مؤرشفة حتى الآن</h4>
+                        <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                          عند إنشاء موسم جديد كلياً وتفعيل خيار الأرشفة، ستظهر جميع النسخ السابقة هنا.
+                        </p>
+                      </div>
+                    ) : (
+                      archivedSnapshots.map((snap) => (
+                        <div
+                          key={snap.id}
+                          className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                            <div>
+                              <span className="text-xs font-black text-amber-400 font-mono block">
+                                {snap.year}
+                              </span>
+                              <strong className="text-base font-black text-white block">
+                                {snap.seasonName}
+                              </strong>
+                            </div>
+
+                            <span className="text-[11px] text-slate-400 font-mono">
+                              أرشف في: {new Date(snap.archivedAt).toLocaleDateString('ar-EG')}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 text-xs">
+                            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                              <span className="text-[10px] text-slate-400 block mb-0.5">🏆 البطل الرسمي:</span>
+                              <strong className="text-emerald-400 font-black">{snap.champion || 'غير محدد'}</strong>
+                            </div>
+                            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                              <span className="text-[10px] text-slate-400 block mb-0.5">🥈 الوصيف:</span>
+                              <strong className="text-slate-200 font-black">{snap.runnerUp || 'غير محدد'}</strong>
+                            </div>
+                          </div>
+
+                          {snap.scorersSummary && (
+                            <div className="text-[11px] text-amber-300 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                              ⚽ أبرز الهدافين: {snap.scorersSummary}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                            <span>عدد الفرق: {snap.teamsCount || 48} فريقاً</span>
+                            <span>عدد المباريات: {snap.matchesCount || 152} مباراة</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-800 flex justify-end shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setIsAdminArchiveModalOpen(false)}
+                      className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      إغلاق
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -5970,9 +6915,7 @@ export default function App() {
               {/* Header */}
               <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950/50 p-5 md:p-6 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-tr ${dynamicTeamData?.logoColor || 'from-emerald-600 to-teal-500'} flex items-center justify-center font-black text-xl text-white shadow-xl ring-2 ring-white/10 shrink-0`}>
-                    {selectedTeamNameForMatches.charAt(0)}
-                  </div>
+                  <TeamLogo teamName={selectedTeamNameForMatches} size="xl" className="shadow-xl ring-2 ring-white/10" />
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black border border-emerald-500/30">
@@ -6128,9 +7071,7 @@ export default function App() {
                       {/* Opponents & Score */}
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex-1 flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-emerald-600/30 text-emerald-300 font-black text-xs flex items-center justify-center shrink-0 border border-emerald-500/40">
-                            {selectedTeamNameForMatches.charAt(0)}
-                          </div>
+                          <TeamLogo teamName={selectedTeamNameForMatches} size="md" />
                           <div>
                             <strong className="text-xs md:text-sm font-bold text-white block">{selectedTeamNameForMatches}</strong>
                             <span className="text-[10px] text-emerald-400">فريقك المختار</span>
@@ -6157,9 +7098,7 @@ export default function App() {
                             </button>
                             <span className="text-[10px] text-slate-400">الخصم (اضغط لعرضه)</span>
                           </div>
-                          <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 font-black text-xs flex items-center justify-center shrink-0">
-                            {opponentName.charAt(0)}
-                          </div>
+                          <TeamLogo teamName={opponentName} size="md" />
                         </div>
                       </div>
 
