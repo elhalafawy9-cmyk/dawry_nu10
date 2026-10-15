@@ -40,6 +40,100 @@ export interface MatchSheet {
   cards?: MatchCardEvent[]; // الإنذارات والكروت الحمراء (الطرود)
 }
 
+// Official real squad for Team "باريس" (PSG) based on the official Nile University registration sheet
+export const PARIS_OFFICIAL_ROSTER: Player[] = [
+  {
+    id: 'p_paris_1',
+    name: 'samir alhalafawy (سمير الحلفاوي)',
+    number: 1,
+    position: 'GK',
+    studentId: '241000442',
+    isCaptain: true,
+    isIdentityLocked: true,
+  },
+  {
+    id: 'p_paris_2',
+    name: 'andrew ashraf (أندرو أشرف)',
+    number: 2,
+    position: 'DEF',
+    studentId: '241002028',
+    isCaptain: false,
+    isIdentityLocked: true,
+  },
+  {
+    id: 'p_paris_3',
+    name: 'ahmed samir (أحمد سمير)',
+    number: 3,
+    position: 'DEF',
+    studentId: '241001376',
+    isCaptain: false,
+    isIdentityLocked: true,
+  },
+  {
+    id: 'p_paris_4',
+    name: 'mohamed amer (محمد عامر)',
+    number: 4,
+    position: 'DEF',
+    studentId: '241002229',
+    isCaptain: false,
+    isIdentityLocked: true,
+  },
+  {
+    id: 'p_paris_5',
+    name: 'mohamed galal (محمد جلال)',
+    number: 5,
+    position: 'MID',
+    studentId: '231001145',
+    isCaptain: false,
+    isIdentityLocked: true,
+  },
+  {
+    id: 'p_paris_6',
+    name: 'youssef zaghloul (يوسف زغلول)',
+    number: 6,
+    position: 'MID',
+    studentId: '221001650',
+    isCaptain: false,
+    isIdentityLocked: true,
+  },
+  {
+    id: 'p_paris_7',
+    name: 'saifelden mahmoud (سيف الدين محمود)',
+    number: 7,
+    position: 'MID',
+    studentId: '241001341',
+    isCaptain: false,
+    isIdentityLocked: true,
+  },
+  {
+    id: 'p_paris_8',
+    name: 'abdelrahman emad (عبد الرحمن عماد)',
+    number: 8,
+    position: 'FWD',
+    studentId: '241001687',
+    isCaptain: false,
+    isIdentityLocked: true,
+  },
+  {
+    id: 'p_paris_9',
+    name: 'ziad Eissa (زياد عيسى)',
+    number: 9,
+    position: 'FWD',
+    studentId: '241001897',
+    isCaptain: false,
+    isIdentityLocked: true,
+  },
+  {
+    id: 'p_paris_10',
+    name: 'moataz hany (معتز هاني)',
+    number: 10,
+    position: 'FWD',
+    studentId: '221001683',
+    isCaptain: false,
+    isIdentityLocked: true,
+  },
+];
+
 // Generate default squad for 48 teams
 export function generateInitialSquads(teamNames: string[]): Record<string, Player[]> {
   const commonFirstNames = [
@@ -54,6 +148,11 @@ export function generateInitialSquads(teamNames: string[]): Record<string, Playe
   const squads: Record<string, Player[]> = {};
 
   teamNames.forEach((teamName, tIdx) => {
+    if (teamName === 'باريس') {
+      squads[teamName] = PARIS_OFFICIAL_ROSTER;
+      return;
+    }
+
     const players: Player[] = [];
     const positions: ('GK' | 'DEF' | 'DEF' | 'MID' | 'MID' | 'FWD' | 'FWD' | 'MID' | 'DEF')[] = [
       'GK', 'DEF', 'DEF', 'MID', 'MID', 'FWD', 'FWD', 'MID', 'DEF'

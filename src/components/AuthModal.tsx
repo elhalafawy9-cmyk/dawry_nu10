@@ -327,7 +327,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-300 font-medium">
-                  البريد: <strong className="text-amber-200 font-mono">s.mohamed2442@nu.edu.eg</strong>
+                  البريد: <strong className="text-amber-200 font-mono">elhalafawy9@gmail.com</strong>
                 </p>
                 <button
                   type="button"

@@ -16,6 +16,7 @@ import { MatchAlertsListModal } from './components/MatchAlertsListModal';
 import { MatchLineupModal } from './components/MatchLineupModal';
 import { AssignTeamManagersPage } from './components/AssignTeamManagersPage';
 import { LeagueRegistrationPage } from './components/LeagueRegistrationPage';
+import { BackupModal } from './components/BackupModal';
 import { 
   fetchServerUsers, 
   recordUserEnter, 
@@ -54,6 +55,7 @@ import {
   UserRole, 
   PERMANENT_ADMIN_EMAIL, 
   PERMANENT_ADMIN_PASSWORD,
+  INITIAL_USERS,
   loadStoredUsers, 
   saveStoredUsers, 
   loadActiveUser, 
@@ -121,7 +123,10 @@ import {
   UserPlus,
   Bell,
   Send,
-  Key
+  Key,
+  PlusCircle,
+  Archive,
+  Database
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -442,6 +447,7 @@ export default function App() {
   // Admin New Season & Archive Modals
   const [isAdminNewSeasonModalOpen, setIsAdminNewSeasonModalOpen] = useState<boolean>(false);
   const [isAdminArchiveModalOpen, setIsAdminArchiveModalOpen] = useState<boolean>(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
   const [adminNewSeasonForm, setAdminNewSeasonForm] = useState({
     name: `دوري جامعة النيل ${new Date().getFullYear() + 1} - النسخة السادسة`,
     year: `${new Date().getFullYear()} / ${new Date().getFullYear() + 1}`,
@@ -650,7 +656,7 @@ export default function App() {
             runnerUp: detectedRunner || 'لم يحدد بعد',
             teams: teams,
             matches: matches,
-            scorersSummary: `${tournamentStatsData.topScorers.slice(0, 3).map(s => `${s.name} (${s.teamName}) - ${s.goals} أهداف`).join(' · ')}`,
+            scorersSummary: `${tournamentStatsData.scorers.slice(0, 3).map(s => `${s.name} (${s.team}) - ${s.totalGoals} أهداف`).join(' · ')}`,
             archivedBy: currentUser?.email || 'admin',
           });
           await handleRefreshArchivedSnapshots();
@@ -869,10 +875,10 @@ export default function App() {
     return () => clearInterval(hbInterval);
   }, [currentUser?.id]);
 
-  // Data States
+  // Data States - All 48 teams start with clean 0 points
   const [teams, setTeams] = useState<Team[]>(() => {
     try {
-      const raw = localStorage.getItem('dawry_teams_custom_v1');
+      const raw = localStorage.getItem('dawry_teams_custom_v2');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -882,10 +888,31 @@ export default function App() {
           }));
         }
       }
+      localStorage.removeItem('dawry_teams_custom_v1');
     } catch {}
-    return INITIAL_TEAMS;
+    // Clean initial zero teams
+    const zeroTeams = INITIAL_TEAMS.map(t => ({
+      ...t,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      gf: 0,
+      ga: 0,
+      gd: 0,
+      points: 0,
+    }));
+    try {
+      localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(zeroTeams));
+    } catch {}
+    return zeroTeams;
   });
-  const [matches, setMatches] = useState<Match[]>(INITIAL_MATCHES);
+  const [matches, setMatches] = useState<Match[]>(() => {
+    try {
+      localStorage.removeItem('dawry_matches_storage_v1');
+    } catch {}
+    return INITIAL_MATCHES;
+  });
   const [scorekeepers, setScorekeepers] = useState<Scorekeeper[]>(INITIAL_SCOREKEEPERS);
 
   // Squads State (all 48 teams players)
@@ -1059,6 +1086,107 @@ export default function App() {
       confetti({ particleCount: 50, spread: 60 });
       alert('تم تصفير جميع الماتشات والنتائج بنجاح! جميع الفرق تبدأ الآن بـ 0 نقاط و0 أهداف.');
     }
+  };
+
+  // --- RESTORE BACKUP & RESET TO ZERO HANDLERS ---
+  const handleRestoreComplete = (restored: {
+    users?: AppUser[];
+    teams?: Team[];
+    matches?: Match[];
+    squads?: Record<string, Player[]>;
+    applications?: TeamApplication[];
+    seasons?: TournamentSeason[];
+    archivedSnapshots?: ArchivedSeasonSnapshot[];
+    activeSeasonId?: string;
+    currentSeasonName?: string;
+    currentAcademicYear?: string;
+  }) => {
+    if (restored.users && restored.users.length > 0) {
+      setUsers(restored.users);
+      saveStoredUsers(restored.users);
+      const matched = restored.users.find(u => u.id === currentUser?.id || u.email.toLowerCase() === currentUser?.email.toLowerCase()) || restored.users[0];
+      if (matched) {
+        setCurrentUser(matched);
+        saveActiveUser(matched);
+      }
+    }
+    if (restored.teams && restored.teams.length > 0) {
+      setTeams(restored.teams);
+      try {
+        localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(restored.teams));
+      } catch {}
+    }
+    if (restored.matches && restored.matches.length > 0) {
+      setMatches(restored.matches);
+      try {
+        localStorage.setItem('dawry_matches_storage_v1', JSON.stringify(restored.matches));
+      } catch {}
+    }
+    if (restored.squads && typeof restored.squads === 'object') {
+      setSquads(restored.squads);
+      saveStoredSquads(restored.squads);
+    }
+    if (restored.applications) {
+      setApplications(restored.applications);
+    }
+    if (restored.seasons) {
+      setSeasons(restored.seasons);
+    }
+    if (restored.archivedSnapshots) {
+      setArchivedSnapshots(restored.archivedSnapshots);
+    }
+    if (restored.activeSeasonId) setActiveSeasonId(restored.activeSeasonId);
+    if (restored.currentSeasonName) setCurrentSeasonName(restored.currentSeasonName);
+    if (restored.currentAcademicYear) setCurrentAcademicYear(restored.currentAcademicYear);
+  };
+
+  const handleResetToZero = () => {
+    const zeroTeams = INITIAL_TEAMS.map(t => ({
+      ...t,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      gf: 0,
+      ga: 0,
+      gd: 0,
+      points: 0,
+    }));
+    setTeams(zeroTeams);
+    try {
+      localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(zeroTeams));
+      localStorage.removeItem('dawry_teams_custom_v1');
+    } catch {}
+
+    const freshMatches = INITIAL_MATCHES.map(m => ({
+      ...m,
+      scoreA: null,
+      scoreB: null,
+      status: 'upcoming' as const,
+      minute: undefined,
+      scorersSummary: undefined,
+      recordedBy: undefined,
+      isScheduled: false,
+      lineups: undefined,
+      substitutions: [],
+      cards: [],
+    }));
+    setMatches(freshMatches);
+    try {
+      localStorage.removeItem('dawry_matches_storage_v1');
+    } catch {}
+
+    setUsers(INITIAL_USERS);
+    saveStoredUsers(INITIAL_USERS);
+    setCurrentUser(INITIAL_USERS[0]);
+    saveActiveUser(INITIAL_USERS[0]);
+
+    setApplications([]);
+    setArchivedSnapshots([]);
+    setMatchAlerts([]);
+    saveStoredMatchAlerts([]);
+    setPlayerRequests([]);
+    saveStoredPlayerRequests([]);
   };
 
   // Tournament Statistics Leaders memo (Scorers & Playmakers / Assists)
@@ -2866,6 +2994,18 @@ export default function App() {
                   </button>
                 )}
 
+                {/* Backup & Restore Button */}
+                {isAdmin && (
+                  <button
+                    onClick={() => setIsBackupModalOpen(true)}
+                    className="relative px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 hover:text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
+                    title="سحب أو استيراد نسخة احتياطية من البطولة"
+                  >
+                    <Database className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="hidden sm:inline">نسخ احتياطي 💾</span>
+                  </button>
+                )}
+
                 {/* Logout button */}
                 <button
                   onClick={handleLogout}
@@ -4513,6 +4653,16 @@ export default function App() {
                   >
                     <Archive className="w-3.5 h-3.5 text-amber-400" />
                     <span>أرشيف المواسم ({archivedSnapshots.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsBackupModalOpen(true)}
+                    className="px-3.5 py-2.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-emerald-500/40"
+                    title="سحب أو استيراد ملف النسخة الاحتياطية للبطولة"
+                  >
+                    <Database className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>النسخ الاحتياطي والاستعادة 💾</span>
                   </button>
 
                   <button
@@ -7562,6 +7712,27 @@ export default function App() {
           setCurrentUser(null);
           setAuthView('signup');
         }}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL: FULL BACKUP & RESTORE / SYSTEM ZERO RESET */}
+      {/* ========================================================================= */}
+      <BackupModal
+        isOpen={isBackupModalOpen}
+        onClose={() => setIsBackupModalOpen(false)}
+        currentUser={currentUser}
+        users={users}
+        teams={teams}
+        matches={matches}
+        squads={squads}
+        applications={applications}
+        seasons={seasons}
+        archivedSnapshots={archivedSnapshots}
+        activeSeasonId={activeSeasonId}
+        currentSeasonName={currentSeasonName}
+        currentAcademicYear={currentAcademicYear}
+        onRestoreComplete={handleRestoreComplete}
+        onResetToZero={handleResetToZero}
       />
 
       {/* Footer */}

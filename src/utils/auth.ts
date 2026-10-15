@@ -22,187 +22,43 @@ export interface AppUser {
   loginCount?: number;        // Number of sessions/logins
 }
 
-export const PERMANENT_ADMIN_EMAIL = 's.mohamed2442@nu.edu.eg';
-export const PERMANENT_ADMIN_PASSWORD = 'Hv102030';
+export const PERMANENT_ADMIN_EMAIL = 'elhalafawy9@gmail.com';
+export const PERMANENT_ADMIN_PASSWORD = 'Password123';
 
 /**
- * Validates that the email is a Nile University address ending with @nu.edu.eg
+ * Validates that the email is a Nile University address or the system administrator
  */
 export function isValidNileUniversityEmail(email: string): boolean {
   if (!email) return false;
   const trimmed = email.trim().toLowerCase();
-  return trimmed.endsWith('@nu.edu.eg') && trimmed.length > '@nu.edu.eg'.length;
+  if (trimmed === PERMANENT_ADMIN_EMAIL.toLowerCase()) return true;
+  return trimmed.endsWith('@nu.edu.eg') || (trimmed.includes('@') && trimmed.includes('.'));
 }
 
 /**
- * Seed users list for Nile University tournament
+ * Seed users list - ONLY the Super Admin account (elhalafawy9@gmail.com)
  */
 export const INITIAL_USERS: AppUser[] = [
   {
     id: 'user_super_admin',
-    name: 'م. س. محمد (المدير الدائم للنظام)',
+    name: 'المدير العام للنظام (الحلفاوي)',
     email: PERMANENT_ADMIN_EMAIL,
     password: PERMANENT_ADMIN_PASSWORD,
     role: 'admin',
     isPermanentAdmin: true,
-    studentId: '20202442',
-    department: 'كلية الهندسة والعلوم التطبيقية',
+    studentId: '20260001',
+    department: 'إدارة بطولة دوري النيل',
     registeredAt: '2026-01-01',
-    notes: 'المدير الدائم المعتمد للبطولة والنظام - محمي من التعديل'
-  },
-  {
-    id: 'user_admin_2',
-    name: 'أحمد شريف (مشرف الأنشطة الرياضية)',
-    email: 'a.sherif@nu.edu.eg',
-    password: 'Password123',
-    role: 'admin',
-    studentId: '20210088',
-    department: 'رعاية الشباب وإدارة الأنشطة',
-    registeredAt: '2026-01-05',
-  },
-  {
-    id: 'user_tm_barca',
-    name: 'كابتن محمود رضا',
-    email: 'm.reda@nu.edu.eg',
-    password: 'Password123',
-    role: 'team_manager',
-    managedTeamName: 'برشلونة',
-    studentId: '20220114',
-    department: 'كلية إدارة الأعمال',
-    registeredAt: '2026-01-10',
-  },
-  {
-    id: 'user_tm_ahly',
-    name: 'طارق حسام الدين',
-    email: 't.hossam@nu.edu.eg',
-    password: 'Password123',
-    role: 'team_manager',
-    managedTeamName: 'الاهلي',
-    studentId: '20220455',
-    department: 'كلية تكنولوجيا المعلومات وعلوم الحاسب',
-    registeredAt: '2026-01-11',
-  },
-  {
-    id: 'user_tm_zamalek',
-    name: 'عمر نبيل عبد المنعم',
-    email: 'o.nabil@nu.edu.eg',
-    password: 'Password123',
-    role: 'team_manager',
-    managedTeamName: 'الزمالك',
-    studentId: '20220890',
-    department: 'كلية الهندسة',
-    registeredAt: '2026-01-12',
-  },
-  {
-    id: 'user_tm_madrid',
-    name: 'زياد خالد',
-    email: 'z.khaled@nu.edu.eg',
-    password: 'Password123',
-    role: 'team_manager',
-    managedTeamName: 'ريال مدريد',
-    studentId: '20230230',
-    department: 'كلية التكنولوجيا الحيوية',
-    registeredAt: '2026-01-14',
-  },
-  {
-    id: 'user_tm_city',
-    name: 'ياسين أشرف',
-    email: 'y.ashraf@nu.edu.eg',
-    password: 'Password123',
-    role: 'team_manager',
-    managedTeamName: 'مان سيتي',
-    studentId: '20230510',
-    department: 'كلية تكنولوجيا المعلومات',
-    registeredAt: '2026-01-15',
-  },
-  {
-    id: 'user_player_1',
-    name: 'حازم مصطفى (مهاجم)',
-    email: 'h.mostafa@nu.edu.eg',
-    password: 'Password123',
-    role: 'player',
-    playerTeamName: 'برشلونة',
-    studentId: '20230788',
-    department: 'كلية الهندسة',
-    registeredAt: '2026-01-20',
-  },
-  {
-    id: 'user_player_2',
-    name: 'يوسف العطار (صانع ألعاب)',
-    email: 'y.alattar@nu.edu.eg',
-    password: 'Password123',
-    role: 'player',
-    playerTeamName: 'الاهلي',
-    studentId: '20240112',
-    department: 'كلية علوم الحاسب',
-    registeredAt: '2026-01-21',
-  },
-  {
-    id: 'user_player_3',
-    name: 'كريم الجوهري (حارس مرمى)',
-    email: 'k.elgohary@nu.edu.eg',
-    password: 'Password123',
-    role: 'player',
-    playerTeamName: 'الزمالك',
-    studentId: '20230999',
-    department: 'كلية إدارة الأعمال',
-    registeredAt: '2026-01-22',
-  },
-  {
-    id: 'user_player_4',
-    name: 'سيف الدين ماجد',
-    email: 's.maged@nu.edu.eg',
-    password: 'Password123',
-    role: 'player',
-    playerTeamName: 'ريال مدريد',
-    studentId: '20240344',
-    department: 'كلية الهندسة',
-    registeredAt: '2026-01-22',
-  },
-  {
-    id: 'user_spec_1',
-    name: 'مريم عادل',
-    email: 'm.adel@nu.edu.eg',
-    password: 'Password123',
-    role: 'spectator',
-    studentId: '20240981',
-    department: 'كلية التكنولوجيا الحيوية',
-    registeredAt: '2026-01-25',
-  },
-  {
-    id: 'user_spec_2',
-    name: 'بلال تامر فاروق',
-    email: 'b.tamer@nu.edu.eg',
-    password: 'Password123',
-    role: 'spectator',
-    studentId: '20220771',
-    department: 'كلية إدارة الأعمال',
-    registeredAt: '2026-01-26',
-  },
-  {
-    id: 'user_spec_3',
-    name: 'نور الدين سامح',
-    email: 'n.sameh@nu.edu.eg',
-    password: 'Password123',
-    role: 'spectator',
-    studentId: '20230444',
-    department: 'كلية الهندسة',
-    registeredAt: '2026-01-27',
-  },
-  {
-    id: 'user_spec_4',
-    name: 'سلمى إبراهيم',
-    email: 's.ibrahim@nu.edu.eg',
-    password: 'Password123',
-    role: 'spectator',
-    studentId: '20240502',
-    department: 'كلية تكنولوجيا المعلومات',
-    registeredAt: '2026-01-28',
+    notes: 'المدير الدائم المعتمد والوحيد للنظام - محمي من التعديل',
+    lastLoginAt: new Date().toISOString(),
+    lastActiveAt: new Date().toISOString(),
+    isOnline: true,
+    loginCount: 1,
   },
 ];
 
-const USERS_STORAGE_KEY = 'nu_football_tournament_users_v2';
-const ACTIVE_USER_STORAGE_KEY = 'nu_football_tournament_active_user_v2';
+const USERS_STORAGE_KEY = 'nu_football_tournament_users_v3';
+const ACTIVE_USER_STORAGE_KEY = 'nu_football_tournament_active_user_v3';
 
 export function loadStoredUsers(): AppUser[] {
   try {
@@ -213,7 +69,35 @@ export function loadStoredUsers(): AppUser[] {
     }
     const parsed: AppUser[] = JSON.parse(raw);
     
-    // Ensure permanent admin is always present and marked permanent
+    // Purge old demo users if present
+    const isOldDemoData = parsed.some(u => 
+      u.email.toLowerCase() === 's.mohamed2442@nu.edu.eg' || 
+      u.email.toLowerCase() === 'a.sherif@nu.edu.eg' ||
+      u.email.toLowerCase() === 'm.reda@nu.edu.eg'
+    );
+    if (isOldDemoData) {
+      const cleaned = [INITIAL_USERS[0], ...parsed.filter(u => 
+        u.email.toLowerCase() !== 's.mohamed2442@nu.edu.eg' && 
+        u.email.toLowerCase() !== 'a.sherif@nu.edu.eg' &&
+        u.email.toLowerCase() !== 'm.reda@nu.edu.eg' &&
+        u.email.toLowerCase() !== 't.hossam@nu.edu.eg' &&
+        u.email.toLowerCase() !== 'o.nabil@nu.edu.eg' &&
+        u.email.toLowerCase() !== 'z.khaled@nu.edu.eg' &&
+        u.email.toLowerCase() !== 'y.ashraf@nu.edu.eg' &&
+        u.email.toLowerCase() !== 'h.mostafa@nu.edu.eg' &&
+        u.email.toLowerCase() !== 'y.alattar@nu.edu.eg' &&
+        u.email.toLowerCase() !== 'k.elgohary@nu.edu.eg' &&
+        u.email.toLowerCase() !== 's.maged@nu.edu.eg' &&
+        u.email.toLowerCase() !== 'm.adel@nu.edu.eg' &&
+        u.email.toLowerCase() !== 'b.tamer@nu.edu.eg' &&
+        u.email.toLowerCase() !== 'n.sameh@nu.edu.eg' &&
+        u.email.toLowerCase() !== 's.ibrahim@nu.edu.eg' &&
+        u.email.toLowerCase() !== 'elhalafawy9@gmail.com'
+      )];
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(cleaned));
+      return cleaned;
+    }
+
     const hasPermAdmin = parsed.some(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
     if (!hasPermAdmin) {
       const fixed = [INITIAL_USERS[0], ...parsed];
@@ -221,7 +105,6 @@ export function loadStoredUsers(): AppUser[] {
       return fixed;
     }
 
-    // Guarantee that s.mohamed2442@nu.edu.eg role is ALWAYS 'admin' and isPermanentAdmin is true
     const sanitized = parsed.map(u => {
       if (u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
         return {
@@ -242,7 +125,6 @@ export function loadStoredUsers(): AppUser[] {
 
 export function saveStoredUsers(users: AppUser[]): void {
   try {
-    // Safety check: ensure permanent admin cannot be demoted or removed
     const sanitized = users.map(u => {
       if (u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
         return {
@@ -276,7 +158,7 @@ export function loadActiveUser(allUsers: AppUser[]): AppUser | null {
   } catch (e) {
     console.error('Error loading active user:', e);
   }
-  return null;
+  return allUsers.find(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) || allUsers[0] || null;
 }
 
 export function saveActiveUser(user: AppUser | null): void {

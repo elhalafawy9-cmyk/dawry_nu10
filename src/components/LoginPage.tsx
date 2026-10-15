@@ -83,7 +83,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       if (adminUser) {
         setIsLoading(false);
-        setSuccess('أهلاً بك يا م. س. محمد، تم التحقق بنجاح والدخول للنظام 👑');
+        setSuccess(`أهلاً بك يا ${adminUser.name}، تم التحقق بنجاح والدخول للنظام 👑`);
         setTimeout(() => {
           onLogin(adminUser!);
         }, 400);
@@ -261,57 +261,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           {/* Quick Demo Login One-Click Buttons */}
           <div className="pt-3 border-t border-slate-800 space-y-2">
             <span className="text-[11px] font-bold text-slate-400 block text-center">
-              دخول سريع ومباشر للتجربة (اختر دورك):
+              دخول مباشر سريع للنظام:
             </span>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  const u = users.find(x => x.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) || users[0];
-                  if (u) onLogin(u);
-                }}
-                className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Crown className="w-3.5 h-3.5 text-amber-400" />
-                <span>المدير الدائم 👑</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const u = users.find(x => x.role === 'team_manager') || users[2];
-                  if (u) onLogin(u);
-                }}
-                className="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>مسؤول فريق 📋</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const u = users.find(x => x.role === 'player') || users[7];
-                  if (u) onLogin(u);
-                }}
-                className="p-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Shirt className="w-3.5 h-3.5 text-blue-400" />
-                <span>لاعب معتمد ⚽</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const u = users.find(x => x.role === 'spectator') || users[11];
-                  if (u) onLogin(u);
-                }}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Eye className="w-3.5 h-3.5 text-slate-400" />
-                <span>مشجع ومتفرج 👁️</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const u = users.find(x => x.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) || users[0];
+                if (u) onLogin(u);
+              }}
+              className="w-full p-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            >
+              <Crown className="w-4 h-4 text-amber-400" />
+              <span>دخول فوري بحساب المدير العام (الحلفاوي) 👑</span>
+            </button>
           </div>
 
           {/* Switch to Signup */}

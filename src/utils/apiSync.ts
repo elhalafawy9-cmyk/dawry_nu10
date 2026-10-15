@@ -721,4 +721,64 @@ export async function archiveSeasonOnServer(payload: {
   }
 }
 
+/**
+ * Downloads / fetches complete backup from server
+ */
+export async function fetchServerBackup(): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/backup`, {
+      headers: { 'Accept': 'application/json' },
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return data.backup;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch backup from server:', e);
+  }
+  return null;
+}
+
+/**
+ * Imports / restores a complete backup onto the server
+ */
+export async function importServerBackup(backupData: any): Promise<{ success: boolean; error?: string; data?: any }> {
+  try {
+    const res = await fetch(`${API_BASE}/backup/import`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ backup: backupData }),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, data };
+    }
+    return { success: false, error: data.error || 'فشل في استعادة النسخة الاحتياطية' };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'حدث خطأ في الاتصال بالخادم' };
+  }
+}
+
+/**
+ * Hard reset system on server to zero points and users
+ */
+export async function resetSystemOnServer(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/system/reset-all`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+    const data = await res.json();
+    return { success: res.ok && data.success, error: data.error };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
 

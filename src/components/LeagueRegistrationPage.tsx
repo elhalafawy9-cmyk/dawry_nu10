@@ -203,6 +203,20 @@ export const LeagueRegistrationPage: React.FC<LeagueRegistrationPageProps> = ({
   });
   const [isStartingNewSeason, setIsStartingNewSeason] = useState(false);
 
+const mapPositionToAr = (pos: string): 'حارس' | 'دفاع' | 'وسط' | 'هجوم' => {
+  if (pos === 'GK' || pos === 'حارس') return 'حارس';
+  if (pos === 'DEF' || pos === 'دفاع') return 'دفاع';
+  if (pos === 'FWD' || pos === 'هجوم') return 'هجوم';
+  return 'وسط';
+};
+
+const mapPositionToEn = (pos: string): 'GK' | 'DEF' | 'MID' | 'FWD' => {
+  if (pos === 'حارس' || pos === 'GK') return 'GK';
+  if (pos === 'دفاع' || pos === 'DEF') return 'DEF';
+  if (pos === 'هجوم' || pos === 'FWD') return 'FWD';
+  return 'MID';
+};
+
   // When a team is selected, pre-load existing players from squads or default roster
   const handleSelectTeam = (teamName: string) => {
     setSelectedTeamName(teamName);
@@ -213,7 +227,7 @@ export const LeagueRegistrationPage: React.FC<LeagueRegistrationPageProps> = ({
           id: p.id || `p_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
           name: p.name,
           number: p.number || 10,
-          position: p.position || 'وسط',
+          position: mapPositionToAr(p.position),
           studentId: p.studentId || '',
           isCaptain: p.isCaptain || false,
         }))
@@ -339,8 +353,8 @@ export const LeagueRegistrationPage: React.FC<LeagueRegistrationPageProps> = ({
             id: p.id,
             name: p.name.trim(),
             number: Number(p.number) || 10,
-            position: p.position,
-            studentId: p.studentId.trim() || undefined,
+            position: mapPositionToEn(p.position),
+            studentId: p.studentId.trim() || '',
             isCaptain: p.isCaptain || false,
             isIdentityLocked: true,
           }));

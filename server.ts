@@ -73,73 +73,16 @@ export interface TournamentSeason {
 
 const DEFAULT_SEASONS: TournamentSeason[] = [
   {
-    id: 'season_2025',
-    name: 'دوري جامعة النيل 2025 - النسخة الرابعة',
-    year: '2024 / 2025',
-    teamsCount: 32,
-    status: 'archived',
-    champion: 'برشلونة (هندسة النيل)',
-    runnerUp: 'الاهلي (حاسبات ومعلومات)',
-    createdAt: '2024-10-01',
-    archivedAt: '2025-05-20',
-  },
-  {
     id: 'season_2026',
     name: 'دوري جامعة النيل 2026 - النسخة الخامسة (48 فريقاً)',
     year: '2025 / 2026',
     teamsCount: 48,
     status: 'active',
-    createdAt: '2025-10-01',
+    createdAt: '2026-01-01',
   },
 ];
 
-const DEFAULT_APPLICATIONS: TeamApplication[] = [
-  {
-    id: 'app_101',
-    teamName: 'نسور الذكاء الاصطناعي (AI Eagles)',
-    faculty: 'كلية تكنولوجيا المعلومات وعلوم الحاسب',
-    captainName: 'ياسين كريم طارق',
-    captainStudentId: '20230912',
-    email: 'y.kareem@nu.edu.eg',
-    phone: '01023456789',
-    playerCount: 14,
-    primaryColor: '#0ea5e9',
-    secondaryColor: '#0369a1',
-    notes: 'فريق قسم الذكاء الاصطناعي وعلوم البيانات - جاهزون للمنافسة بالزي الكامل والكارنيهات الجامعية.',
-    status: 'pending',
-    submittedAt: '2026-10-12T14:30:00.000Z',
-  },
-  {
-    id: 'app_102',
-    teamName: 'رواد الأعمال (FinTech Tigers)',
-    faculty: 'كلية إدارة الأعمال والمالية',
-    captainName: 'عمر شريف الجابري',
-    captainStudentId: '20220411',
-    email: 'o.sherif@nu.edu.eg',
-    phone: '01122334455',
-    playerCount: 15,
-    primaryColor: '#f59e0b',
-    secondaryColor: '#1e293b',
-    notes: 'فريق طلاب إدارة الأعمال - متفرغون لمواعيد الملاعب الرسمية.',
-    status: 'pending',
-    submittedAt: '2026-10-13T09:15:00.000Z',
-  },
-  {
-    id: 'app_103',
-    teamName: 'محاربو الميكاترونكس (Mecha Warriors)',
-    faculty: 'كلية الهندسة والعلوم التطبيقية',
-    captainName: 'حازم ماجد عبد الله',
-    captainStudentId: '20210777',
-    email: 'h.maged@nu.edu.eg',
-    phone: '01298765432',
-    playerCount: 16,
-    primaryColor: '#10b981',
-    secondaryColor: '#064e3b',
-    notes: 'وصيف بطولة كليات الهندسة العام الماضي، نتعهد بالالتزام باللوائح والروح الرياضية.',
-    status: 'pending',
-    submittedAt: '2026-10-14T11:45:00.000Z',
-  },
-];
+const DEFAULT_APPLICATIONS: TeamApplication[] = [];
 
 function readSettings(): AppSettings {
   ensureDataDir();
@@ -239,26 +182,7 @@ function readArchivedSnapshots(): ArchivedSeasonSnapshot[] {
   } catch (e) {
     console.warn('Could not read archived_seasons.json', e);
   }
-  const defaultSnapshots: ArchivedSeasonSnapshot[] = [
-    {
-      id: 'snap_2025',
-      seasonId: 'season_2025',
-      seasonName: 'دوري جامعة النيل 2025 - النسخة الرابعة',
-      year: '2024 / 2025',
-      archivedAt: '2025-05-20T18:00:00.000Z',
-      champion: 'برشلونة (هندسة النيل)',
-      runnerUp: 'الاهلي (حاسبات ومعلومات)',
-      teamsCount: 32,
-      matchesCount: 64,
-      teams: [
-        { name: 'برشلونة (هندسة النيل)', points: 15, played: 5, won: 5, gf: 14, ga: 2, gd: 12 },
-        { name: 'الاهلي (حاسبات ومعلومات)', points: 13, played: 5, won: 4, gf: 11, ga: 3, gd: 8 },
-        { name: 'ريال مدريد (إدارة أعمال)', points: 10, played: 5, won: 3, gf: 9, ga: 5, gd: 4 },
-        { name: 'بايرن (تكنولوجيا حيوية)', points: 9, played: 5, won: 3, gf: 8, ga: 6, gd: 2 },
-      ],
-      scorersSummary: 'هداف البطولة: عمر النجار (8 أهداف) • أفضل صانع: زياد طارق (6 صناعات)',
-    },
-  ];
+  const defaultSnapshots: ArchivedSeasonSnapshot[] = [];
   writeArchivedSnapshots(defaultSnapshots);
   return defaultSnapshots;
 }
@@ -272,218 +196,25 @@ function writeArchivedSnapshots(snapshots: ArchivedSeasonSnapshot[]): void {
   }
 }
 
+const PERMANENT_ADMIN_EMAIL = 'elhalafawy9@gmail.com';
 
-
-const PERMANENT_ADMIN_EMAIL = 's.mohamed2442@nu.edu.eg';
-
-// Initial default seed users
+// Initial default seed users - ONLY user elhalafawy9@gmail.com as super admin
 const DEFAULT_INITIAL_USERS = [
   {
     id: 'user_super_admin',
-    name: 'م. س. محمد (المدير الدائم للنظام)',
+    name: 'المدير العام للنظام (الحلفاوي)',
     email: PERMANENT_ADMIN_EMAIL,
     password: 'Password123',
     role: 'admin',
     isPermanentAdmin: true,
-    studentId: '20202442',
-    department: 'كلية الهندسة والعلوم التطبيقية',
+    studentId: '20260001',
+    department: 'إدارة بطولة دوري النيل',
     registeredAt: '2026-01-01',
-    notes: 'المدير الدائم المعتمد للبطولة والنظام - محمي من التعديل',
+    notes: 'المدير الدائم المعتمد والوحيد للنظام',
     lastLoginAt: new Date().toISOString(),
     lastActiveAt: new Date().toISOString(),
     isOnline: true,
     loginCount: 1,
-  },
-  {
-    id: 'user_admin_2',
-    name: 'أحمد شريف (مشرف الأنشطة الرياضية)',
-    email: 'a.sherif@nu.edu.eg',
-    password: 'Password123',
-    role: 'admin',
-    studentId: '20210088',
-    department: 'رعاية الشباب وإدارة الأنشطة',
-    registeredAt: '2026-01-05',
-    lastLoginAt: '2026-05-10T14:20:00.000Z',
-    isOnline: false,
-    loginCount: 4,
-  },
-  {
-    id: 'user_tm_barca',
-    name: 'كابتن محمود رضا',
-    email: 'm.reda@nu.edu.eg',
-    password: 'Password123',
-    role: 'team_manager',
-    managedTeamName: 'برشلونة',
-    studentId: '20220114',
-    department: 'كلية إدارة الأعمال',
-    registeredAt: '2026-01-10',
-    lastLoginAt: '2026-05-11T09:15:00.000Z',
-    isOnline: false,
-    loginCount: 3,
-  },
-  {
-    id: 'user_tm_ahly',
-    name: 'طارق حسام الدين',
-    email: 't.hossam@nu.edu.eg',
-    password: 'Password123',
-    role: 'team_manager',
-    managedTeamName: 'الاهلي',
-    studentId: '20220455',
-    department: 'كلية تكنولوجيا المعلومات وعلوم الحاسب',
-    registeredAt: '2026-01-11',
-    lastLoginAt: '2026-05-11T11:45:00.000Z',
-    isOnline: false,
-    loginCount: 5,
-  },
-  {
-    id: 'user_tm_zamalek',
-    name: 'عمر نبيل عبد المنعم',
-    email: 'o.nabil@nu.edu.eg',
-    password: 'Password123',
-    role: 'team_manager',
-    managedTeamName: 'الزمالك',
-    studentId: '20220890',
-    department: 'كلية الهندسة',
-    registeredAt: '2026-01-12',
-    lastLoginAt: '2026-05-10T18:00:00.000Z',
-    isOnline: false,
-    loginCount: 2,
-  },
-  {
-    id: 'user_tm_madrid',
-    name: 'زياد خالد',
-    email: 'z.khaled@nu.edu.eg',
-    password: 'Password123',
-    role: 'team_manager',
-    managedTeamName: 'ريال مدريد',
-    studentId: '20230230',
-    department: 'كلية التكنولوجيا الحيوية',
-    registeredAt: '2026-01-14',
-    lastLoginAt: '2026-05-09T16:30:00.000Z',
-    isOnline: false,
-    loginCount: 2,
-  },
-  {
-    id: 'user_tm_city',
-    name: 'ياسين أشرف',
-    email: 'y.ashraf@nu.edu.eg',
-    password: 'Password123',
-    role: 'team_manager',
-    managedTeamName: 'مان سيتي',
-    studentId: '20230510',
-    department: 'كلية تكنولوجيا المعلومات',
-    registeredAt: '2026-01-15',
-    lastLoginAt: '2026-05-08T12:00:00.000Z',
-    isOnline: false,
-    loginCount: 1,
-  },
-  {
-    id: 'user_player_1',
-    name: 'حازم مصطفى (مهاجم)',
-    email: 'h.mostafa@nu.edu.eg',
-    password: 'Password123',
-    role: 'player',
-    playerTeamName: 'برشلونة',
-    studentId: '20230788',
-    department: 'كلية الهندسة',
-    registeredAt: '2026-01-20',
-    lastLoginAt: '2026-05-11T13:10:00.000Z',
-    isOnline: false,
-    loginCount: 6,
-  },
-  {
-    id: 'user_player_2',
-    name: 'يوسف العطار (صانع ألعاب)',
-    email: 'y.alattar@nu.edu.eg',
-    password: 'Password123',
-    role: 'player',
-    playerTeamName: 'الاهلي',
-    studentId: '20240112',
-    department: 'كلية علوم الحاسب',
-    registeredAt: '2026-01-21',
-    lastLoginAt: '2026-05-11T15:05:00.000Z',
-    isOnline: false,
-    loginCount: 4,
-  },
-  {
-    id: 'user_player_3',
-    name: 'كريم الجوهري (حارس مرمى)',
-    email: 'k.elgohary@nu.edu.eg',
-    password: 'Password123',
-    role: 'player',
-    playerTeamName: 'الزمالك',
-    studentId: '20230999',
-    department: 'كلية إدارة الأعمال',
-    registeredAt: '2026-01-22',
-    lastLoginAt: '2026-05-10T11:20:00.000Z',
-    isOnline: false,
-    loginCount: 3,
-  },
-  {
-    id: 'user_player_4',
-    name: 'سيف الدين ماجد',
-    email: 's.maged@nu.edu.eg',
-    password: 'Password123',
-    role: 'player',
-    playerTeamName: 'ريال مدريد',
-    studentId: '20240344',
-    department: 'كلية الهندسة',
-    registeredAt: '2026-01-22',
-    lastLoginAt: '2026-05-09T17:40:00.000Z',
-    isOnline: false,
-    loginCount: 2,
-  },
-  {
-    id: 'user_spec_1',
-    name: 'مريم عادل',
-    email: 'm.adel@nu.edu.eg',
-    password: 'Password123',
-    role: 'spectator',
-    studentId: '20240981',
-    department: 'كلية التكنولوجيا الحيوية',
-    registeredAt: '2026-01-25',
-    lastLoginAt: '2026-05-11T10:00:00.000Z',
-    isOnline: false,
-    loginCount: 2,
-  },
-  {
-    id: 'user_spec_2',
-    name: 'بلال تامر فاروق',
-    email: 'b.tamer@nu.edu.eg',
-    password: 'Password123',
-    role: 'spectator',
-    studentId: '20220771',
-    department: 'كلية إدارة الأعمال',
-    registeredAt: '2026-01-26',
-    lastLoginAt: '2026-05-08T09:30:00.000Z',
-    isOnline: false,
-    loginCount: 1,
-  },
-  {
-    id: 'user_spec_3',
-    name: 'نور الدين سامح',
-    email: 'n.sameh@nu.edu.eg',
-    password: 'Password123',
-    role: 'spectator',
-    studentId: '20230444',
-    department: 'كلية الهندسة',
-    registeredAt: '2026-01-27',
-    lastLoginAt: '2026-05-07T14:15:00.000Z',
-    isOnline: false,
-    loginCount: 1,
-  },
-  {
-    id: 'user_spec_4',
-    name: 'سلمى إبراهيم',
-    email: 's.ibrahim@nu.edu.eg',
-    password: 'Password123',
-    role: 'spectator',
-    studentId: '20240502',
-    department: 'كلية تكنولوجيا المعلومات',
-    registeredAt: '2026-01-28',
-    lastLoginAt: '2026-05-11T16:20:00.000Z',
-    isOnline: false,
-    loginCount: 3,
   },
 ];
 
@@ -502,9 +233,14 @@ function readUsers(): any[] {
       const raw = fs.readFileSync(USERS_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
+        // Purge old demo admin and users completely
+        const cleaned = parsed.filter(u => u.email && u.email.toLowerCase() !== 's.mohamed2442@nu.edu.eg');
+        if (!cleaned.some(u => u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase())) {
+          cleaned.unshift(DEFAULT_INITIAL_USERS[0]);
+        }
         // Compute online status dynamically (active within 3 minutes)
         const now = Date.now();
-        return parsed.map(u => {
+        return cleaned.map(u => {
           const lastActive = u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : 0;
           const isRecentlyActive = (now - lastActive) < (3 * 60 * 1000);
           return {
@@ -526,17 +262,19 @@ function readUsers(): any[] {
 function writeUsers(users: any[]) {
   ensureDataDir();
   try {
-    // Permanent admin guard
-    const sanitized = users.map(u => {
-      if (u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
-        return {
-          ...u,
-          role: 'admin',
-          isPermanentAdmin: true,
-        };
-      }
-      return u;
-    });
+    // Permanent admin guard & purge old admin
+    const sanitized = users
+      .filter(u => u.email && u.email.toLowerCase() !== 's.mohamed2442@nu.edu.eg')
+      .map(u => {
+        if (u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
+          return {
+            ...u,
+            role: 'admin',
+            isPermanentAdmin: true,
+          };
+        }
+        return u;
+      });
 
     const hasPermAdmin = sanitized.some(u => u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
     if (!hasPermAdmin) {
@@ -1041,6 +779,104 @@ app.post('/api/seasons/archive', (req: Request, res: Response) => {
   writeArchivedSnapshots(snapshots);
   console.log(`[SEASON] Archived snapshot saved for season: ${newSnapshot.seasonName} (${newSnapshot.year})`);
   res.json({ success: true, snapshot: newSnapshot, snapshots });
+});
+
+// 18. GET /api/backup - Export complete system backup
+app.get('/api/backup', (_req: Request, res: Response) => {
+  const users = readUsers();
+  const settings = readSettings();
+  const applications = readApplications();
+  const seasons = readSeasons();
+  const archivedSnapshots = readArchivedSnapshots();
+
+  const backupData = {
+    version: '1.0',
+    appName: 'دوري جامعة النيل — بطولة كرة القدم',
+    exportedAt: new Date().toISOString(),
+    users,
+    settings,
+    applications,
+    seasons,
+    archivedSnapshots,
+  };
+
+  res.json({ success: true, backup: backupData });
+});
+
+// 19. POST /api/backup/import - Import complete system backup
+app.post('/api/backup/import', (req: Request, res: Response) => {
+  const incoming = req.body;
+  if (!incoming || typeof incoming !== 'object') {
+    return res.status(400).json({ success: false, error: 'ملف النسخة الاحتياطية غير صالح' });
+  }
+
+  const payload = incoming.backup || incoming;
+
+  if (Array.isArray(payload.users) && payload.users.length > 0) {
+    writeUsers(payload.users);
+  }
+  if (payload.settings && typeof payload.settings === 'object') {
+    writeSettings({ ...DEFAULT_SETTINGS, ...payload.settings });
+  }
+  if (Array.isArray(payload.applications)) {
+    writeApplications(payload.applications);
+  }
+  if (Array.isArray(payload.seasons) && payload.seasons.length > 0) {
+    writeSeasons(payload.seasons);
+  }
+  if (Array.isArray(payload.archivedSnapshots)) {
+    writeArchivedSnapshots(payload.archivedSnapshots);
+  }
+
+  console.log(`[BACKUP RESTORE] Successfully imported backup from ${payload.exportedAt || payload.timestamp || 'unknown'}`);
+  res.json({
+    success: true,
+    message: 'تم استعادة النسخة الاحتياطية بنجاح على الخادم',
+    users: readUsers(),
+    settings: readSettings(),
+    applications: readApplications(),
+    seasons: readSeasons(),
+    archivedSnapshots: readArchivedSnapshots(),
+  });
+});
+
+// 20. POST /api/system/reset-all - Hard reset system to zero & keep only super admin
+app.post('/api/system/reset-all', (_req: Request, res: Response) => {
+  const freshAdmin = [
+    {
+      id: 'user_super_admin',
+      name: 'المدير العام للنظام (الحلفاوي)',
+      email: PERMANENT_ADMIN_EMAIL,
+      password: 'Password123',
+      role: 'admin',
+      isPermanentAdmin: true,
+      studentId: '20260001',
+      department: 'إدارة بطولة دوري النيل',
+      registeredAt: '2026-01-01',
+      notes: 'المدير الدائم المعتمد والوحيد للنظام',
+      lastLoginAt: new Date().toISOString(),
+      lastActiveAt: new Date().toISOString(),
+      isOnline: true,
+      loginCount: 1,
+    },
+  ];
+
+  writeUsers(freshAdmin);
+  writeApplications([]);
+  writeArchivedSnapshots([]);
+  writeSeasons(DEFAULT_SEASONS);
+  writeSettings(DEFAULT_SETTINGS);
+
+  console.log('[SYSTEM RESET] System hard reset to zero. All users purged except elhalafawy9@gmail.com.');
+  res.json({
+    success: true,
+    message: 'تم تصفير جميع البيانات بنجاح وحذف كافة المستخدمين عدا حساب المدير العام',
+    users: freshAdmin,
+    settings: DEFAULT_SETTINGS,
+    applications: [],
+    seasons: DEFAULT_SEASONS,
+    archivedSnapshots: [],
+  });
 });
 
 
