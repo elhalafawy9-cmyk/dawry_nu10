@@ -4,6 +4,7 @@ import {
   UserRole, 
   isValidNileUniversityEmail 
 } from '../utils/auth';
+import { fetchServerUsers } from '../utils/apiSync';
 import { 
   UserPlus, 
   LogIn, 
@@ -67,7 +68,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({
     `المجموعة ${t.group}`.includes(teamSearch)
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -92,7 +93,12 @@ export const SignupPage: React.FC<SignupPageProps> = ({
     }
 
     // Check duplicate email
-    const emailExists = users.some(u => u.email.toLowerCase() === trimmedEmail);
+    let emailExists = users.some(u => u.email.toLowerCase() === trimmedEmail);
+    if (!emailExists) {
+      const serverUsers = await fetchServerUsers();
+      emailExists = serverUsers ? serverUsers.some(u => u.email.toLowerCase() === trimmedEmail) : false;
+    }
+
     if (emailExists) {
       setError('هذا البريد الجامعي مسجل بالفعل! يمكنك الانتقال إلى تسجيل الدخول.');
       return;

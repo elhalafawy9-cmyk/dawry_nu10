@@ -42,6 +42,7 @@ interface TeamsRosterPageProps {
   onOpenApprovalsModal?: () => void;
   onUpdateTeamLogo?: (teamName: string, newLogoUrl: string) => void;
   onUpdatePlayerPhoto?: (teamName: string, playerId: string, newPhotoUrl: string) => void;
+  isPlayerEditingOpen?: boolean;
 }
 
 export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
@@ -57,6 +58,7 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
   onOpenApprovalsModal,
   onUpdateTeamLogo,
   onUpdatePlayerPhoto,
+  isPlayerEditingOpen = true,
 }) => {
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>('all');
   const [searchTeamQuery, setSearchTeamQuery] = useState<string>('');
@@ -69,6 +71,8 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
     if (currentUser.role === 'team_manager' && currentUser.managedTeamName === activeTeamName) return true;
     return false;
   }, [currentUser, activeTeamName]);
+
+  const canDirectEdit = (currentUser?.role === 'admin') || isPlayerEditingOpen;
 
   // Photo & Logo Upload Modal Configuration
   const [uploadModalConfig, setUploadModalConfig] = useState<{
@@ -340,8 +344,8 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
     if (!playerForm.name.trim()) return;
 
     if (editingPlayer) {
-      if (currentUser?.role === 'admin') {
-        // ADMIN DIRECT EDIT: Admin can directly edit name, student ID, number, position, photo, and captain status!
+      if (canDirectEdit) {
+        // DIRECT EDIT: (Admin or Player Editing Window is Open)
         const updated = currentSquad.map(p => {
           if (p.id === editingPlayer.id) {
             return {
@@ -362,9 +366,12 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
         setEditingPlayer(null);
         setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
         confetti({ particleCount: 30, spread: 50 });
-        alert(`تم تعديل بيانات وصورة اللاعب (${playerForm.name.trim()}) مباشرة بصلاحية الأدمن 👑🔒`);
+        alert(currentUser?.role === 'admin'
+          ? `تم تعديل بيانات وصورة اللاعب (${playerForm.name.trim()}) مباشرة بصلاحية الأدمن 👑`
+          : `تم حفظ وتعديل بيانات اللاعب (${playerForm.name.trim()}) في قائمة فريق ${activeTeamName} مباشرة بنجاح! ⚡✅`
+        );
       } else {
-        // NON-ADMIN / TEAM MANAGER: Send edit request to Admin!
+        // NON-ADMIN / TEAM MANAGER WHEN LOCKED: Send edit request to Admin!
         if (onRequestEditPlayer) {
           onRequestEditPlayer({
             type: 'edit',
@@ -391,6 +398,7 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
         setIsAddingPlayer(false);
         setEditingPlayer(null);
         setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
+        alert(`تم إرسال طلب تعديل اللاعب (${playerForm.name}) لمدير البطولة (Admin) للمراجعة والاعتماد ⏳🔒`);
       }
     } else {
       // Add
@@ -399,7 +407,25 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
         return;
       }
 
-      if (currentUser?.role !== 'admin') {
+      if (canDirectEdit) {
+        // Direct add
+        const newP: Player = {
+          id: `p_${Date.now()}`,
+          name: playerForm.name.trim(),
+          studentId: playerForm.studentId.trim(),
+          number: Number(playerForm.number),
+          position: playerForm.position,
+          isCaptain: playerForm.isCaptain,
+          photoUrl: playerForm.photoUrl || undefined,
+          isIdentityLocked: true,
+        };
+        onUpdateSquads({ ...squads, [activeTeamName]: [...currentSquad, newP] });
+        setIsAddingPlayer(false);
+        setEditingPlayer(null);
+        setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 2, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
+        confetti({ particleCount: 40, spread: 60 });
+        alert(`تمت إضافة وتسجيل اللاعب (${newP.name}) في قائمة فريق ${activeTeamName} مباشرة بنجاح! 🎉⚽`);
+      } else {
         // Send request to Admin for approval
         if (onRequestAddPlayer) {
           onRequestAddPlayer({
@@ -418,24 +444,6 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
         setEditingPlayer(null);
         setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
         alert(`تم إرسال طلب تسجيل اللاعب (${playerForm.name}) والـ ID (${playerForm.studentId}) لمدير البطولة (Admin) للموافقة عليه واعتماده رسمياً! ⏳🔒`);
-      } else {
-        // Admin direct add
-        const newP: Player = {
-          id: `p_${Date.now()}`,
-          name: playerForm.name.trim(),
-          studentId: playerForm.studentId.trim(),
-          number: Number(playerForm.number),
-          position: playerForm.position,
-          isCaptain: playerForm.isCaptain,
-          photoUrl: playerForm.photoUrl || undefined,
-          isIdentityLocked: true,
-        };
-        onUpdateSquads({ ...squads, [activeTeamName]: [...currentSquad, newP] });
-        setIsAddingPlayer(false);
-        setEditingPlayer(null);
-        setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
-        confetti({ particleCount: 40, spread: 60 });
-        alert(`تمت إضافة اللاعب (${newP.name}) واعتماد رقمه الجامعي (${newP.studentId}) مع قفل الهوية 🔒✅`);
       }
     }
   };
@@ -469,7 +477,7 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
           <button
             onClick={() => {
               setEditingPlayer(null);
-              setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, editReason: '' });
+              setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
               setIsAddingPlayer(true);
             }}
             className="px-4 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-teal-500/20"
@@ -667,7 +675,7 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
                   <button
                     onClick={() => {
                       setEditingPlayer(null);
-                      setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, editReason: '' });
+                      setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
                       setIsAddingPlayer(true);
                     }}
                     className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-teal-600 text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"

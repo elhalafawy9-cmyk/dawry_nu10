@@ -5,6 +5,7 @@ import {
   PERMANENT_ADMIN_PASSWORD, 
   isValidNileUniversityEmail 
 } from '../utils/auth';
+import { fetchServerUsers } from '../utils/apiSync';
 import { 
   LogIn, 
   Lock, 
@@ -16,7 +17,10 @@ import {
   CheckCircle2, 
   AlertCircle, 
   GraduationCap, 
-  Trophy
+  Trophy,
+  Crown,
+  UserCheck,
+  Shirt
 } from 'lucide-react';
 
 interface LoginPageProps {
@@ -38,7 +42,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -71,21 +75,29 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         return;
       }
 
-      const adminUser = users.find(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
+      let adminUser = users.find(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
+      if (!adminUser) {
+        const fresh = await fetchServerUsers();
+        adminUser = fresh?.find(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
+      }
+
       if (adminUser) {
+        setIsLoading(false);
+        setSuccess('أهلاً بك يا م. س. محمد، تم التحقق بنجاح والدخول للنظام 👑');
         setTimeout(() => {
-          setIsLoading(false);
-          setSuccess('أهلاً بك يا م. س. محمد، تم التحقق بنجاح والدخول للنظام 👑');
-          setTimeout(() => {
-            onLogin(adminUser);
-          }, 500);
-        }, 350);
+          onLogin(adminUser!);
+        }, 400);
         return;
       }
     }
 
-    // Match in registered users
-    const matched = users.find(u => u.email.toLowerCase() === trimmedEmail);
+    // Match in registered users (check local users, and if not found, check server)
+    let matched = users.find(u => u.email.toLowerCase() === trimmedEmail);
+    if (!matched) {
+      const serverUsers = await fetchServerUsers();
+      matched = serverUsers?.find(u => u.email.toLowerCase() === trimmedEmail);
+    }
+
     if (!matched) {
       setIsLoading(false);
       setError('هذا البريد الجامعي غير مسجل لدينا! اضغط على "إنشاء حساب جديد" بالأسفل للتسجيل.');
@@ -98,13 +110,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       return;
     }
 
+    setIsLoading(false);
+    setSuccess(`تم تسجيل الدخول بنجاح! مرحباً ${matched.name}`);
     setTimeout(() => {
-      setIsLoading(false);
-      setSuccess(`تم تسجيل الدخول بنجاح! مرحباً ${matched.name}`);
-      setTimeout(() => {
-        onLogin(matched);
-      }, 500);
-    }, 350);
+      onLogin(matched!);
+    }, 400);
   };
 
   return (
@@ -248,8 +258,64 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </button>
           </form>
 
+          {/* Quick Demo Login One-Click Buttons */}
+          <div className="pt-3 border-t border-slate-800 space-y-2">
+            <span className="text-[11px] font-bold text-slate-400 block text-center">
+              دخول سريع ومباشر للتجربة (اختر دورك):
+            </span>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  const u = users.find(x => x.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) || users[0];
+                  if (u) onLogin(u);
+                }}
+                className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Crown className="w-3.5 h-3.5 text-amber-400" />
+                <span>المدير الدائم 👑</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const u = users.find(x => x.role === 'team_manager') || users[2];
+                  if (u) onLogin(u);
+                }}
+                className="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>مسؤول فريق 📋</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const u = users.find(x => x.role === 'player') || users[7];
+                  if (u) onLogin(u);
+                }}
+                className="p-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Shirt className="w-3.5 h-3.5 text-blue-400" />
+                <span>لاعب معتمد ⚽</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const u = users.find(x => x.role === 'spectator') || users[11];
+                  if (u) onLogin(u);
+                }}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Eye className="w-3.5 h-3.5 text-slate-400" />
+                <span>مشجع ومتفرج 👁️</span>
+              </button>
+            </div>
+          </div>
+
           {/* Switch to Signup */}
-          <div className="pt-4 border-t border-slate-800 text-center space-y-2">
+          <div className="pt-3 border-t border-slate-800 text-center space-y-2">
             <p className="text-xs text-slate-400">
               ليس لديك حساب بعد؟
             </p>

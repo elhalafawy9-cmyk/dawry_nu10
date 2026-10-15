@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { RoundMatchupOrganizerModal } from './components/RoundMatchupOrganizerModal';
 import { TeamsRosterPage } from './components/TeamsRosterPage';
@@ -14,6 +14,22 @@ import { PlayerApprovalsModal } from './components/PlayerApprovalsModal';
 import { MatchAlertComposerModal } from './components/MatchAlertComposerModal';
 import { MatchAlertsListModal } from './components/MatchAlertsListModal';
 import { MatchLineupModal } from './components/MatchLineupModal';
+import { AssignTeamManagersPage } from './components/AssignTeamManagersPage';
+import { 
+  fetchServerUsers, 
+  recordUserEnter, 
+  registerUserOnServer, 
+  updateUserOnServer, 
+  deleteUserOnServer, 
+  syncLocalUsersToServer, 
+  sendUserHeartbeat,
+  assignTeamManagerOnServer,
+  unassignTeamManagerOnServer,
+  getLocalSettings,
+  saveLocalSettings,
+  fetchServerSettings,
+  updateServerSettings
+} from './utils/apiSync';
 import { 
   MatchScheduleNotification, 
   loadStoredMatchAlerts, 
@@ -90,7 +106,8 @@ import {
   Lock,
   UserPlus,
   Bell,
-  Send
+  Send,
+  Key
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -357,7 +374,7 @@ const INITIAL_SCOREKEEPERS: Scorekeeper[] = [
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<
-    'matches_control' | 'spectator_portal' | 'team_manager' | 'my_team' | 'users_directory' | 'groups' | 'bracket' | 'teams_roster' | 'stats_leaders' | 'manage'
+    'matches_control' | 'spectator_portal' | 'team_manager' | 'my_team' | 'users_directory' | 'assign_managers' | 'groups' | 'bracket' | 'teams_roster' | 'stats_leaders' | 'manage'
   >('matches_control');
   
   // Auth & Nile University Users State
@@ -377,6 +394,131 @@ export default function App() {
   const isTeamManager = effectiveRole === 'team_manager';
   const isPlayer = effectiveRole === 'player';
   const isSpectator = effectiveRole === 'spectator';
+
+  // Real-Time Server Sync State
+  const [isSyncingUsers, setIsSyncingUsers] = useState<boolean>(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>('');
+
+  // Tournament Player Editing Window State (مفتوح حالياً للفرق ويمكن تغييره في أي وقت من لوحة التحكم)
+  const [isPlayerEditingOpen, setIsPlayerEditingOpen] = useState<boolean>(() => {
+    return getLocalSettings().isPlayerEditingOpen;
+  });
+
+  const handleTogglePlayerEditing = async (nextState?: boolean) => {
+    const updatedValue = typeof nextState === 'boolean' ? nextState : !isPlayerEditingOpen;
+    setIsPlayerEditingOpen(updatedValue);
+    saveLocalSettings({
+      isPlayerEditingOpen: updatedValue,
+      updatedBy: currentUser?.email || 'admin',
+      updatedAt: new Date().toISOString(),
+    });
+    try {
+      await updateServerSettings({
+        isPlayerEditingOpen: updatedValue,
+        updatedBy: currentUser?.email || 'admin',
+      });
+    } catch (e) {
+      console.warn('Failed to sync settings to server', e);
+    }
+    confetti({ particleCount: 35, spread: 45 });
+  };
+
+  // Explicit sync function
+  const handleRefreshUsersFromServer = async () => {
+    setIsSyncingUsers(true);
+    try {
+      const serverUsers = await fetchServerUsers();
+      if (serverUsers && Array.isArray(serverUsers)) {
+        setUsers(serverUsers);
+        saveStoredUsers(serverUsers);
+        if (currentUser) {
+          const matched = serverUsers.find(u => u.id === currentUser.id || u.email.toLowerCase() === currentUser.email.toLowerCase());
+          if (matched) {
+            setCurrentUser(matched);
+            saveActiveUser(matched);
+          }
+        }
+      }
+      setLastSyncTime(new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    } catch (e) {
+      console.warn('Sync failed', e);
+    } finally {
+      setIsSyncingUsers(false);
+    }
+  };
+
+  // On App mount: sync local accounts to server, load latest users, and record entry
+  useEffect(() => {
+    let isMounted = true;
+
+    const initSync = async () => {
+      // 1. Sync local users to server so any accounts created offline are preserved
+      const localUsers = loadStoredUsers();
+      await syncLocalUsersToServer(localUsers);
+
+      // 2. Fetch latest server users
+      const serverUsers = await fetchServerUsers();
+      if (serverUsers && isMounted) {
+        setUsers(serverUsers);
+      }
+
+      // 3. If there is an active logged in user, notify server that they entered!
+      const active = loadActiveUser(serverUsers || localUsers);
+      if (active && isMounted) {
+        const updatedUsers = await recordUserEnter(active);
+        if (updatedUsers && isMounted) {
+          setUsers(updatedUsers);
+          const freshActive = updatedUsers.find(u => u.id === active.id || u.email.toLowerCase() === active.email.toLowerCase());
+          if (freshActive) {
+            setCurrentUser(freshActive);
+            saveActiveUser(freshActive);
+          }
+        }
+      }
+
+      // 3.5. Fetch tournament settings (isPlayerEditingOpen)
+      const serverSettings = await fetchServerSettings();
+      if (serverSettings && typeof serverSettings.isPlayerEditingOpen === 'boolean' && isMounted) {
+        setIsPlayerEditingOpen(serverSettings.isPlayerEditingOpen);
+      }
+
+      if (isMounted) {
+        setLastSyncTime(new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      }
+    };
+
+    initSync();
+
+    // 4. Background polling every 5 seconds so when ANY user enters or registers on another phone/device,
+    // they appear immediately in the admin's Users Directory page!
+    const pollInterval = setInterval(() => {
+      fetchServerUsers().then(latest => {
+        if (latest && isMounted) {
+          setUsers(latest);
+          setLastSyncTime(new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+        }
+      });
+      fetchServerSettings().then(st => {
+        if (st && typeof st.isPlayerEditingOpen === 'boolean' && isMounted) {
+          setIsPlayerEditingOpen(st.isPlayerEditingOpen);
+        }
+      });
+    }, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+    };
+  }, []);
+
+  // Heartbeat effect for active user
+  useEffect(() => {
+    if (!currentUser) return;
+    const hbInterval = setInterval(() => {
+      sendUserHeartbeat(currentUser.id);
+    }, 20000);
+    return () => clearInterval(hbInterval);
+  }, [currentUser?.id]);
 
   // Data States
   const [teams, setTeams] = useState<Team[]>(() => {
@@ -1945,6 +2087,8 @@ export default function App() {
 
   // User Management & Security Handlers
   const handleUpdateUserRole = (userId: string, newRole: UserRole, teamName?: string) => {
+    let updatedTargetUser: AppUser | undefined;
+
     setUsers(prev => {
       const updated = prev.map(u => {
         // PERMANENT ADMIN PROTECTION: s.mohamed2442@nu.edu.eg cannot be altered or demoted
@@ -1952,18 +2096,26 @@ export default function App() {
           return { ...u, role: 'admin' as UserRole, isPermanentAdmin: true };
         }
         if (u.id === userId) {
-          return {
+          const patched: AppUser = {
             ...u,
             role: newRole,
             managedTeamName: newRole === 'team_manager' ? teamName : undefined,
             playerTeamName: newRole === 'player' ? teamName : undefined,
           };
+          updatedTargetUser = patched;
+          return patched;
         }
         return u;
       });
       saveStoredUsers(updated);
       return updated;
     });
+
+    if (updatedTargetUser) {
+      updateUserOnServer(updatedTargetUser).then(serverUsers => {
+        if (serverUsers) setUsers(serverUsers);
+      });
+    }
 
     if (currentUser && currentUser.id === userId && currentUser.email.toLowerCase() !== PERMANENT_ADMIN_EMAIL.toLowerCase()) {
       setCurrentUser(prev => {
@@ -1987,6 +2139,9 @@ export default function App() {
       saveStoredUsers(next);
       return next;
     });
+    updateUserOnServer(updatedUser).then(serverUsers => {
+      if (serverUsers) setUsers(serverUsers);
+    });
     if (currentUser && currentUser.id === updatedUser.id) {
       setCurrentUser(updatedUser);
       saveActiveUser(updatedUser);
@@ -1999,6 +2154,9 @@ export default function App() {
       saveStoredUsers(next);
       return next;
     });
+    registerUserOnServer(newUser).then(serverUsers => {
+      if (serverUsers) setUsers(serverUsers);
+    });
   };
 
   const handleDeleteUser = (userId: string) => {
@@ -2009,12 +2167,105 @@ export default function App() {
       saveStoredUsers(next);
       return next;
     });
+    deleteUserOnServer(userId).then(serverUsers => {
+      if (serverUsers) setUsers(serverUsers);
+    });
+  };
+
+  const handleAssignTeamManager = async (data: {
+    email: string;
+    password?: string;
+    teamName: string;
+    name?: string;
+    studentId?: string;
+    department?: string;
+  }) => {
+    const serverUsers = await assignTeamManagerOnServer(data);
+    if (serverUsers) {
+      setUsers(serverUsers);
+      saveStoredUsers(serverUsers);
+    } else {
+      // Local fallback
+      setUsers(prev => {
+        const trimmedEmail = data.email.trim().toLowerCase();
+        const existingIdx = prev.findIndex(u => u.email.toLowerCase() === trimmedEmail);
+        const nowIso = new Date().toISOString();
+        if (existingIdx >= 0) {
+          const next = [...prev];
+          next[existingIdx] = {
+            ...next[existingIdx],
+            name: data.name || next[existingIdx].name,
+            password: data.password || next[existingIdx].password,
+            role: 'team_manager' as UserRole,
+            managedTeamName: data.teamName,
+            managerApprovalStatus: 'approved',
+            studentId: data.studentId || next[existingIdx].studentId,
+            department: data.department || next[existingIdx].department,
+          };
+          saveStoredUsers(next);
+          return next;
+        } else {
+          const newUser: AppUser = {
+            id: `user_tm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            name: data.name || trimmedEmail.split('@')[0],
+            email: trimmedEmail,
+            password: data.password || 'Password123',
+            role: 'team_manager' as UserRole,
+            managedTeamName: data.teamName,
+            managerApprovalStatus: 'approved',
+            studentId: data.studentId,
+            department: data.department || 'جامعة النيل',
+            registeredAt: nowIso.substring(0, 10),
+          };
+          const next = [newUser, ...prev];
+          saveStoredUsers(next);
+          return next;
+        }
+      });
+    }
+  };
+
+  const handleUnassignTeamManager = async (userId: string, email: string) => {
+    const serverUsers = await unassignTeamManagerOnServer({ userId, email });
+    if (serverUsers) {
+      setUsers(serverUsers);
+      saveStoredUsers(serverUsers);
+    } else {
+      setUsers(prev => {
+        const next = prev.map(u => {
+          if (u.id === userId || u.email.toLowerCase() === email.toLowerCase()) {
+            return {
+              ...u,
+              role: 'spectator' as UserRole,
+              managedTeamName: undefined,
+              managerApprovalStatus: undefined,
+            };
+          }
+          return u;
+        });
+        saveStoredUsers(next);
+        return next;
+      });
+    }
   };
 
   const handleLogin = (user: AppUser) => {
     setCurrentUser(user);
     saveActiveUser(user);
     setPreviewRole(null);
+
+    // Broadcast user enter to server immediately so they appear online / entered across all devices!
+    recordUserEnter(user).then(serverUsers => {
+      if (serverUsers) {
+        setUsers(serverUsers);
+        const fresh = serverUsers.find(u => u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase());
+        if (fresh) {
+          setCurrentUser(fresh);
+          saveActiveUser(fresh);
+        }
+      }
+    });
+
     if (user.role === 'team_manager') {
       setCurrentTab('team_manager');
     } else if (user.role === 'admin') {
@@ -2351,6 +2602,21 @@ export default function App() {
               </button>
             )}
 
+            {/* Tab: Quick Assign Team Managers (Admin Only) */}
+            {isAdmin && (
+              <button
+                onClick={() => setCurrentTab('assign_managers')}
+                className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  currentTab === 'assign_managers'
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow-lg shadow-amber-500/30 font-black'
+                    : 'bg-slate-900/80 text-amber-300 hover:bg-slate-800 border border-amber-500/30'
+                }`}
+              >
+                <Key className="w-4 h-4 text-amber-400" />
+                تعيين مسؤولي الفرق 👔
+              </button>
+            )}
+
             {/* Tab: Matches & Schedule (Full control for Admin, Schedule view for others) */}
             <button
               onClick={() => setCurrentTab('matches_control')}
@@ -2373,7 +2639,7 @@ export default function App() {
               }`}
             >
               <Shield className="w-4 h-4" />
-              المجموعات (32 فريق)
+              المجموعات (48 فريق)
             </button>
 
             <button
@@ -2503,6 +2769,9 @@ export default function App() {
               onRequestEditPlayer={handleRequestEditPlayer}
               onOpenApprovalsModal={() => setIsApprovalsModalOpen(true)}
               onOpenAllAlertsModal={() => setIsAlertsListOpen(true)}
+              onNavigateToAssignManagers={() => setCurrentTab('assign_managers')}
+              isPlayerEditingOpen={isPlayerEditingOpen}
+              onTogglePlayerEditing={handleTogglePlayerEditing}
             />
           ) : (
             <div className="bg-slate-900 border border-emerald-500/30 rounded-3xl p-8 text-center max-w-lg mx-auto my-12 shadow-2xl space-y-4">
@@ -2536,6 +2805,10 @@ export default function App() {
               onUpdateUser={handleUpdateUser}
               onAddUser={handleAddUser}
               onDeleteUser={handleDeleteUser}
+              onRefreshUsers={handleRefreshUsersFromServer}
+              isSyncing={isSyncingUsers}
+              lastSyncTime={lastSyncTime}
+              onNavigateToAssignManagers={() => setCurrentTab('assign_managers')}
             />
           ) : (
             <div className="bg-slate-900 border border-purple-500/30 rounded-3xl p-8 text-center max-w-lg mx-auto my-12 shadow-2xl space-y-4">
@@ -2549,6 +2822,42 @@ export default function App() {
               <button
                 onClick={() => setCurrentTab(isTeamManager ? 'team_manager' : isPlayer ? 'my_team' : 'spectator_portal')}
                 className="px-5 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs transition-colors cursor-pointer shadow-lg"
+              >
+                العودة إلى صفحتك المعتمدة ➔
+              </button>
+            </div>
+          )
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB: ASSIGN TEAM MANAGERS (صفحة تعيين وتوزيع مسؤولي الفرق الـ 48 - للأدمن) */}
+        {/* ========================================================================= */}
+        {currentTab === 'assign_managers' && (
+          isAdmin ? (
+            <AssignTeamManagersPage
+              teams={teams}
+              users={users}
+              currentUser={{ ...currentUser, role: effectiveRole }}
+              onAssignManager={handleAssignTeamManager}
+              onUnassignManager={handleUnassignTeamManager}
+              onRefreshUsers={handleRefreshUsersFromServer}
+              isSyncing={isSyncingUsers}
+              onNavigateToTeamPortal={(teamName) => {
+                setCurrentTab('team_manager');
+              }}
+            />
+          ) : (
+            <div className="bg-slate-900 border border-amber-500/30 rounded-3xl p-8 text-center max-w-lg mx-auto my-12 shadow-2xl space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/30">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-black text-white">صفحة تعيين مسؤولي الفرق للأدمن فقط 👔</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                تعيين وتفويض مسؤولي ومدربي الفرق الـ 48 متاح فقط للمدير العام للبطولة.
+              </p>
+              <button
+                onClick={() => setCurrentTab(isTeamManager ? 'team_manager' : isPlayer ? 'my_team' : 'spectator_portal')}
+                className="px-5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-colors cursor-pointer shadow-lg"
               >
                 العودة إلى صفحتك المعتمدة ➔
               </button>
@@ -3637,6 +3946,7 @@ export default function App() {
             onRequestEditPlayer={handleRequestEditPlayer}
             playerRequests={playerRequests}
             onOpenApprovalsModal={() => setIsApprovalsModalOpen(true)}
+            isPlayerEditingOpen={isPlayerEditingOpen}
           />
         )}
 
@@ -3660,6 +3970,85 @@ export default function App() {
           isAdmin ? (
             <div className="space-y-6">
             
+            {/* Top Control Panel Settings: Player Roster Editing Window Control (فترة تعديل وقيد اللاعبين) */}
+            <div className={`p-5 md:p-6 rounded-3xl border transition-all shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-5 ${
+              isPlayerEditingOpen
+                ? 'bg-gradient-to-r from-emerald-950/80 via-slate-900 to-teal-950/50 border-emerald-500/50'
+                : 'bg-gradient-to-r from-amber-950/80 via-slate-900 to-slate-950 border-amber-500/50'
+            }`}>
+              <div className="flex items-start md:items-center gap-4">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
+                  isPlayerEditingOpen
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 ring-4 ring-emerald-500/10'
+                    : 'bg-amber-500/20 text-amber-400 border border-amber-500/40 ring-4 ring-amber-500/10'
+                }`}>
+                  {isPlayerEditingOpen ? <Sparkles className="w-7 h-7 text-emerald-400 animate-pulse" /> : <Lock className="w-7 h-7 text-amber-400" />}
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-slate-950/80 border border-slate-800 text-slate-300">
+                      لوحة التحكم العامة ⚙️
+                    </span>
+                    <span className={`text-xs font-black px-2.5 py-0.5 rounded-full border ${
+                      isPlayerEditingOpen
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    }`}>
+                      {isPlayerEditingOpen ? '🟢 فترة تعديل وقيد اللاعبين: مفتوحة حالياً' : '🔒 فترة تعديل وقيد اللاعبين: مقفلة رسمياً'}
+                    </span>
+                  </div>
+
+                  <h3 className="text-base md:text-xl font-black text-white">
+                    {isPlayerEditingOpen
+                      ? 'تعديل وقيد اللاعبين متاح ومفتوح لمسؤولي الفرق (تعديل مباشر ⚡)'
+                      : 'قوائم اللاعبين مقفلة ومعتمدة رسمياً (تتطلب موافقة الأدمن 🔒)'}
+                  </h3>
+
+                  <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                    {isPlayerEditingOpen
+                      ? 'مسؤولو ومدربو الـ 48 فرقة يمكنهم الآن تعديل قوائمهم، والأسماء، والـ ID، وأرقام القمصان، والمراكز، والصور مباشرة دون انتظار موافقة. يمكنك إغلاقها في أي وقت بنقرة واحدة.'
+                      : 'قوائم الفرق مقفلة ضد التعديل المباشر. أي محاولة تعديل أو إضافة لاعب ستصلك في لوحة "اعتماد الطلبات" للمراجعة والموافقة عليها أولاً.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Toggle Switch */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleTogglePlayerEditing()}
+                  className={`px-5 py-3 rounded-2xl text-xs md:text-sm font-black flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xl ${
+                    isPlayerEditingOpen
+                      ? 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-rose-600/30 ring-2 ring-rose-400/30'
+                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/30 ring-2 ring-emerald-300/50'
+                  }`}
+                  title="التبديل بين فتح وإغلاق تعديل اللاعبين للفرق"
+                >
+                  {isPlayerEditingOpen ? (
+                    <>
+                      <Lock className="w-4 h-4" />
+                      <span>قفل تعديل اللاعبين الآن 🔒</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>فتح تعديل اللاعبين للفرق الآن 🟢</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentTab('team_manager')}
+                  className="px-4 py-3 rounded-2xl bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold border border-slate-800 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Users className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>معاينة صفحة مسؤولي الفرق ➔</span>
+                </button>
+              </div>
+            </div>
+
             {/* Manage Sub-tab switcher */}
             <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 max-w-md">
               <button

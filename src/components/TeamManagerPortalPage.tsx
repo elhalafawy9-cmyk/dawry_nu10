@@ -29,7 +29,8 @@ import {
   AlertTriangle,
   Send,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Key
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Match, Team } from '../App';
@@ -55,6 +56,9 @@ interface TeamManagerPortalPageProps {
   onOpenAllAlertsModal?: () => void;
   onUpdateTeamLogo?: (teamName: string, newLogoUrl: string) => void;
   onUpdatePlayerPhoto?: (teamName: string, playerId: string, newPhotoUrl: string) => void;
+  onNavigateToAssignManagers?: () => void;
+  isPlayerEditingOpen?: boolean;
+  onTogglePlayerEditing?: (open: boolean) => void;
 }
 
 export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
@@ -75,7 +79,13 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
   onOpenAllAlertsModal,
   onUpdateTeamLogo,
   onUpdatePlayerPhoto,
+  onNavigateToAssignManagers,
+  isPlayerEditingOpen = true,
+  onTogglePlayerEditing,
 }) => {
+  // Can direct edit if admin OR player editing window is open
+  const canDirectEdit = isAdmin || isPlayerEditingOpen;
+
   // Currently selected team that the manager is managing (locked to assignedTeamName if not admin)
   const initialTeam = (!isAdmin && assignedTeamName) ? assignedTeamName : (teams[0]?.name || 'برشلونة');
   const [managedTeamName, setManagedTeamName] = useState<string>(initialTeam);
@@ -319,8 +329,8 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
     if (!playerForm.name.trim()) return;
 
     if (editingPlayer) {
-      if (isAdmin) {
-        // ADMIN DIRECT EDIT: Admin can directly edit name, student ID, number, position, photo, and captain status!
+      if (canDirectEdit) {
+        // DIRECT EDIT (Admin or Player Editing Window is Open)
         const updated = currentSquad.map(p => {
           if (p.id === editingPlayer.id) {
             return {
@@ -331,7 +341,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
               position: playerForm.position,
               isCaptain: playerForm.isCaptain,
               photoUrl: playerForm.photoUrl || p.photoUrl,
-              isIdentityLocked: true, // محمي ومقفل
+              isIdentityLocked: true,
             };
           }
           return p;
@@ -341,9 +351,12 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
         setEditingPlayer(null);
         setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
         confetti({ particleCount: 30, spread: 40 });
-        alert(`تم تعديل بيانات وصورة اللاعب (${playerForm.name.trim()}) مباشرة بصلاحية الأدمن 👑🔒`);
+        alert(isAdmin 
+          ? `تم تعديل بيانات وصورة اللاعب (${playerForm.name.trim()}) مباشرة بصلاحية الأدمن 👑` 
+          : `تم حفظ وتعديل بيانات اللاعب (${playerForm.name.trim()}) في قائمة فريق ${managedTeamName} مباشرة بنجاح! ⚡✅`
+        );
       } else {
-        // TEAM MANAGER / NON-ADMIN:
+        // TEAM MANAGER / NON-ADMIN WHEN EDITING IS LOCKED:
         // Must send an Edit Request to Admin for approval!
         if (onRequestEditPlayer) {
           onRequestEditPlayer({
@@ -371,6 +384,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
         setIsAddingPlayer(false);
         setEditingPlayer(null);
         setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
+        alert(`تم إرسال طلب تعديل اللاعب (${playerForm.name}) لمدير البطولة (Admin) للموافقة عليه واعتماده ⏳🔒`);
       }
     } else {
       // Adding new player:
@@ -379,8 +393,26 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
         return;
       }
 
-      if (!isAdmin) {
-        // TEAM MANAGER: Send request to Admin for approval!
+      if (canDirectEdit) {
+        // DIRECT ADD (Admin or Player Editing Window is Open)
+        const newP: Player = {
+          id: `p_${Date.now()}`,
+          name: playerForm.name.trim(),
+          studentId: playerForm.studentId.trim(),
+          number: Number(playerForm.number),
+          position: playerForm.position,
+          isCaptain: playerForm.isCaptain,
+          photoUrl: playerForm.photoUrl || undefined,
+          isIdentityLocked: true,
+        };
+        onUpdateSquads({ ...squads, [managedTeamName]: [...currentSquad, newP] });
+        setIsAddingPlayer(false);
+        setEditingPlayer(null);
+        setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 2, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
+        confetti({ particleCount: 40, spread: 50 });
+        alert(`تمت إضافة وتسجيل اللاعب (${newP.name}) في قائمة فريق ${managedTeamName} مباشرة بنجاح! 🎉⚽`);
+      } else {
+        // TEAM MANAGER WHEN EDITING IS LOCKED: Send request to Admin for approval
         if (onRequestAddPlayer) {
           onRequestAddPlayer({
             type: 'add',
@@ -398,24 +430,6 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
         setEditingPlayer(null);
         setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
         alert(`تم إرسال طلب قيد اللاعب (${playerForm.name}) والـ ID (${playerForm.studentId}) لمدير البطولة (Admin) للموافقة عليه واعتماده رسمياً! ⏳🔒`);
-      } else {
-        // ADMIN: Can directly add and lock identity
-        const newP: Player = {
-          id: `p_${Date.now()}`,
-          name: playerForm.name.trim(),
-          studentId: playerForm.studentId.trim(),
-          number: Number(playerForm.number),
-          position: playerForm.position,
-          isCaptain: playerForm.isCaptain,
-          photoUrl: playerForm.photoUrl || undefined,
-          isIdentityLocked: true,
-        };
-        onUpdateSquads({ ...squads, [managedTeamName]: [...currentSquad, newP] });
-        setIsAddingPlayer(false);
-        setEditingPlayer(null);
-        setPlayerForm({ name: '', studentId: '', number: 10, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
-        confetti({ particleCount: 40, spread: 50 });
-        alert(`تمت إضافة اللاعب (${newP.name}) واعتماد رقمه الجامعي (${newP.studentId}) رسمياً مع قفل الهوية 🔒✅`);
       }
     }
   };
@@ -484,7 +498,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
       return;
     }
 
-    if (!isAdmin) {
+    if (!canDirectEdit) {
       newPlayers.forEach(p => {
         if (onRequestAddPlayer) {
           onRequestAddPlayer({
@@ -507,7 +521,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
       });
       setBulkText('');
       confetti({ particleCount: 70, spread: 80 });
-      alert(`تمت إضافة ${newPlayers.length} لاعبين إلى فريق ${managedTeamName} واعتماد بياناتهم بنجاح! 🎉`);
+      alert(`تمت إضافة ${newPlayers.length} لاعبين إلى فريق ${managedTeamName} مباشرة واعتماد بياناتهم بنجاح! 🎉⚡`);
     }
   };
 
@@ -628,6 +642,19 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
             <Camera className="w-3.5 h-3.5" />
             <span>شعار الفريق 📷</span>
           </button>
+
+          {/* Quick jump to Assign Team Managers for Admin */}
+          {isAdmin && onNavigateToAssignManagers && (
+            <button
+              type="button"
+              onClick={onNavigateToAssignManagers}
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer mr-1"
+              title="صفحة تعيين وتوزيع مسؤولي الفرق (إيميل + باسورد + فرقة)"
+            >
+              <Key className="w-3.5 h-3.5 text-slate-950" />
+              <span>تعيين وتوزيع مسؤولي الفرق 👔</span>
+            </button>
+          )}
         </div>
 
         {/* Sub-Tabs Switcher */}
@@ -708,6 +735,72 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
         </div>
       </div>
 
+      {/* Real-time Player Editing Window Banner & Quick Admin Toggle */}
+      <div className={`p-4 rounded-3xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg ${
+        isPlayerEditingOpen
+          ? 'bg-gradient-to-r from-emerald-950/60 via-slate-900 to-teal-950/40 border-emerald-500/40'
+          : 'bg-gradient-to-r from-amber-950/60 via-slate-900 to-slate-950 border-amber-500/40'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-md ${
+            isPlayerEditingOpen
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+              : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+          }`}>
+            {isPlayerEditingOpen ? <Sparkles className="w-5 h-5 text-emerald-400 animate-spin" style={{ animationDuration: '6s' }} /> : <Lock className="w-5 h-5 text-amber-400" />}
+          </div>
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <strong className="text-xs md:text-sm font-black text-white">
+                {isPlayerEditingOpen
+                  ? 'فترة تعديل وقيد اللاعبين: مفتوحة حالياً 🟢'
+                  : 'فترة تعديل وقيد اللاعبين: مقفلة رسمياً 🔒'}
+              </strong>
+              <span className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-full border ${
+                isPlayerEditingOpen
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+              }`}>
+                {isPlayerEditingOpen ? 'تعديل وقيد مباشر متاح ⚡' : 'يتطلب اعتماد الأدمن ⏳'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300">
+              {isPlayerEditingOpen
+                ? 'يمكن لمسؤولي ومدربي الفرق إضافة وتعديل أسماء اللاعبين، وأرقام الـ ID، والمراكز، وأرقام القمصان، والصور مباشرة دون انتظار موافقة الإدارة.'
+                : 'القوائم مقفلة ومعتمدة. أي إضافة أو تعديل تتطلب تقديم طلب للأدمن لمراجعته واعتماده.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Admin Quick Switch Toggle */}
+        {isAdmin && onTogglePlayerEditing && (
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={() => onTogglePlayerEditing(!isPlayerEditingOpen)}
+              className={`px-4 py-2 rounded-2xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer shadow-lg ${
+                isPlayerEditingOpen
+                  ? 'bg-rose-500/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 shadow-rose-500/10'
+                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-emerald-500/20'
+              }`}
+              title="تغيير حالة فترة التعديل في أي وقت للأدمن"
+            >
+              {isPlayerEditingOpen ? (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>قفل التعديل المباشر 🔒</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>فتح التعديل المباشر للفرق 🟢</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* SUB-TAB 1: SQUAD BUILDER */}
       {subTab === 'squad_builder' && (
         <div className="space-y-4">
@@ -720,7 +813,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
             <button
               onClick={() => {
                 setEditingPlayer(null);
-                setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, editReason: '' });
+                setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
                 setIsAddingPlayer(true);
               }}
               className="px-4 py-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 cursor-pointer"
@@ -738,13 +831,28 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                   <Shirt className="w-4 h-4 text-emerald-400" />
                   <strong className="text-sm font-black text-emerald-300">
                     {editingPlayer 
-                      ? (isAdmin ? `تعديل مباشر لبيانات اللاعب: ${editingPlayer.name} (صلاحية الأدمن 👑)` : `طلب تعديل بيانات اللاعب: ${editingPlayer.name}`)
+                      ? (canDirectEdit 
+                          ? (isAdmin ? `تعديل مباشر لبيانات اللاعب: ${editingPlayer.name} (صلاحية الأدمن 👑)` : `تعديل بيانات اللاعب: ${editingPlayer.name} (تعديل مباشر ⚡)`)
+                          : `طلب تعديل بيانات اللاعب: ${editingPlayer.name}`)
                       : `إضافة وتسجيل لاعب جديد إلى ${managedTeamName}`}
                   </strong>
                   {editingPlayer?.isIdentityLocked && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
-                      <Lock className="w-3 h-3 text-amber-400" />
-                      {isAdmin ? 'معتمد ومقفل (متاح للأدمن تعديله)' : 'معتمد ومقفل — يتطلب موافقة الأدمن للتعديل 🔒'}
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+                      canDirectEdit 
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    }`}>
+                      {canDirectEdit ? (
+                        <>
+                          <Sparkles className="w-3 h-3 text-emerald-400" />
+                          <span>تعديل مباشر متاح 🟢</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-3 h-3 text-amber-400" />
+                          <span>معتمد ومقفل — يتطلب موافقة الأدمن للتعديل 🔒</span>
+                        </>
+                      )}
                     </span>
                   )}
                 </div>
@@ -756,17 +864,29 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                 </button>
               </div>
 
-              {/* Informational Banner for Team Manager when requesting modification */}
-              {editingPlayer && !isAdmin && (
-                <div className="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/40 text-xs text-indigo-300 flex items-start gap-2.5">
-                  <AlertCircle className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-                  <div className="space-y-0.5">
-                    <strong className="text-white block font-black">حماية بيانات وهوية اللاعب 🔒</strong>
-                    <p className="text-[11px] text-slate-300">
-                      بيانات اللاعب ورقم الـ ID مقفلان رسمياً لمنع التلاعب. عند تعديل أي بيانات هنا وكتابة سبب التعديل، سيصل طلبك مباشرة إلى حساب الأدمن، وسيقوم بمراجعة الفروقات واعتماد التعديل أو رفضه.
-                    </p>
+              {/* Informational Banner for Team Manager */}
+              {editingPlayer && (
+                canDirectEdit && !isAdmin ? (
+                  <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-xs text-emerald-300 flex items-start gap-2.5">
+                    <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <strong className="text-white block font-black">فترة التعديل المباشر مفتوحة 🟢⚡</strong>
+                      <p className="text-[11px] text-slate-300">
+                        يمكنك تعديل اسم اللاعب، الرقم الجامعي، رقم القميص، المركز، أو الصورة الشخصية مباشرة وسيتم تطبيقها فوراً في القائمة الرسمية.
+                      </p>
+                    </div>
                   </div>
-                </div>
+                ) : !canDirectEdit ? (
+                  <div className="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/40 text-xs text-indigo-300 flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <strong className="text-white block font-black">حماية بيانات وهوية اللاعب 🔒</strong>
+                      <p className="text-[11px] text-slate-300">
+                        بيانات اللاعب ورقم الـ ID مقفلان رسمياً لمنع التلاعب. عند تعديل أي بيانات هنا وكتابة سبب التعديل، سيصل طلبك مباشرة إلى حساب الأدمن، وسيقوم بمراجعة الفروقات واعتماد التعديل أو رفضه.
+                      </p>
+                    </div>
+                  </div>
+                ) : null
               )}
 
               <form onSubmit={handleSavePlayer} className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -917,8 +1037,8 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                   </div>
                 </div>
 
-                {/* Reason for modification (When editing and not admin) */}
-                {editingPlayer && !isAdmin && (
+                {/* Reason for modification (Only when editing and direct edit is NOT open) */}
+                {editingPlayer && !canDirectEdit && (
                   <div className="md:col-span-4 space-y-1 bg-slate-950/60 p-3 rounded-xl border border-indigo-500/30">
                     <label className="text-xs text-indigo-300 font-bold flex items-center gap-1.5">
                       <AlertCircle className="w-3.5 h-3.5 text-indigo-400" />
@@ -937,7 +1057,12 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
 
                 <div className="md:col-span-4 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
                   <div className="text-xs text-slate-400">
-                    {!isAdmin ? (
+                    {canDirectEdit ? (
+                      <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                        <Sparkles className="w-4 h-4 text-emerald-400" />
+                        <span>{isAdmin ? 'صلاحية الأدمن: حفظ وتعديل فوري ومباشر 👑' : 'فترة التعديل مفتوحة: حفظ وتعديل مباشر في القائمة الرسمية ⚡'}</span>
+                      </span>
+                    ) : (
                       editingPlayer ? (
                         <span className="flex items-center gap-1.5 text-indigo-300">
                           <Clock className="w-4 h-4 text-indigo-400" />
@@ -949,11 +1074,6 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                           سيتم إرسال طلب القيد للأدمن للاعتماد والموافقة أولاً قبل نزوله في القائمة ⏳
                         </span>
                       )
-                    ) : (
-                      <span className="flex items-center gap-1.5 text-emerald-400">
-                        <Shield className="w-4 h-4 text-emerald-400" />
-                        صلاحية الأدمن: حفظ وتعديل فوري ومباشر في القائمة الرسمية 👑
-                      </span>
                     )}
                   </div>
 
@@ -969,7 +1089,12 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                       type="submit"
                       className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center gap-1.5"
                     >
-                      {!isAdmin ? (
+                      {canDirectEdit ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>{editingPlayer ? 'حفظ التعديلات مباشرة 💾' : 'إضافة وتسجيل اللاعب فوراً ⚡'}</span>
+                        </>
+                      ) : (
                         editingPlayer ? (
                           <>
                             <Clock className="w-4 h-4" />
@@ -981,11 +1106,6 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                             <span>إرسال طلب القيد للأدمن للموافقة 🚀</span>
                           </>
                         )
-                      ) : (
-                        <>
-                          <Check className="w-4 h-4" />
-                          <span>{editingPlayer ? 'حفظ التعديلات كـ أدمن 💾' : 'إضافة واعتماد اللاعب فوراً'}</span>
-                        </>
                       )}
                     </button>
                   </div>
@@ -1048,7 +1168,11 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                         <span className="px-2 py-0.5 rounded-md bg-slate-950 text-emerald-400 text-[10px] font-mono font-bold border border-slate-800 flex items-center gap-1">
                           <GraduationCap className="w-3 h-3 text-emerald-400" />
                           ID: {player.studentId || '—'}
-                          <span title="مقفل ومحمي"><Lock className="w-2.5 h-2.5 text-slate-500" /></span>
+                          {canDirectEdit ? (
+                            <span title="تعديل مباشر متاح 🟢"><Check className="w-2.5 h-2.5 text-emerald-400" /></span>
+                          ) : (
+                            <span title="مقفل ومحمي"><Lock className="w-2.5 h-2.5 text-slate-500" /></span>
+                          )}
                         </span>
                         {hasPendingEdit && (
                           <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-bold border border-indigo-500/40 flex items-center gap-1">
@@ -1097,15 +1221,15 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
                         setIsAddingPlayer(true);
                       }}
                       className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
-                      title={isAdmin ? "تعديل اللاعب كـ أدمن" : "طلب تعديل اللاعب"}
+                      title={canDirectEdit ? "تعديل اللاعب مباشرة ⚡" : "طلب تعديل اللاعب 🔒"}
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                     </button>
-                    {isAdmin && (
+                    {canDirectEdit && (
                       <button
                         onClick={() => handleDeletePlayer(player.id)}
                         className="p-2 rounded-xl text-rose-400 hover:text-rose-200 hover:bg-rose-950/40 transition-all cursor-pointer"
-                        title="حذف اللاعب"
+                        title="حذف اللاعب من قائمة الفريق"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -1123,7 +1247,7 @@ export const TeamManagerPortalPage: React.FC<TeamManagerPortalPageProps> = ({
               <button
                 onClick={() => {
                   setEditingPlayer(null);
-                  setPlayerForm({ name: '', studentId: '', number: 1, position: 'GK', isCaptain: true, editReason: '' });
+                  setPlayerForm({ name: '', studentId: '', number: 1, position: 'GK', isCaptain: true, photoUrl: '', editReason: '' });
                   setIsAddingPlayer(true);
                 }}
                 className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs cursor-pointer inline-flex items-center gap-1"

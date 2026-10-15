@@ -30,8 +30,13 @@ import {
   ArrowUpDown,
   Check,
   Crown,
-  Clock
+  Clock,
+  RefreshCw,
+  LogIn,
+  Activity,
+  Key
 } from 'lucide-react';
+import { formatTimeAgoArabic } from '../utils/apiSync';
 
 interface UsersDirectoryPageProps {
   users: AppUser[];
@@ -41,6 +46,10 @@ interface UsersDirectoryPageProps {
   onUpdateUser: (updatedUser: AppUser) => void;
   onAddUser: (newUser: AppUser) => void;
   onDeleteUser: (userId: string) => void;
+  onRefreshUsers?: () => void;
+  isSyncing?: boolean;
+  lastSyncTime?: string;
+  onNavigateToAssignManagers?: () => void;
 }
 
 export const UsersDirectoryPage: React.FC<UsersDirectoryPageProps> = ({
@@ -51,10 +60,16 @@ export const UsersDirectoryPage: React.FC<UsersDirectoryPageProps> = ({
   onUpdateUser,
   onAddUser,
   onDeleteUser,
+  onRefreshUsers,
+  isSyncing,
+  lastSyncTime,
+  onNavigateToAssignManagers,
 }) => {
-  // Search & Filters
+  // Search, Filters & Sorting
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
+  const [presenceFilter, setPresenceFilter] = useState<'all' | 'online' | 'entered'>('all');
+  const [sortBy, setSortBy] = useState<'recent_login' | 'online_first' | 'registered' | 'name'>('recent_login');
   const [teamFilter, setTeamFilter] = useState<string>('all');
 
   // Change Role Modal State
@@ -95,7 +110,11 @@ export const UsersDirectoryPage: React.FC<UsersDirectoryPageProps> = ({
 
   // Filtered users calculation
   const filteredUsers = useMemo(() => {
-    return users.filter(user => {
+    const filtered = users.filter(user => {
+      // Presence filter
+      if (presenceFilter === 'online' && !user.isOnline) return false;
+      if (presenceFilter === 'entered' && !user.lastLoginAt) return false;
+
       // Role filter
       if (roleFilter !== 'all' && user.role !== roleFilter) return false;
 
@@ -117,18 +136,47 @@ export const UsersDirectoryPage: React.FC<UsersDirectoryPageProps> = ({
 
       return true;
     });
-  }, [users, roleFilter, teamFilter, searchQuery]);
+
+    // Sorting
+    return [...filtered].sort((a, b) => {
+      // Permanent admin always first
+      if (a.isPermanentAdmin) return -1;
+      if (b.isPermanentAdmin) return 1;
+
+      if (sortBy === 'recent_login') {
+        const timeA = a.lastLoginAt ? new Date(a.lastLoginAt).getTime() : 0;
+        const timeB = b.lastLoginAt ? new Date(b.lastLoginAt).getTime() : 0;
+        if (timeA !== timeB) return timeB - timeA;
+      }
+      if (sortBy === 'online_first') {
+        if (a.isOnline && !b.isOnline) return -1;
+        if (!a.isOnline && b.isOnline) return 1;
+        const timeA = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
+        const timeB = b.lastActiveAt ? new Date(b.lastActiveAt).getTime() : 0;
+        if (timeA !== timeB) return timeB - timeA;
+      }
+      if (sortBy === 'registered') {
+        return (b.registeredAt || '').localeCompare(a.registeredAt || '');
+      }
+      if (sortBy === 'name') {
+        return a.name.localeCompare(b.name, 'ar');
+      }
+      return 0;
+    });
+  }, [users, roleFilter, teamFilter, searchQuery, presenceFilter, sortBy]);
 
   // Statistics
+  const onlineCount = useMemo(() => users.filter(u => u.isOnline).length, [users]);
   const stats = useMemo(() => {
     return {
       total: users.length,
+      online: onlineCount,
       admins: users.filter(u => u.role === 'admin').length,
       managers: users.filter(u => u.role === 'team_manager').length,
       players: users.filter(u => u.role === 'player').length,
       spectators: users.filter(u => u.role === 'spectator').length,
     };
-  }, [users]);
+  }, [users, onlineCount]);
 
   // Open role change modal
   const handleOpenRoleModal = (user: AppUser) => {
@@ -393,108 +441,226 @@ export const UsersDirectoryPage: React.FC<UsersDirectoryPageProps> = ({
         </div>
       </div>
 
-      {/* Quick Statistics Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+      {/* Live Server Synchronization & Online Presence Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-3xl bg-slate-900/90 border border-emerald-500/30 shadow-xl shadow-emerald-950/20">
+        <div className="flex items-center gap-3">
+          <div className="relative flex items-center justify-center w-9 h-9 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400">
+            <Activity className="w-5 h-5 text-emerald-400" />
+            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 animate-ping opacity-75" />
+            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-slate-900" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-black text-white">مزامنة حضور ودخول المستخدمين مع السيرفر</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                متصل الآن: {stats.online} مستخدم 🟢
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">
+                إجمالي الدليل: {stats.total}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              كل من يدخل أو يسجل من أي موبايل أو لابتوب يظهر فورياً هنا في الدليل.
+              {lastSyncTime && <span className="mr-2 text-emerald-400/80 font-mono">| آخر تحديث: {lastSyncTime}</span>}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          {onRefreshUsers && (
+            <button
+              onClick={onRefreshUsers}
+              disabled={isSyncing}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs border border-emerald-500/40 flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{isSyncing ? 'جارِ التحديث...' : 'تحديث فوري من السيرفر 🔄'}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Statistics Grid (6 Cards) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
           <div>
             <span className="text-[11px] text-slate-400 font-bold block">إجمالي المسجلين</span>
-            <strong className="text-2xl font-black text-white font-mono">{stats.total}</strong>
+            <strong className="text-xl font-black text-white font-mono">{stats.total}</strong>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-300">
-            <Users className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-slate-300">
+            <Users className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900 border border-purple-500/30 flex items-center justify-between">
+        <div className="p-3.5 rounded-2xl bg-slate-900 border border-emerald-500/40 flex items-center justify-between">
           <div>
-            <span className="text-[11px] text-purple-300 font-bold block">مدراء النظام (Admins)</span>
-            <strong className="text-2xl font-black text-purple-400 font-mono">{stats.admins}</strong>
+            <span className="text-[11px] text-emerald-300 font-bold block">متصل الآن 🟢</span>
+            <strong className="text-xl font-black text-emerald-400 font-mono">{stats.online}</strong>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
-            <Shield className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <Activity className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900 border border-emerald-500/30 flex items-center justify-between">
+        <div className="p-3.5 rounded-2xl bg-slate-900 border border-purple-500/30 flex items-center justify-between">
+          <div>
+            <span className="text-[11px] text-purple-300 font-bold block">مدراء (Admins)</span>
+            <strong className="text-xl font-black text-purple-400 font-mono">{stats.admins}</strong>
+          </div>
+          <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
+            <Shield className="w-4 h-4" />
+          </div>
+        </div>
+
+        <div className="p-3.5 rounded-2xl bg-slate-900 border border-emerald-500/30 flex items-center justify-between">
           <div>
             <span className="text-[11px] text-emerald-300 font-bold block">مسؤولو الفرق</span>
-            <strong className="text-2xl font-black text-emerald-400 font-mono">{stats.managers}</strong>
+            <strong className="text-xl font-black text-emerald-400 font-mono">{stats.managers}</strong>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-            <UserCheck className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-slate-900 border border-blue-500/30 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] text-blue-300 font-bold block">اللاعبون المعتمدون</span>
-            <strong className="text-2xl font-black text-blue-400 font-mono">{stats.players}</strong>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
-            <Shirt className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <UserCheck className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-between">
+        <div className="p-3.5 rounded-2xl bg-slate-900 border border-blue-500/30 flex items-center justify-between">
           <div>
-            <span className="text-[11px] text-slate-400 font-bold block">المتفرجون والمشجعون</span>
-            <strong className="text-2xl font-black text-slate-300 font-mono">{stats.spectators}</strong>
+            <span className="text-[11px] text-blue-300 font-bold block">اللاعبون</span>
+            <strong className="text-xl font-black text-blue-400 font-mono">{stats.players}</strong>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-800 text-slate-400 flex items-center justify-center">
-            <Eye className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+            <Shirt className="w-4 h-4" />
+          </div>
+        </div>
+
+        <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-between">
+          <div>
+            <span className="text-[11px] text-slate-400 font-bold block">المتفرجون</span>
+            <strong className="text-xl font-black text-slate-300 font-mono">{stats.spectators}</strong>
+          </div>
+          <div className="w-9 h-9 rounded-xl bg-slate-800 text-slate-400 flex items-center justify-center">
+            <Eye className="w-4 h-4" />
           </div>
         </div>
       </div>
 
-      {/* Search, Filters, and Add User Button */}
-      <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Search input */}
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-500 absolute right-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="بحث بالاسم، أو البريد الجامعي (@nu.edu.eg)، أو رقم القيد، أو الفريق..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-10 pl-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-          />
+      {/* Search, Filters, Presence Pills and Add User Button */}
+      <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-3">
+        {/* Presence Pills & Quick Sort */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-400 ml-1">تصفية التواجد:</span>
+            <button
+              onClick={() => setPresenceFilter('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                presenceFilter === 'all'
+                  ? 'bg-emerald-500 text-slate-950 font-black shadow'
+                  : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              الكل ({users.length})
+            </button>
+            <button
+              onClick={() => setPresenceFilter('online')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                presenceFilter === 'online'
+                  ? 'bg-emerald-500 text-slate-950 font-black shadow'
+                  : 'bg-slate-950 text-emerald-400 hover:text-emerald-300 border border-slate-800'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              متصل الآن ({stats.online}) 🟢
+            </button>
+            <button
+              onClick={() => setPresenceFilter('entered')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                presenceFilter === 'entered'
+                  ? 'bg-emerald-500 text-slate-950 font-black shadow'
+                  : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              <LogIn className="w-3 h-3 text-amber-400" />
+              سجلوا دخولاً للنظام ({users.filter(u => u.lastLoginAt).length})
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-400">الترتيب:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-emerald-300 focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
+            >
+              <option value="recent_login">الأحدث دخولاً أولاً ⚡</option>
+              <option value="online_first">المتصلون الآن أولاً 🟢</option>
+              <option value="registered">الأحدث تسجيلاً</option>
+              <option value="name">الاسم أبجدياً</option>
+            </select>
+          </div>
         </div>
 
-        {/* Filter controls */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Role Filter */}
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value as any)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
-          >
-            <option value="all">كل الرتب والأدوار</option>
-            <option value="admin">مدير نظام (Admin)</option>
-            <option value="team_manager">مسؤول فريق (Manager)</option>
-            <option value="player">لاعب (Player)</option>
-            <option value="spectator">متفرج (Spectator)</option>
-          </select>
+        {/* Search & Role / Team Filters */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Search input */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-500 absolute right-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="بحث بالاسم، أو البريد الجامعي (@nu.edu.eg)، أو رقم القيد، أو الفريق..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-10 pl-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            />
+          </div>
 
-          {/* Team Filter */}
-          <select
-            value={teamFilter}
-            onChange={(e) => setTeamFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer max-w-[150px]"
-          >
-            <option value="all">كل الفرق (48)</option>
-            {teams.map(t => (
-              <option key={t.id} value={t.name}>{t.name}</option>
-            ))}
-          </select>
+          {/* Filter controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Role Filter */}
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value as any)}
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
+            >
+              <option value="all">كل الرتب والأدوار</option>
+              <option value="admin">مدير نظام (Admin)</option>
+              <option value="team_manager">مسؤول فريق (Manager)</option>
+              <option value="player">لاعب (Player)</option>
+              <option value="spectator">متفرج (Spectator)</option>
+            </select>
 
-          {/* Add User Button */}
-          <button
-            onClick={() => setIsAddUserModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 cursor-pointer transition-all shrink-0"
-          >
-            <UserPlus className="w-4 h-4" />
-            إضافة عضو جديد (@nu)
-          </button>
+            {/* Team Filter */}
+            <select
+              value={teamFilter}
+              onChange={(e) => setTeamFilter(e.target.value)}
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer max-w-[150px]"
+            >
+              <option value="all">كل الفرق (48)</option>
+              {teams.map(t => (
+                <option key={t.id} value={t.name}>{t.name}</option>
+              ))}
+            </select>
+
+            {/* Assign Team Managers Button */}
+            {onNavigateToAssignManagers && (
+              <button
+                onClick={onNavigateToAssignManagers}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/20 cursor-pointer transition-all shrink-0"
+                title="صفحة تعيين مسؤولي الفرق (إيميل + باسورد + تحديد الفرقة)"
+              >
+                <Key className="w-4 h-4 text-slate-950" />
+                تعيين مسؤولي الفرق 👔
+              </button>
+            )}
+
+            {/* Add User Button */}
+            <button
+              onClick={() => setIsAddUserModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 cursor-pointer transition-all shrink-0"
+            >
+              <UserPlus className="w-4 h-4" />
+              إضافة عضو جديد (@nu)
+            </button>
+          </div>
         </div>
       </div>
 
@@ -594,6 +760,7 @@ export const UsersDirectoryPage: React.FC<UsersDirectoryPageProps> = ({
                 <tr className="bg-slate-950 text-slate-400 text-xs border-b border-slate-800 font-bold">
                   <th className="p-3.5 pr-6">العضو والاسم</th>
                   <th className="p-3.5">البريد الجامعي (@nu.edu.eg)</th>
+                  <th className="p-3.5">حالة التواجد وآخر دخول</th>
                   <th className="p-3.5">الرتبة والدور الحالي</th>
                   <th className="p-3.5">الفريق المرتبط</th>
                   <th className="p-3.5">الكلية ورقم القيد</th>
@@ -650,6 +817,33 @@ export const UsersDirectoryPage: React.FC<UsersDirectoryPageProps> = ({
                           <span className="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 text-[9px] font-bold border border-emerald-500/20">
                             موثق 🏛️
                           </span>
+                        </div>
+                      </td>
+
+                      {/* Presence & Last Entry Status */}
+                      <td className="p-3.5">
+                        <div className="space-y-1">
+                          {user.isOnline ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black shadow-sm">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                              متصل الآن 🟢
+                            </span>
+                          ) : user.lastLoginAt ? (
+                            <span className="text-[11px] text-slate-300 font-medium flex items-center gap-1">
+                              <LogIn className="w-3 h-3 text-slate-400" />
+                              {formatTimeAgoArabic(user.lastLoginAt)}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-500 italic">لم يسجل دخول بعد</span>
+                          )}
+
+                          {user.lastLoginAt && (
+                            <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5 text-slate-500" />
+                              <span>دخول: {new Date(user.lastLoginAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+                              {user.loginCount ? <span className="text-slate-500">({user.loginCount}x)</span> : null}
+                            </div>
+                          )}
                         </div>
                       </td>
 

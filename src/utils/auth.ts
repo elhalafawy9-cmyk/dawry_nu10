@@ -16,6 +16,10 @@ export interface AppUser {
   notes?: string;
   managerApprovalStatus?: 'approved' | 'pending' | 'rejected'; // Approval status for team managers
   requestedTeamName?: string; // Team requested when approval is pending
+  lastLoginAt?: string;       // Timestamp when user logged in / entered the site
+  lastActiveAt?: string;      // Timestamp of last heartbeat/action
+  isOnline?: boolean;         // Currently online flag
+  loginCount?: number;        // Number of sessions/logins
 }
 
 export const PERMANENT_ADMIN_EMAIL = 's.mohamed2442@nu.edu.eg';
