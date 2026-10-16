@@ -176,13 +176,13 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
   const renderPositionBadge = (pos: Player['position']) => {
     switch (pos) {
       case 'GK':
-        return <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">حارس مرمى GK</span>;
+        return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">حارس</span>;
       case 'DEF':
-        return <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">مدافع DEF</span>;
+        return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">مدافع</span>;
       case 'MID':
-        return <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">وسط MID</span>;
+        return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">وسط</span>;
       case 'FWD':
-        return <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">مهاجم FWD</span>;
+        return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">مهاجم</span>;
       default:
         return null;
     }
@@ -306,21 +306,21 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
                       <div
                         key={pName}
                         onClick={() => handleTogglePlayer(teamLetter, pName)}
-                        className={`p-2 rounded-xl bg-slate-950 border border-emerald-500/30 flex items-center justify-between gap-2 transition-all ${
+                        className={`p-2.5 rounded-xl bg-slate-950 border border-emerald-500/30 flex items-center justify-between gap-2.5 transition-all ${
                           readOnly 
                             ? 'cursor-default' 
-                            : 'cursor-pointer hover:bg-emerald-950/30 hover:border-amber-500/50 hover:shadow-md'
+                            : 'cursor-pointer hover:bg-emerald-950/40 hover:border-emerald-400 hover:shadow-md'
                         }`}
                         title={readOnly ? pName : `انقر لنقل ${pName} إلى دكة البدلاء`}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-300 font-mono font-black text-xs flex items-center justify-center shrink-0 border border-emerald-500/30">
                             #{player?.number || '—'}
                           </span>
-                          <div className="truncate">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <strong className="text-xs font-bold text-white truncate">{pName}</strong>
-                              {player?.isCaptain && <Crown className="w-3 h-3 text-amber-400 shrink-0" />}
+                              <strong className="text-xs md:text-sm font-bold text-white truncate block">{pName}</strong>
+                              {player?.isCaptain && <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
                             </div>
                             <div className="flex items-center gap-1 mt-0.5">
                               {player && renderPositionBadge(player.position)}
@@ -329,8 +329,9 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
                         </div>
 
                         {!readOnly && (
-                          <span className="px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-300 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/30 text-[10px] font-bold shrink-0 transition-all">
-                            نقل للدكة ←
+                          <span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-300 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/30 text-[10px] font-bold shrink-0 transition-all flex items-center gap-1">
+                            <ArrowRightLeft className="w-3 h-3" />
+                            <span>للدكة</span>
                           </span>
                         )}
                       </div>
@@ -365,21 +366,21 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
                       <div
                         key={pName}
                         onClick={() => handleTogglePlayer(teamLetter, pName)}
-                        className={`p-2 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-between gap-2 transition-all ${
+                        className={`p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-between gap-2.5 transition-all ${
                           readOnly 
                             ? 'cursor-default' 
                             : 'cursor-pointer hover:bg-slate-800 hover:border-emerald-500/50 hover:shadow-md'
                         }`}
                         title={readOnly ? pName : `انقر لنقل ${pName} إلى التشكيل الأساسي`}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <span className="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 font-mono font-black text-xs flex items-center justify-center shrink-0">
                             #{player?.number || '—'}
                           </span>
-                          <div className="truncate">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-bold text-slate-300 truncate">{pName}</span>
-                              {player?.isCaptain && <Crown className="w-3 h-3 text-amber-400 shrink-0" />}
+                              <strong className="text-xs md:text-sm font-bold text-slate-200 truncate block">{pName}</strong>
+                              {player?.isCaptain && <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
                             </div>
                             <div className="flex items-center gap-1 mt-0.5">
                               {player && renderPositionBadge(player.position)}
@@ -388,8 +389,9 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
                         </div>
 
                         {!readOnly && (
-                          <span className="px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/30 text-[10px] font-bold shrink-0 transition-all">
-                            نقل للأساسي ←
+                          <span className="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/30 text-[10px] font-bold shrink-0 transition-all flex items-center gap-1">
+                            <ArrowRightLeft className="w-3 h-3" />
+                            <span>للأساسي</span>
                           </span>
                         )}
                       </div>
@@ -407,7 +409,7 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto animate-fade-in" dir="rtl">
-      <div className="bg-slate-900 border border-emerald-500/30 w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92vh]">
+      <div className="bg-slate-900 border border-emerald-500/30 w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92vh]">
         
         {/* MODAL HEADER */}
         <div className="relative overflow-hidden bg-gradient-to-r from-emerald-950 via-slate-900 to-indigo-950 p-5 md:p-6 border-b border-emerald-500/30">

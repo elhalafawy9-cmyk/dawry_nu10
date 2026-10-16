@@ -21,12 +21,13 @@ import {
   GraduationCap,
   Check,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Bot
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Match, Team } from '../App';
 import { AppUser } from '../utils/auth';
-import { Player, MatchSubstitution, MatchCardEvent, CardType, MAX_SUBS_PER_TEAM, PlayerRegistrationRequest } from '../utils/roster';
+import { Player, MatchSubstitution, MatchCardEvent, CardType, MAX_SUBS_PER_TEAM, PlayerRegistrationRequest, clearAllSquads, saveStoredSquads } from '../utils/roster';
 import { ImageUploadModal } from './ImageUploadModal';
 import { TeamLogo } from '../utils/teamLogos';
 
@@ -44,6 +45,7 @@ interface TeamsRosterPageProps {
   onUpdateTeamLogo?: (teamName: string, newLogoUrl: string) => void;
   onUpdatePlayerPhoto?: (teamName: string, playerId: string, newPhotoUrl: string) => void;
   isPlayerEditingOpen?: boolean;
+  onOpenAiCopilot?: () => void;
 }
 
 export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
@@ -60,6 +62,7 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
   onUpdateTeamLogo,
   onUpdatePlayerPhoto,
   isPlayerEditingOpen = true,
+  onOpenAiCopilot,
 }) => {
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>('all');
   const [searchTeamQuery, setSearchTeamQuery] = useState<string>('');
@@ -475,6 +478,36 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 shrink-0">
+          {currentUser?.role === 'admin' && (
+            <button
+              type="button"
+              onClick={() => {
+                const totalPlayers = Object.values(squads).reduce((acc, sq) => acc + (sq?.length || 0), 0);
+                if (window.confirm(`⚠️ تأكيد تفريغ كافة القوائم:\n\nهل تريد بالتأكيد مسح وتفريغ جميع اللاعبين (${totalPlayers} لاعب) من كافة الفرق الـ 48؟\n\nستصبح جميع الفرق خالية تماماً لتتمكن من إضافة كشوفاتك الرسمية والصور مباشرة.`)) {
+                  const empty = clearAllSquads(teams.map(t => t.name));
+                  onUpdateSquads(empty);
+                }
+              }}
+              className="px-3.5 py-3 rounded-2xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/30 text-rose-300 hover:text-white font-bold text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-rose-950/20"
+              title="مسح وتفريغ جميع اللاعبين من كل الفرق"
+            >
+              <Trash2 className="w-4 h-4 text-rose-400" />
+              <span>تفريغ كافة الفرق ({Object.values(squads).reduce((acc, sq) => acc + (sq?.length || 0), 0)})</span>
+            </button>
+          )}
+
+          {onOpenAiCopilot && (
+            <button
+              type="button"
+              onClick={onOpenAiCopilot}
+              className="px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-600/30 border border-emerald-400/30"
+              title="إضافة لاعبين وفرق من صورة بالذكاء الاصطناعي (Gemini AI)"
+            >
+              <Bot className="w-4 h-4 text-emerald-200" />
+              <span>إضافة من صورة (AI) 📷</span>
+            </button>
+          )}
+
           <button
             onClick={() => {
               setEditingPlayer(null);
@@ -661,17 +694,36 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
                 </div>
 
                 {canEditCurrentTeam ? (
-                  <button
-                    onClick={() => {
-                      setEditingPlayer(null);
-                      setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
-                      setIsAddingPlayer(true);
-                    }}
-                    className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-teal-600 text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    إضافة لاعب
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {currentSquad.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`هل أنت متأكد من تفريغ ومسح كافة لاعبي فريق ${activeTeam?.name} (${currentSquad.length} لاعب)؟`)) {
+                            const updated = { ...squads, [activeTeamName]: [] };
+                            onUpdateSquads(updated);
+                            saveStoredSquads(updated);
+                          }
+                        }}
+                        className="px-3 py-2 rounded-xl bg-slate-950 hover:bg-rose-950/60 border border-slate-800 hover:border-rose-500/40 text-rose-400 hover:text-rose-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        title={`تفريغ قائمة فريق ${activeTeam?.name}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        تفريغ لاعبي الفريق
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setEditingPlayer(null);
+                        setPlayerForm({ name: '', studentId: '', number: currentSquad.length + 1, position: 'MID', isCaptain: false, photoUrl: '', editReason: '' });
+                        setIsAddingPlayer(true);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-teal-600 text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      إضافة لاعب
+                    </button>
+                  </div>
                 ) : (
                   <span className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 font-bold flex items-center gap-1">
                     <Eye className="w-3.5 h-3.5 text-teal-400" />
@@ -799,6 +851,46 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
                   </div>
                 ))}
               </div>
+
+              {/* Empty Squad State */}
+              {currentSquad.length === 0 && (
+                <div className="p-8 text-center bg-slate-950/70 rounded-2xl border border-dashed border-slate-800 space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-400 flex items-center justify-center mx-auto border border-teal-500/20">
+                    <Shirt className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h5 className="font-bold text-white text-sm">قائمة فريق {activeTeam?.name} خالية تماماً حالياً ⚽</h5>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto">
+                      تم تفريغ القائمة بنجاح لتتمكن من إضافة كشوفاتك الرسمية من الصفر دون الحاجة لمسح أي لاعبين قدامى.
+                    </p>
+                  </div>
+                  {canEditCurrentTeam && (
+                    <div className="flex items-center justify-center gap-2.5 pt-2 flex-wrap">
+                      <button
+                        onClick={() => {
+                          setEditingPlayer(null);
+                          setPlayerForm({ name: '', studentId: '', number: 1, position: 'GK', isCaptain: false, photoUrl: '', editReason: '' });
+                          setIsAddingPlayer(true);
+                        }}
+                        className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+                      >
+                        <Plus className="w-4 h-4" />
+                        إضافة أول لاعب يدوي
+                      </button>
+                      {onOpenAiCopilot && (
+                        <button
+                          type="button"
+                          onClick={onOpenAiCopilot}
+                          className="px-4 py-2.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/30 text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+                        >
+                          <Bot className="w-4 h-4" />
+                          استخراج من صورة الكشف (AI) 📷
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

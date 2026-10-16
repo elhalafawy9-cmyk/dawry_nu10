@@ -3,6 +3,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
+import dotenv from 'dotenv';
+dotenv.config();
+import { GoogleGenAI } from '@google/genai';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,7 +14,18 @@ const app = express();
 const PORT = 3000;
 const HOST = '0.0.0.0';
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Server-side Gemini AI client initialization
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY || '',
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    },
+  },
+});
 
 const DATA_DIR = path.resolve(__dirname, 'data');
 const USERS_FILE = path.resolve(DATA_DIR, 'users.json');
@@ -877,6 +891,197 @@ app.post('/api/system/reset-all', (_req: Request, res: Response) => {
     seasons: DEFAULT_SEASONS,
     archivedSnapshots: [],
   });
+});
+
+// -------------------------------------------------------------
+// 21. POST /api/gemini/chat - Multi-turn Nile League AI Assistant & Multimodal Image Extraction
+// -------------------------------------------------------------
+app.post('/api/gemini/chat', async (req: Request, res: Response) => {
+  try {
+    const { history = [], message = '', image, context = {}, requestedModel } = req.body;
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({
+        success: false,
+        error: 'لم يتم العثور على مفتاح GEMINI_API_KEY في السيرفر.',
+        reply: 'عذراً، مفتاح Gemini API غير مهيأ في بيئة السيرفر. يرجى التأكد من ضبطه.',
+      });
+    }
+
+    const selectedModel = requestedModel || 'gemini-3.5-flash';
+
+    const systemInstruction = `أنت "المساعد الذكي لدوري جامعة النيل لكرة القدم" (Nile University League AI Copilot).
+أنت المساعد الرسمي المعتمد للجنة المنظمة ومديري الفرق والحكام في دوري جامعة النيل لكرة القدم.
+تتحدث باللغة العربية بأسلوب راقٍ، مهني، رياضي ومحمس.
+
+سياق البطولة الحالي:
+- اسم الموسم: ${context.currentSeason || 'دوري جامعة النيل 2026/2027'}
+- العام الأكاديمي: ${context.academicYear || '2026 / 2027'}
+- نظام البطولة: 48 فريقاً موزعين على 8 مجموعات من A إلى H (6 فرق في كل مجموعة).
+- نظام التأهل: يتأهل أول 4 فرق من كل مجموعة لدور الـ 32 الإقصائي.
+
+المهمة الأساسية والاستثنائية (استخراج الفرق واللاعبين من الصور والكشوفات والبطاقات وبطاقات القيد):
+عندما يرسل المستخدم أو الأدمن صورة أو نصاً يحتوي على كشف لاعبين، أسماء أندية أو فرق، قوائم مكتوبة بخط اليد أو مطبوعة، سكرين شوت، بطاقات جامعية، أو صور كارنيهات/بطاقات لاعبين مجمعة:
+1. قم بفحص الصورة أو النص بدقة شديدة واستخرج:
+   - اسم الفريق أو النادي (Team Name) - إن لم يكن مكتوباً بوضوح، استنبطه من اسم الكشف أو استخدم "فريق الكشف الجديد" أو اسم الكلية/القسم إن وجد.
+   - المجموعة المقترحة (Group A إلى H إن ذُكرت أو اتركها فارغة).
+   - اسم الكابتن إن وُجد.
+   - قائمة اللاعبين كاملة:
+     * اسم اللاعب بالكامل (Full Name)
+     * رقم القميص / الفانلة (Shirt Number) إن وجد
+     * رقم القيد أو الرقم الجامعي أو الرقم القومي (studentId) المكتوب تحت الاسم أو في الكارنيه
+     * المركز الرياضي المقترح: 'GK' (حارس مرمى), 'DEF' (مدافع), 'MID' (خط وسط), 'FWD' (مهاجم)
+2. اكتب تحليلاً واضحاً وودياً بالعربية يلخص ما تم قراءته من الكشف بدقة (اسم الفريق، عدد اللاعبين المستخرجين، أسمائهم وأرقامهم).
+3. قم دائماً ودون استثناء بتضمين كتلة JSON في نهاية ردك محاطة بـ \`\`\`json و \`\`\` بالهيكل التالي بدقة ليتمكن الأدمن من إضافتها فوراً بنقرة زر واحدة:
+\`\`\`json
+{
+  "action": "add_teams_and_players",
+  "summary": "تم استخراج X لاعب لفريق Y بنجاح",
+  "teams": [
+    {
+      "name": "اسم الفريق المستخرج",
+      "group": "A",
+      "captain": "اسم الكابتن إن وجد"
+    }
+  ],
+  "players": [
+    {
+      "teamName": "اسم الفريق المستخرج",
+      "name": "اسم اللاعب بالكامل",
+      "number": 10,
+      "position": "FWD",
+      "studentId": "20261234"
+    }
+  ]
+}
+\`\`\`
+ملاحظات هامة:
+- إذا كانت الصورة تحتوي على أكثر من لاعب أو بطاقات متعددة، استخرج جميع اللاعبين الموجودين دون تفويت أي لاعب.
+- مراكز اللاعبين المعتمدة هي فقط: 'GK', 'DEF', 'MID', 'FWD'.
+- إذا لم يُذكر المركز بوضوح، اقترح مركزاً منطقياً حسب ترتيب اللاعبين في القائمة.
+- إذا وجه لك المستخدم أي سؤال آخر عن لوائح البطولة، جدول المواعيد، الإحصائيات، أو قوانين كرة القدم، أجب بذكاء واحترافية وبشكل مفيد.`;
+
+    // Construct multi-turn contents
+    const contents: any[] = [];
+
+    // Prior history turns (last 10 turns)
+    if (Array.isArray(history)) {
+      for (const turn of history.slice(-10)) {
+        const parts: any[] = [];
+        if (turn.image && turn.image.data) {
+          parts.push({
+            inlineData: {
+              mimeType: turn.image.mimeType || 'image/jpeg',
+              data: turn.image.data.replace(/^data:[^;]+;base64,/, ''),
+            },
+          });
+        }
+        if (turn.text) {
+          parts.push({ text: turn.text });
+        }
+        if (parts.length > 0) {
+          contents.push({
+            role: turn.role === 'model' ? 'model' : 'user',
+            parts,
+          });
+        }
+      }
+    }
+
+    // Current turn
+    const currentParts: any[] = [];
+    if (image && image.data) {
+      currentParts.push({
+        inlineData: {
+          mimeType: image.mimeType || 'image/jpeg',
+          data: image.data.replace(/^data:[^;]+;base64,/, ''),
+        },
+      });
+    }
+
+    const promptText = message?.trim() || (image ? 'من فضلك قم بقراءة وتحليل هذه الصورة واستخرج كافة أسماء اللاعبين وأرقام قيدهم وأرقام الفانلات واسم الفريق لإضافتهم مباشرة لقوائم دوري جامعة النيل.' : 'مرحباً، كيف يمكنك مساعدتي في إدارة البطولة؟');
+    currentParts.push({ text: promptText });
+
+    contents.push({
+      role: 'user',
+      parts: currentParts,
+    });
+
+    // Attempt generateContent with verified active modern Gemini models
+    const candidateModels = Array.from(new Set([
+      selectedModel,
+      'gemini-3.5-flash',
+      'gemini-3.6-flash',
+      'gemini-3.8-flash',
+      'gemini-flash-latest',
+      'gemini-flash-lite-latest'
+    ]));
+    let response: any = null;
+    let lastError: any = null;
+
+    for (const modelToTry of candidateModels) {
+      try {
+        response = await ai.models.generateContent({
+          model: modelToTry,
+          contents,
+          config: {
+            systemInstruction,
+            temperature: 0.25,
+          },
+        });
+        if (response && response.text) {
+          break;
+        }
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`Model ${modelToTry} attempt failed, trying next candidate...`, err?.message || err);
+      }
+    }
+
+    if (!response && lastError) {
+      throw lastError;
+    }
+
+    const reply = response?.text || '';
+
+    // Extract JSON payload if present
+    let extractedPayload = null;
+    const jsonMatch = reply.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonMatch && jsonMatch[1]) {
+      try {
+        extractedPayload = JSON.parse(jsonMatch[1]);
+      } catch (err) {
+        console.warn('Could not parse JSON block from Gemini output:', err);
+      }
+    }
+
+    res.json({
+      success: true,
+      reply,
+      extractedPayload,
+    });
+  } catch (error: any) {
+    console.error('Error in /api/gemini/chat:', error);
+    let errorDetail = error?.message || 'حدث خطأ في معالجة طلب الذكاء الاصطناعي';
+    try {
+      if (typeof errorDetail === 'string' && errorDetail.includes('{')) {
+        const jsonStart = errorDetail.indexOf('{');
+        const parsed = JSON.parse(errorDetail.slice(jsonStart));
+        if (parsed?.error?.message) {
+          errorDetail = parsed.error.message;
+        } else if (parsed?.message) {
+          errorDetail = parsed.message;
+        }
+      }
+    } catch (_) {}
+
+    res.status(500).json({
+      success: false,
+      error: errorDetail,
+      reply: 'عذراً، حدث ضغط مؤقت في خدمة الذكاء الاصطناعي أثناء قراءة الصورة. يرجى إعادة المحاولة الآن.',
+    });
+  }
 });
 
 

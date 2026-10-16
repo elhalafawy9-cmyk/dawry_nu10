@@ -38,12 +38,10 @@ export const MatchAlertComposerModal: React.FC<MatchAlertComposerModalProps> = (
   adminName,
   onSendAlert,
 }) => {
-  if (!isOpen || !match) return null;
-
-  const squadA = squads[match.teamA] || [];
-  const squadB = squads[match.teamB] || [];
-  const teamAObj = teams.find(t => t.name === match.teamA);
-  const teamBObj = teams.find(t => t.name === match.teamB);
+  const squadA = match ? (squads[match.teamA] || []) : [];
+  const squadB = match ? (squads[match.teamB] || []) : [];
+  const teamAObj = match ? teams.find(t => t.name === match.teamA) : undefined;
+  const teamBObj = match ? teams.find(t => t.name === match.teamB) : undefined;
 
   const [targetType, setTargetType] = useState<'both' | 'teamA' | 'teamB'>('both');
   const [urgency, setUrgency] = useState<'high' | 'normal'>('high');
@@ -116,6 +114,7 @@ export const MatchAlertComposerModal: React.FC<MatchAlertComposerModalProps> = (
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!match) return;
     if (!title.trim() || !message.trim()) {
       alert('يرجى ملء عنوان التنبيه ونص الرسالة!');
       return;
@@ -153,6 +152,8 @@ export const MatchAlertComposerModal: React.FC<MatchAlertComposerModalProps> = (
     : targetType === 'teamA' 
     ? squadA.length 
     : squadB.length;
+
+  if (!isOpen || !match) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-slate-950/85 backdrop-blur-md overflow-y-auto" dir="rtl">

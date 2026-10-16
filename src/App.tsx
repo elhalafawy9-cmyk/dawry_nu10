@@ -17,6 +17,9 @@ import { MatchLineupModal } from './components/MatchLineupModal';
 import { AssignTeamManagersPage } from './components/AssignTeamManagersPage';
 import { LeagueRegistrationPage } from './components/LeagueRegistrationPage';
 import { BackupModal } from './components/BackupModal';
+import { AdminControlCenter } from './components/AdminControlCenter';
+import { ExportStandingsPDFModal } from './components/ExportStandingsPDFModal';
+import { GeminiChatbotModal } from './components/GeminiChatbotModal';
 import { 
   fetchServerUsers, 
   recordUserEnter, 
@@ -43,6 +46,7 @@ import {
   saveLocalArchivedSnapshots,
   archiveSeasonOnServer,
   createServerSeason,
+  updateServerApplicationStatus,
 } from './utils/apiSync';
 import { TeamLogo, getTeamLogoUrl } from './utils/teamLogos';
 import { 
@@ -126,7 +130,9 @@ import {
   Key,
   PlusCircle,
   Archive,
-  Database
+  Database,
+  FileDown,
+  Bot
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -448,6 +454,8 @@ export default function App() {
   const [isAdminNewSeasonModalOpen, setIsAdminNewSeasonModalOpen] = useState<boolean>(false);
   const [isAdminArchiveModalOpen, setIsAdminArchiveModalOpen] = useState<boolean>(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
+  const [isPdfExportModalOpen, setIsPdfExportModalOpen] = useState<boolean>(false);
+  const [isGeminiChatbotOpen, setIsGeminiChatbotOpen] = useState<boolean>(false);
   const [adminNewSeasonForm, setAdminNewSeasonForm] = useState({
     name: `دوري جامعة النيل ${new Date().getFullYear() + 1} - النسخة السادسة`,
     year: `${new Date().getFullYear()} / ${new Date().getFullYear() + 1}`,
@@ -599,6 +607,16 @@ export default function App() {
       try {
         assignTeamManagerOnServer({ email: targetUser.email, teamName });
       } catch {}
+    }
+  };
+
+  const handleReviewApplication = async (id: string, status: 'approved' | 'rejected', reviewNotes?: string) => {
+    try {
+      await updateServerApplicationStatus(id, status, reviewNotes);
+      const updated = await fetchServerApplications();
+      if (updated) setApplications(updated);
+    } catch (e) {
+      console.error('Failed to review application', e);
     }
   };
 
@@ -917,7 +935,8 @@ export default function App() {
 
   // Squads State (all 48 teams players)
   const [squads, setSquads] = useState<Record<string, Player[]>>(() => {
-    return loadStoredSquads(INITIAL_TEAMS.map(t => t.name));
+    const allTeamNames = Array.from(new Set([...INITIAL_TEAMS.map(t => t.name), ...teams.map(t => t.name)]));
+    return loadStoredSquads(allTeamNames);
   });
 
   // Player Registration Requests State (طلبات قيد وتسجيل اللاعبين من مسؤولي الفرق)
@@ -3064,48 +3083,23 @@ export default function App() {
               صفحة المتفرجين واللاعبين 👁️
             </button>
 
-            {/* Admin Team Manager Portal (All 48 Teams) */}
+            {/* Admin Control Center - Unified, High-Priority Tab */}
             {isAdmin && (
               <button
-                onClick={() => setCurrentTab('team_manager')}
-                className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  currentTab === 'team_manager'
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/30 font-black'
-                    : 'bg-slate-900/80 text-emerald-300 hover:bg-slate-800 border border-emerald-500/30'
+                onClick={() => setCurrentTab('manage')}
+                className={`px-3.5 py-2 rounded-xl text-xs md:text-sm font-black flex items-center gap-2 transition-all cursor-pointer ${
+                  currentTab === 'manage'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-black shadow-lg shadow-amber-500/30 ring-2 ring-amber-300'
+                    : 'bg-slate-900/90 text-amber-400 border border-amber-500/40 hover:bg-slate-800'
                 }`}
               >
-                <UserCheck className="w-4 h-4 text-emerald-400" />
-                إدارة الفرق ومسؤوليها (كل الفرق) 📋
-              </button>
-            )}
-
-            {/* Tab: Users Directory & Roles (Admin Only) */}
-            {isAdmin && (
-              <button
-                onClick={() => setCurrentTab('users_directory')}
-                className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  currentTab === 'users_directory'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/30 font-black'
-                    : 'bg-slate-900/80 text-purple-300 hover:bg-slate-800 border border-purple-500/30'
-                }`}
-              >
-                <Users className="w-4 h-4 text-purple-400" />
-                دليل المستخدمين والصلاحيات 👥 ({users.length})
-              </button>
-            )}
-
-            {/* Tab: Quick Assign Team Managers (Admin Only) */}
-            {isAdmin && (
-              <button
-                onClick={() => setCurrentTab('assign_managers')}
-                className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  currentTab === 'assign_managers'
-                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow-lg shadow-amber-500/30 font-black'
-                    : 'bg-slate-900/80 text-amber-300 hover:bg-slate-800 border border-amber-500/30'
-                }`}
-              >
-                <Key className="w-4 h-4 text-amber-400" />
-                تعيين مسؤولي الفرق 👔
+                <Crown className="w-4 h-4 text-amber-400" />
+                <span>لوحة التحكم الموحدة (Admin) ⚡</span>
+                {(playerRequests.filter(r => r.status === 'pending').length + applications.filter(a => a.status === 'pending').length) > 0 && (
+                  <span className="w-5 h-5 rounded-full bg-rose-600 text-white text-[10px] flex items-center justify-center font-black animate-pulse">
+                    {playerRequests.filter(r => r.status === 'pending').length + applications.filter(a => a.status === 'pending').length}
+                  </span>
+                )}
               </button>
             )}
 
@@ -3170,6 +3164,16 @@ export default function App() {
               الهداف والصانع ({tournamentStatsData.scorers.length + tournamentStatsData.playmakers.length})
             </button>
 
+            {/* Tab: AI Copilot Assistant */}
+            <button
+              onClick={() => setIsGeminiChatbotOpen(true)}
+              className="px-3 py-2 rounded-xl text-xs md:text-sm font-black flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-emerald-600/90 to-teal-600/90 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md border border-emerald-400/40 hover:scale-[1.02]"
+              title="المساعد الذكي للبطولة — إضافة فرق ولاعبين من صورة"
+            >
+              <Bot className="w-4 h-4 text-emerald-200" />
+              <span>المساعد الذكي 🤖</span>
+            </button>
+
             {/* Tab: League Season Application (Visible to all when isLeagueRegistrationVisible, or only Admin when hidden) */}
             {(isLeagueRegistrationVisible || isAdmin) && (
               <button
@@ -3199,21 +3203,6 @@ export default function App() {
                     {applications.filter(a => a.status === 'pending').length}
                   </span>
                 )}
-              </button>
-            )}
-
-            {/* Admin Control Panel (Admin Only) */}
-            {isAdmin && (
-              <button
-                onClick={() => setCurrentTab('manage')}
-                className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  currentTab === 'manage'
-                    ? 'bg-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/30'
-                    : 'bg-slate-900/80 text-amber-400 border border-amber-500/30 hover:bg-slate-800'
-                }`}
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                لوحة التحكم (Admin) ⚡
               </button>
             )}
           </nav>
@@ -3952,40 +3941,51 @@ export default function App() {
                   </p>
                 </div>
 
-                {/* Switch between Single Group Table, 5-Round Fixtures, and All 32 Qualified Teams View */}
-                <div className="flex items-center gap-2 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 self-start md:self-auto">
+                {/* Switch between Single Group Table, 5-Round Fixtures, and All 32 Qualified Teams View + PDF Export Button */}
+                <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
+                  <div className="flex items-center gap-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800">
+                    <button
+                      onClick={() => setGroupsViewMode('table')}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        groupsViewMode === 'table'
+                          ? 'bg-emerald-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      جدول الترتيب
+                    </button>
+                    <button
+                      onClick={() => setGroupsViewMode('fixtures')}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        groupsViewMode === 'fixtures'
+                          ? 'bg-teal-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      مباريات المجموعة (5 جولات)
+                    </button>
+                    <button
+                      onClick={() => setGroupsViewMode('qualified_32')}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        groupsViewMode === 'qualified_32'
+                          ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Award className="w-3.5 h-3.5" />
+                      المتأهلون الـ 32 (الكل)
+                    </button>
+                  </div>
+
                   <button
-                    onClick={() => setGroupsViewMode('table')}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                      groupsViewMode === 'table'
-                        ? 'bg-emerald-600 text-white shadow-md'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
+                    onClick={() => setIsPdfExportModalOpen(true)}
+                    className="px-4 py-2.5 rounded-2xl text-xs font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-950/60 border border-emerald-400/40 flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                    title="تصدير السجل الرسمي لترتيب المجموعات كملف PDF معتمد للأرشيف"
                   >
-                    <Layers className="w-3.5 h-3.5" />
-                    جدول الترتيب
-                  </button>
-                  <button
-                    onClick={() => setGroupsViewMode('fixtures')}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                      groupsViewMode === 'fixtures'
-                        ? 'bg-teal-600 text-white shadow-md'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <Calendar className="w-3.5 h-3.5" />
-                    مباريات المجموعة (5 جولات)
-                  </button>
-                  <button
-                    onClick={() => setGroupsViewMode('qualified_32')}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                      groupsViewMode === 'qualified_32'
-                        ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <Award className="w-3.5 h-3.5" />
-                    المتأهلون الـ 32 (الكل)
+                    <FileDown className="w-4 h-4 text-emerald-200" />
+                    <span>تصدير السجل الرسمي (PDF) 📄</span>
                   </button>
                 </div>
               </div>
@@ -4049,15 +4049,25 @@ export default function App() {
 
                 {/* Table */}
                 <div className="bg-slate-900/90 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-                  <div className="p-4 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
+                  <div className="p-4 bg-slate-950/60 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
                       <h3 className="font-black text-white text-base">ترتيب المجموعة {selectedGroup}</h3>
                       <span className="text-xs text-slate-400">(6 فرق تتنافس على 4 بطاقات صعود)</span>
                     </div>
-                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                      يصعد أول 4 إلى دور الـ 32
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setIsPdfExportModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-emerald-950 text-slate-300 hover:text-emerald-300 border border-slate-700 hover:border-emerald-500/40 transition-all cursor-pointer"
+                        title="تصدير السجل والترتيب كملف PDF معتمد"
+                      >
+                        <FileDown className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>تحميل تقرير PDF</span>
+                      </button>
+                      <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                        يصعد أول 4 إلى دور الـ 32
+                      </span>
+                    </div>
                   </div>
 
                   <div className="overflow-x-auto">
@@ -4510,6 +4520,7 @@ export default function App() {
             playerRequests={playerRequests}
             onOpenApprovalsModal={() => setIsApprovalsModalOpen(true)}
             isPlayerEditingOpen={isPlayerEditingOpen}
+            onOpenAiCopilot={() => setIsGeminiChatbotOpen(true)}
           />
         )}
 
@@ -4527,852 +4538,55 @@ export default function App() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 5: MANAGE TEAMS, GROUPS & SCOREKEEPERS */}
+        {/* TAB: UNIFIED STREAMLINED ADMIN CONTROL CENTER (لوحة التحكم المبسطة) */}
         {/* ========================================================================= */}
         {currentTab === 'manage' && (
           isAdmin ? (
-            <div className="space-y-6">
-            
-            {/* Top Control Panel Settings: Player Roster Editing Window Control (فترة تعديل وقيد اللاعبين) */}
-            <div className={`p-5 md:p-6 rounded-3xl border transition-all shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-5 ${
-              isPlayerEditingOpen
-                ? 'bg-gradient-to-r from-emerald-950/80 via-slate-900 to-teal-950/50 border-emerald-500/50'
-                : 'bg-gradient-to-r from-amber-950/80 via-slate-900 to-slate-950 border-amber-500/50'
-            }`}>
-              <div className="flex items-start md:items-center gap-4">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
-                  isPlayerEditingOpen
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 ring-4 ring-emerald-500/10'
-                    : 'bg-amber-500/20 text-amber-400 border border-amber-500/40 ring-4 ring-amber-500/10'
-                }`}>
-                  {isPlayerEditingOpen ? <Sparkles className="w-7 h-7 text-emerald-400 animate-pulse" /> : <Lock className="w-7 h-7 text-amber-400" />}
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-slate-950/80 border border-slate-800 text-slate-300">
-                      لوحة التحكم العامة ⚙️
-                    </span>
-                    <span className={`text-xs font-black px-2.5 py-0.5 rounded-full border ${
-                      isPlayerEditingOpen
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                        : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                    }`}>
-                      {isPlayerEditingOpen ? '🟢 فترة تعديل وقيد اللاعبين: مفتوحة حالياً' : '🔒 فترة تعديل وقيد اللاعبين: مقفلة رسمياً'}
-                    </span>
-                  </div>
-
-                  <h3 className="text-base md:text-xl font-black text-white">
-                    {isPlayerEditingOpen
-                      ? 'تعديل وقيد اللاعبين متاح ومفتوح لمسؤولي الفرق (تعديل مباشر ⚡)'
-                      : 'قوائم اللاعبين مقفلة ومعتمدة رسمياً (تتطلب موافقة الأدمن 🔒)'}
-                  </h3>
-
-                  <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-                    {isPlayerEditingOpen
-                      ? 'مسؤولو ومدربو الـ 48 فرقة يمكنهم الآن تعديل قوائمهم، والأسماء، والـ ID، وأرقام القمصان، والمراكز، والصور مباشرة دون انتظار موافقة. يمكنك إغلاقها في أي وقت بنقرة واحدة.'
-                      : 'قوائم الفرق مقفلة ضد التعديل المباشر. أي محاولة تعديل أو إضافة لاعب ستصلك في لوحة "اعتماد الطلبات" للمراجعة والموافقة عليها أولاً.'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Action Toggle Switch */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleTogglePlayerEditing()}
-                  className={`px-5 py-3 rounded-2xl text-xs md:text-sm font-black flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xl ${
-                    isPlayerEditingOpen
-                      ? 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-rose-600/30 ring-2 ring-rose-400/30'
-                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/30 ring-2 ring-emerald-300/50'
-                  }`}
-                  title="التبديل بين فتح وإغلاق تعديل اللاعبين للفرق"
-                >
-                  {isPlayerEditingOpen ? (
-                    <>
-                      <Lock className="w-4 h-4" />
-                      <span>قفل تعديل اللاعبين الآن 🔒</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      <span>فتح تعديل اللاعبين للفرق الآن 🟢</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setCurrentTab('team_manager')}
-                  className="px-4 py-3 rounded-2xl bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold border border-slate-800 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <Users className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>معاينة صفحة مسؤولي الفرق ➔</span>
-                </button>
-              </div>
-            </div>
-
-            {/* League Registration & Annual Tournament Admin Control Card */}
-            <div className="p-5 md:p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
-                <div className="flex items-start md:items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
-                    <Trophy className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-amber-400">إدارة التقديم والمواسم السنوية 🏆</span>
-                      <span aria-hidden="true" className="text-slate-600">·</span>
-                      <span className="text-xs text-slate-400 font-mono">{currentAcademicYear}</span>
-                    </div>
-                    <h3 className="text-base md:text-lg font-black text-white">
-                      التحكم في صفحة التقديم في الدوري واستقبال الفرق الجديدة
-                    </h3>
-                    <p className="text-xs text-slate-400 leading-relaxed max-w-2xl">
-                      حدد إذا كانت صفحة التقديم تظهر في القائمة العامة لجميع الزوار أو تختفي، وافتح أو أغلق استقبال الاستمارات، وأنشئ دوري جديد لكل عام مع أرشفة المواسم السابقة.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setIsAdminNewSeasonModalOpen(true)}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-amber-500/20"
-                    title="إنشاء موسم وبطولة جديدة كلياً وتصفير جميع النقاط مع أرشفة الموسم الحالي"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" />
-                    <span>إنشاء موسم جديد (0 نقاط) ⚡</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsAdminArchiveModalOpen(true)}
-                    className="px-3.5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-amber-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-amber-500/30"
-                    title="سجل وأرشيف المواسم السابقة والنتائج التاريخية"
-                  >
-                    <Archive className="w-3.5 h-3.5 text-amber-400" />
-                    <span>أرشيف المواسم ({archivedSnapshots.length})</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsBackupModalOpen(true)}
-                    className="px-3.5 py-2.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-emerald-500/40"
-                    title="سحب أو استيراد ملف النسخة الاحتياطية للبطولة"
-                  >
-                    <Database className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>النسخ الاحتياطي والاستعادة 💾</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCurrentTab('league_registration')}
-                    className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-700"
-                  >
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>لوحة التقديم والطلبات ➔</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Toggles Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                {/* Switch 1: Public Visibility */}
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
-                  <div>
-                    <span className="text-xs font-bold text-slate-300 block mb-0.5">
-                      ظهور صفحة التقديم في القائمة العامة للجميع:
-                    </span>
-                    <span className="text-[11px] text-slate-400 block">
-                      {isLeagueRegistrationVisible
-                        ? '🟢 ظاهرة لجميع الطلاب والزوار في شريط التنقل العلوي.'
-                        : '🔒 مخفية عن الزوار والجمهور (تظهر فقط للأدمن في القائمة).'}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleToggleRegistrationVisible()}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-black transition-colors shrink-0 cursor-pointer ${
-                      isLeagueRegistrationVisible
-                        ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30'
-                        : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-                    }`}
-                  >
-                    {isLeagueRegistrationVisible ? 'إخفاء عن الجمهور 👁️' : 'إظهار للجميع 🟢'}
-                  </button>
-                </div>
-
-                {/* Switch 2: Open/Close Submissions */}
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
-                  <div>
-                    <span className="text-xs font-bold text-slate-300 block mb-0.5">
-                      حالة استقبال طلبات واستمارات الفرق:
-                    </span>
-                    <span className="text-[11px] text-slate-400 block">
-                      {isLeagueRegistrationOpen
-                        ? '🟢 باب التقديم مفتوح حالياً لاستقبال الفرق الجديدة.'
-                        : '🔒 باب التقديم مقفل مؤقتاً بقرار من اللجنة المنظمة.'}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleToggleRegistrationOpen()}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-black transition-colors shrink-0 cursor-pointer ${
-                      isLeagueRegistrationOpen
-                        ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30'
-                        : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-                    }`}
-                  >
-                    {isLeagueRegistrationOpen ? 'إغلاق باب التقديم 🔒' : 'فتح باب التقديم ⚡'}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Manage Sub-tab switcher */}
-            <div className="flex flex-wrap items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 max-w-2xl">
-              <button
-                onClick={() => setManageSubTab('teams')}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  manageSubTab === 'teams'
-                    ? 'bg-emerald-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Shield className="w-4 h-4" />
-                إدارة الفرق والمجاميع (48 فريق)
-              </button>
-              <button
-                onClick={() => setManageSubTab('scorekeepers')}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  manageSubTab === 'scorekeepers'
-                    ? 'bg-amber-500 text-slate-950 font-black shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                مسؤولو النتائج
-              </button>
-              <button
-                onClick={() => setManageSubTab('seasons_archive')}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  manageSubTab === 'seasons_archive'
-                    ? 'bg-amber-500 text-slate-950 font-black shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Trophy className="w-4 h-4" />
-                المواسم والأرشيف
-              </button>
-            </div>
-
-            {/* Teams Sub-Tab */}
-            {manageSubTab === 'teams' && (
-              <div className="space-y-4">
-                {/* Header Filter & Action Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl">
-                  {/* Group Filter Buttons */}
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                    <span className="text-slate-400 font-bold ml-1 flex items-center gap-1">
-                      <Layers className="w-3.5 h-3.5 text-emerald-400" />
-                      المجموعة:
-                    </span>
-                    <button
-                      onClick={() => setManageTeamsGroupFilter('all')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        manageTeamsGroupFilter === 'all'
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                      }`}
-                    >
-                      الكل (48 فريق)
-                    </button>
-                    {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((grp) => (
-                      <button
-                        key={grp}
-                        onClick={() => setManageTeamsGroupFilter(grp)}
-                        className={`w-8 h-8 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
-                          manageTeamsGroupFilter === grp
-                            ? 'bg-amber-500 text-slate-950 font-black ring-2 ring-amber-300'
-                            : 'bg-slate-950 text-slate-300 hover:text-white border border-slate-800'
-                        }`}
-                      >
-                        {grp}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={handleResetAllMatches}
-                      className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                      title="تصفير جميع المباريات والنتائج"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      تصفير كل الماتشات
-                    </button>
-                    <button
-                      onClick={handleOpenBulkEditModal}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-black flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer transition-all"
-                    >
-                      <SlidersHorizontal className="w-3.5 h-3.5" />
-                      تعديل وإدخال أسماء الفرق والمجاميع (Bulk Edit)
-                    </button>
-                  </div>
-                </div>
-
-                {/* Info summary */}
-                <div className="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2 text-slate-300">
-                    <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>
-                      نظام المجموعات: <strong className="text-white">48 فريقاً</strong> موزعين على <strong className="text-amber-400">8 مجموعات (A حتى H)</strong> • يلعب كل فريق <strong className="text-emerald-300">5 مباريات</strong> مع فرق مجموعته • يصعد أول 4 فرق لدور الـ 32.
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-slate-400 bg-slate-950/60 px-2.5 py-1 rounded-xl border border-slate-800">
-                    المعروض حالياً: {teams.filter(t => manageTeamsGroupFilter === 'all' ? true : t.group === manageTeamsGroupFilter).length} فرق
-                  </span>
-                </div>
-
-                {/* Teams Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {teams
-                    .filter((team) => (manageTeamsGroupFilter === 'all' ? true : team.group === manageTeamsGroupFilter))
-                    .map((team) => (
-                      <div
-                        key={team.id}
-                        className="bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 rounded-2xl p-4 flex flex-col justify-between gap-3 transition-all shadow-md group"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div
-                            onClick={() => setSelectedTeamNameForMatches(team.name)}
-                            className="flex items-center gap-3 truncate cursor-pointer flex-1"
-                            title="اضغط لعرض مباريات هذا الفريق بالكامل"
-                          >
-                            <TeamLogo teamName={team.name} size="lg" className="group-hover:scale-105 transition-transform" />
-                            <div className="truncate">
-                              <strong className="text-xs md:text-sm font-bold text-white block truncate group-hover:text-emerald-400 transition-colors">{team.name}</strong>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 text-[10px] font-bold border border-emerald-500/20">
-                                  المجموعة {team.group}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <button
-                              onClick={() => setSelectedTeamNameForMatches(team.name)}
-                              className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-600 text-emerald-300 hover:text-white text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer border border-emerald-500/20 shadow-sm"
-                              title="عرض مباريات هذا الفريق (5 مباريات)"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              الماتشات (5)
-                            </button>
-                            <button
-                              onClick={() => setEditingTeam(team)}
-                              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer border border-slate-700"
-                              title="تعديل اسم الفريق ومجموعته"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                              تعديل
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Stats Progress Bar */}
-                        <div className="pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                          <div className="flex items-center gap-1">
-                            <span className="text-slate-500">المباريات:</span>
-                            <strong className="text-white font-bold">{team.played} / 5</strong>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <span>نقاط: <strong className="text-amber-400 font-bold">{team.points}</strong></span>
-                            <span>فارق: <strong className="text-emerald-400 font-bold">{team.gd > 0 ? `+${team.gd}` : team.gd}</strong></span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {/* Scorekeepers Sub-Tab */}
-            {manageSubTab === 'scorekeepers' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
-                  <h3 className="text-base font-black text-white pb-3 border-b border-slate-800">
-                    تعيين مسؤول جديد لتسجيل نتائج المباريات
-                  </h3>
-                  <form onSubmit={handleAddScorekeeper} className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1">اسم المسؤول / الحكم *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="مثال: يوسف حسام"
-                        value={newScorekeeperForm.name}
-                        onChange={(e) => setNewScorekeeperForm({ ...newScorekeeperForm, name: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1">الرقم التعريفي (ID) *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="مثال: 20230555"
-                        value={newScorekeeperForm.studentId}
-                        onChange={(e) => setNewScorekeeperForm({ ...newScorekeeperForm, studentId: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="w-full py-3 rounded-xl bg-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 cursor-pointer mt-2"
-                    >
-                      اعتماد وتفويض مسؤول النتائج
-                    </button>
-                  </form>
-                </div>
-
-                <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-3">
-                  <h3 className="text-base font-black text-white pb-3 border-b border-slate-800">
-                    المسؤولون المعتمدون ({scorekeepers.length})
-                  </h3>
-                  {scorekeepers.map((sk) => (
-                    <div
-                      key={sk.id}
-                      className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-                        sk.id === activeOperatorId ? 'bg-amber-950/20 border-amber-500/50' : 'bg-slate-950 border-slate-800'
-                      }`}
-                    >
-                      <div>
-                        <strong className="text-sm font-bold text-white block">{sk.name}</strong>
-                        <span className="text-[11px] text-slate-400 font-mono">ID: {sk.studentId}</span>
-                      </div>
-                      {sk.id !== activeOperatorId && (
-                        <button
-                          onClick={() => setActiveOperatorId(sk.id)}
-                          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white text-xs font-bold cursor-pointer"
-                        >
-                          الدخول باسمه
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Seasons & Archive Sub-Tab */}
-            {manageSubTab === 'seasons_archive' && (
-              <div className="space-y-6">
-                {/* Active Season Banner */}
-                <div className="p-6 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 border border-amber-500/30 shadow-2xl space-y-4">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/40 shrink-0">
-                        <Trophy className="w-7 h-7" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black border border-emerald-500/30">
-                            🟢 الموسم النشط حالياً
-                          </span>
-                          <span className="text-xs text-slate-400 font-mono">{currentAcademicYear}</span>
-                        </div>
-                        <h2 className="text-xl md:text-2xl font-black text-white">{currentSeasonName}</h2>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          البطولة تعمل بنظام 48 فريقاً مقسمين على 8 مجموعات (A-H)، بإجمالي 152 مباراة.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setIsAdminNewSeasonModalOpen(true)}
-                        className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-amber-500/20"
-                      >
-                        <PlusCircle className="w-4 h-4" />
-                        <span>إطلاق موسم جديد كلياً (0 نقاط) ⚡</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Season Metrics */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                    <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-center">
-                      <span className="text-[11px] text-slate-400 block mb-0.5">عدد الفرق</span>
-                      <strong className="text-xl font-black text-white">{teams.length}</strong>
-                      <span className="text-[10px] text-emerald-400 block">فريقاً مسجلاً</span>
-                    </div>
-                    <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-center">
-                      <span className="text-[11px] text-slate-400 block mb-0.5">المباريات الإجمالية</span>
-                      <strong className="text-xl font-black text-amber-400">{matches.length}</strong>
-                      <span className="text-[10px] text-slate-500 block">120 مجموعات + 32 إقصائي</span>
-                    </div>
-                    <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-center">
-                      <span className="text-[11px] text-slate-400 block mb-0.5">المباريات الملعوبة</span>
-                      <strong className="text-xl font-black text-emerald-400">
-                        {matches.filter((m) => m.status === 'finished').length}
-                      </strong>
-                      <span className="text-[10px] text-slate-500 block">مباراة منتهية</span>
-                    </div>
-                    <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-center">
-                      <span className="text-[11px] text-slate-400 block mb-0.5">المواسم المؤرشفة</span>
-                      <strong className="text-xl font-black text-sky-400">{archivedSnapshots.length}</strong>
-                      <span className="text-[10px] text-slate-500 block">نسخة تاريخية</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Archived Seasons Snapshots List */}
-                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                    <div>
-                      <h3 className="text-base md:text-lg font-black text-white flex items-center gap-2">
-                        <Archive className="w-5 h-5 text-amber-400" />
-                        <span>سجل وأرشيف المواسم السابقة في قاعدة البيانات</span>
-                      </h3>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        جميع نتائج الفرق والمباريات والأبطال المحفوظة من المواسم السابقة.
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleRefreshArchivedSnapshots()}
-                      className="px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-bold border border-slate-800 flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>تحديث الأرشيف</span>
-                    </button>
-                  </div>
-
-                  {archivedSnapshots.length === 0 ? (
-                    <div className="p-10 text-center rounded-2xl bg-slate-950/60 border border-dashed border-slate-800 space-y-2">
-                      <Archive className="w-10 h-10 text-slate-600 mx-auto" />
-                      <h4 className="text-sm font-bold text-slate-400">لا توجد مواسم مؤرشفة بعد</h4>
-                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                        عند إطلاق موسم جديد وتفعيل خيار "أرشفة الموسم الحالي"، سيتم حفظ النتائج والفرق هنا في قاعدة البيانات تلقائياً.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {archivedSnapshots.map((snap) => (
-                        <div
-                          key={snap.id}
-                          className="p-4 rounded-2xl bg-slate-950 border border-slate-800/90 hover:border-amber-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                        >
-                          <div className="flex items-start sm:items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
-                              <Trophy className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <strong className="text-sm md:text-base font-black text-white">{snap.seasonName}</strong>
-                                <span className="text-[11px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                                  {snap.year}
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
-                                {snap.champion && (
-                                  <span className="text-emerald-400 font-bold flex items-center gap-1">
-                                    🏆 البطل: {snap.champion}
-                                  </span>
-                                )}
-                                {snap.runnerUp && (
-                                  <span className="text-slate-300 font-medium">
-                                    🥈 الوصيف: {snap.runnerUp}
-                                  </span>
-                                )}
-                                <span>· {snap.teamsCount || 48} فريقاً</span>
-                                <span>· {snap.matchesCount || 152} مباراة</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="text-left shrink-0">
-                            <span className="text-[11px] text-slate-500 block">
-                              تاريخ الأرشفة: {new Date(snap.archivedAt).toLocaleDateString('ar-EG')}
-                            </span>
-                            <span className="text-[10px] text-slate-600 block">
-                              بواسطة: {snap.archivedBy || 'الإدارة'}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ------------------------------------------------------------- */}
-            {/* ADMIN MODAL: CREATE BRAND NEW SEASON WITH ZERO POINTS */}
-            {/* ------------------------------------------------------------- */}
-            {isAdminNewSeasonModalOpen && (
-              <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-                <div className="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl space-y-6 animate-in fade-in zoom-in-95">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/40">
-                        <Trophy className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-black text-white">إطلاق موسم جديد كلياً (0 نقاط) 🏆</h3>
-                        <p className="text-xs text-slate-400">بدء دوري جديد مع خيار أرشفة الموسم الحالي</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsAdminNewSeasonModalOpen(false)}
-                      className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      await handleStartNewSeasonZeroPoints(adminNewSeasonForm);
-                    }}
-                    className="space-y-4"
-                  >
-                    <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                        اسم الموسم / النسخة الجديدة *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={adminNewSeasonForm.name}
-                        onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, name: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-bold"
-                        placeholder="مثال: دوري جامعة النيل 2027 - النسخة السادسة"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                          العام الأكاديمي *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={adminNewSeasonForm.year}
-                          onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, year: e.target.value })}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-bold"
-                          placeholder="مثال: 2026 / 2027"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                          عدد فرق البطولة
-                        </label>
-                        <input
-                          type="number"
-                          value={adminNewSeasonForm.teamsCount}
-                          onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, teamsCount: Number(e.target.value) || 48 })}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-bold text-center"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Archive Previous Season Option */}
-                    <div className="p-4 rounded-2xl bg-slate-950 border border-amber-500/30 space-y-3">
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={adminNewSeasonForm.archivePrevious}
-                          onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, archivePrevious: e.target.checked })}
-                          className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500 border-slate-700 bg-slate-900"
-                        />
-                        <span className="text-xs font-black text-amber-300">
-                          أرشفة وحفظ نتائج وفرق الموسم الحالي في قاعدة البيانات 📦
-                        </span>
-                      </label>
-
-                      {adminNewSeasonForm.archivePrevious && (
-                        <div className="space-y-3 pt-2 border-t border-slate-800/80">
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                              بطل الموسم الحالي (Champion)
-                            </label>
-                            <input
-                              type="text"
-                              value={adminNewSeasonForm.champion}
-                              onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, champion: e.target.value })}
-                              placeholder="مثال: برشلونة (أو يترك فارغاً ليكتشف تلقائياً من النهائي)"
-                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                              وصيف البطولة (Runner-up)
-                            </label>
-                            <input
-                              type="text"
-                              value={adminNewSeasonForm.runnerUp}
-                              onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, runnerUp: e.target.value })}
-                              placeholder="مثال: الزمالك"
-                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Reset points explanation banner */}
-                    <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 text-xs leading-relaxed space-y-1">
-                      <strong className="block font-black text-white">ماذا سيحدث عند الضغط على تأكيد؟</strong>
-                      <p>
-                        1. حفظ أرشيف كامل للموسم الحالي في قاعدة البيانات (الفرق والنتائج والمباريات).
-                      </p>
-                      <p>
-                        2. تصفير نقاط وجداول جميع الفرق إلى (0 نقاط، 0 لعب، 0 فوز، 0 أهداف).
-                      </p>
-                      <p>
-                        3. إعادة تهيئة جميع الـ 152 مباراة لتصبح قادمة للموسم الجديد.
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-3 pt-2">
-                      <button
-                        type="submit"
-                        disabled={isStartingSeasonInAdmin}
-                        className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                      >
-                        {isStartingSeasonInAdmin ? (
-                          <>
-                            <RotateCcw className="w-4 h-4 animate-spin" />
-                            <span>جارٍ أرشفة وتصفير الموسم...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Trophy className="w-4 h-4" />
-                            <span>تأكيد وإطلاق الموسم الجديد بصفر نقاط 🏆</span>
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setIsAdminNewSeasonModalOpen(false)}
-                        className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors cursor-pointer"
-                      >
-                        إلغاء
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-
-            {/* ------------------------------------------------------------- */}
-            {/* ADMIN MODAL: ARCHIVE VIEWER */}
-            {/* ------------------------------------------------------------- */}
-            {isAdminArchiveModalOpen && (
-              <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-                <div className="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl space-y-6 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-4 shrink-0">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/40">
-                        <Archive className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-black text-white">سجل وأرشيف المواسم السابقة 🏛️</h3>
-                        <p className="text-xs text-slate-400">تاريخ البطولات والنتائج المحفوظة في قاعدة البيانات</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsAdminArchiveModalOpen(false)}
-                      className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                    {archivedSnapshots.length === 0 ? (
-                      <div className="p-10 text-center rounded-2xl bg-slate-950/60 border border-dashed border-slate-800 space-y-2">
-                        <Archive className="w-12 h-12 text-slate-600 mx-auto" />
-                        <h4 className="text-sm font-bold text-slate-300">لا توجد مواسم مؤرشفة حتى الآن</h4>
-                        <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                          عند إنشاء موسم جديد كلياً وتفعيل خيار الأرشفة، ستظهر جميع النسخ السابقة هنا.
-                        </p>
-                      </div>
-                    ) : (
-                      archivedSnapshots.map((snap) => (
-                        <div
-                          key={snap.id}
-                          className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3"
-                        >
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
-                            <div>
-                              <span className="text-xs font-black text-amber-400 font-mono block">
-                                {snap.year}
-                              </span>
-                              <strong className="text-base font-black text-white block">
-                                {snap.seasonName}
-                              </strong>
-                            </div>
-
-                            <span className="text-[11px] text-slate-400 font-mono">
-                              أرشف في: {new Date(snap.archivedAt).toLocaleDateString('ar-EG')}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3 text-xs">
-                            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-                              <span className="text-[10px] text-slate-400 block mb-0.5">🏆 البطل الرسمي:</span>
-                              <strong className="text-emerald-400 font-black">{snap.champion || 'غير محدد'}</strong>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-                              <span className="text-[10px] text-slate-400 block mb-0.5">🥈 الوصيف:</span>
-                              <strong className="text-slate-200 font-black">{snap.runnerUp || 'غير محدد'}</strong>
-                            </div>
-                          </div>
-
-                          {snap.scorersSummary && (
-                            <div className="text-[11px] text-amber-300 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                              ⚽ أبرز الهدافين: {snap.scorersSummary}
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                            <span>عدد الفرق: {snap.teamsCount || 48} فريقاً</span>
-                            <span>عدد المباريات: {snap.matchesCount || 152} مباراة</span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-800 flex justify-end shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setIsAdminArchiveModalOpen(false)}
-                      className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer"
-                    >
-                      إغلاق
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-            </div>
+            <AdminControlCenter
+              currentUser={currentUser}
+              teams={teams}
+              matches={matches}
+              users={users}
+              playerRequests={playerRequests}
+              applications={applications}
+              seasons={seasons}
+              archivedSnapshots={archivedSnapshots}
+              isPlayerEditingOpen={isPlayerEditingOpen}
+              onTogglePlayerEditing={handleTogglePlayerEditing}
+              isLeagueRegistrationVisible={isLeagueRegistrationVisible}
+              onToggleRegistrationVisible={handleToggleRegistrationVisible}
+              isLeagueRegistrationOpen={isLeagueRegistrationOpen}
+              onToggleRegistrationOpen={handleToggleRegistrationOpen}
+              activeSeasonId={activeSeasonId}
+              currentSeasonName={currentSeasonName}
+              currentAcademicYear={currentAcademicYear}
+              onOpenApprovalsModal={() => setIsApprovalsModalOpen(true)}
+              onOpenRoundOrganizer={() => setIsRoundOrganizerOpen(true)}
+              onOpenAlertComposer={() => {
+                const defaultMatch = matches.find(m => m.isScheduled) || matches[0];
+                setAlertComposerMatch(defaultMatch);
+                setIsAlertComposerOpen(true);
+              }}
+              onOpenBackupModal={() => setIsBackupModalOpen(true)}
+              onOpenNewSeasonModal={() => setIsAdminNewSeasonModalOpen(true)}
+              onOpenArchiveModal={() => setIsAdminArchiveModalOpen(true)}
+              onOpenBulkEditModal={handleOpenBulkEditModal}
+              onEditTeam={(team) => setEditingTeam(team)}
+              onScheduleMatch={(match) => setSchedulingMatch(match)}
+              onResetAllMatches={handleResetAllMatches}
+              onSelectTeamForMatches={(teamName) => setSelectedTeamNameForMatches(teamName)}
+              onAssignManager={handleAssignTeamManager}
+              onUnassignManager={handleUnassignTeamManager}
+              onUpdateUserRole={handleUpdateUserRole}
+              onUpdateUser={handleUpdateUser}
+              onAddUser={handleAddUser}
+              onDeleteUser={handleDeleteUser}
+              onRefreshUsers={handleRefreshUsersFromServer}
+              onRefreshApplications={handleRefreshApplications}
+              onReviewApplication={handleReviewApplication}
+              onNavigateTab={(tab) => setCurrentTab(tab)}
+              onOpenAiCopilot={() => setIsGeminiChatbotOpen(true)}
+            />
           ) : (
             <div className="bg-slate-900 border border-amber-500/30 rounded-3xl p-8 text-center max-w-lg mx-auto my-12 shadow-2xl space-y-4">
               <div className="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/30">
@@ -7734,6 +6948,314 @@ export default function App() {
         onRestoreComplete={handleRestoreComplete}
         onResetToZero={handleResetToZero}
       />
+
+      {/* ========================================================================= */}
+      {/* MODAL: EXPORT GROUP STANDINGS & STATS PDF */}
+      {/* ========================================================================= */}
+      <ExportStandingsPDFModal
+        isOpen={isPdfExportModalOpen}
+        onClose={() => setIsPdfExportModalOpen(false)}
+        teams={teams}
+        matches={matches}
+        getGroupStandings={getGroupStandings}
+        selectedGroup={selectedGroup}
+        seasonName={currentSeasonName}
+        academicYear={currentAcademicYear}
+        scheduledMatchesCount={scheduledMatchesCount}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL: GEMINI AI MULTI-TURN CHATBOT & IMAGE ROSTER EXTRACTION */}
+      {/* ========================================================================= */}
+      <GeminiChatbotModal
+        isOpen={isGeminiChatbotOpen}
+        onClose={() => setIsGeminiChatbotOpen(false)}
+        teams={teams}
+        onUpdateTeams={setTeams}
+        squads={squads}
+        onUpdateSquads={setSquads}
+        currentSeasonName={currentSeasonName}
+        currentAcademicYear={currentAcademicYear}
+        isAdmin={isAdmin}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL: CREATE BRAND NEW SEASON WITH ZERO POINTS */}
+      {/* ========================================================================= */}
+      {isAdminNewSeasonModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl space-y-6 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/40">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white">إطلاق موسم جديد كلياً (0 نقاط) 🏆</h3>
+                  <p className="text-xs text-slate-400">بدء دوري جديد مع خيار أرشفة الموسم الحالي</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAdminNewSeasonModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await handleStartNewSeasonZeroPoints(adminNewSeasonForm);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  اسم الموسم / النسخة الجديدة *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={adminNewSeasonForm.name}
+                  onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, name: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-bold"
+                  placeholder="مثال: دوري جامعة النيل 2027 - النسخة السادسة"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    العام الأكاديمي *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={adminNewSeasonForm.year}
+                    onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, year: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-bold"
+                    placeholder="مثال: 2026 / 2027"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    عدد فرق البطولة
+                  </label>
+                  <input
+                    type="number"
+                    value={adminNewSeasonForm.teamsCount}
+                    onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, teamsCount: Number(e.target.value) || 48 })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-bold text-center"
+                  />
+                </div>
+              </div>
+
+              {/* Archive Previous Season Option */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-amber-500/30 space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={adminNewSeasonForm.archivePrevious}
+                    onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, archivePrevious: e.target.checked })}
+                    className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500 border-slate-700 bg-slate-900"
+                  />
+                  <span className="text-xs font-black text-amber-300">
+                    أرشفة وحفظ نتائج وفرق الموسم الحالي في قاعدة البيانات 📦
+                  </span>
+                </label>
+
+                {adminNewSeasonForm.archivePrevious && (
+                  <div className="space-y-3 pt-2 border-t border-slate-800/80">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                        بطل الموسم الحالي (Champion)
+                      </label>
+                      <input
+                        type="text"
+                        value={adminNewSeasonForm.champion}
+                        onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, champion: e.target.value })}
+                        placeholder="مثال: برشلونة (أو يترك فارغاً ليكتشف تلقائياً من النهائي)"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                        وصيف البطولة (Runner-up)
+                      </label>
+                      <input
+                        type="text"
+                        value={adminNewSeasonForm.runnerUp}
+                        onChange={(e) => setAdminNewSeasonForm({ ...adminNewSeasonForm, runnerUp: e.target.value })}
+                        placeholder="مثال: الزمالك"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Reset points explanation banner */}
+              <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 text-xs leading-relaxed space-y-1">
+                <strong className="block font-black text-white">ماذا سيحدث عند الضغط على تأكيد؟</strong>
+                <p>
+                  1. حفظ أرشيف كامل للموسم الحالي في قاعدة البيانات (الفرق والنتائج والمباريات).
+                </p>
+                <p>
+                  2. تصفير نقاط وجداول جميع الفرق إلى (0 نقاط، 0 لعب، 0 فوز، 0 أهداف).
+                </p>
+                <p>
+                  3. إعادة تهيئة جميع الـ 152 مباراة لتصبح قادمة للموسم الجديد.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isStartingSeasonInAdmin}
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isStartingSeasonInAdmin ? (
+                    <>
+                      <RotateCcw className="w-4 h-4 animate-spin" />
+                      <span>جارٍ أرشفة وتصفير الموسم...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trophy className="w-4 h-4" />
+                      <span>تأكيد وإطلاق الموسم الجديد بصفر نقاط 🏆</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsAdminNewSeasonModalOpen(false)}
+                  className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: ARCHIVE VIEWER */}
+      {/* ========================================================================= */}
+      {isAdminArchiveModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl space-y-6 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/40">
+                  <Archive className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white">سجل وأرشيف المواسم السابقة 🏛️</h3>
+                  <p className="text-xs text-slate-400">تاريخ البطولات والنتائج المحفوظة في قاعدة البيانات</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAdminArchiveModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {archivedSnapshots.length === 0 ? (
+                <div className="p-10 text-center rounded-2xl bg-slate-950/60 border border-dashed border-slate-800 space-y-2">
+                  <Archive className="w-12 h-12 text-slate-600 mx-auto" />
+                  <h4 className="text-sm font-bold text-slate-300">لا توجد مواسم مؤرشفة حتى الآن</h4>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    عند إنشاء موسم جديد كلياً وتفعيل خيار الأرشفة، ستظهر جميع النسخ السابقة هنا.
+                  </p>
+                </div>
+              ) : (
+                archivedSnapshots.map((snap) => (
+                  <div
+                    key={snap.id}
+                    className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                      <div>
+                        <span className="text-xs font-black text-amber-400 font-mono block">
+                          {snap.year}
+                        </span>
+                        <strong className="text-base font-black text-white block">
+                          {snap.seasonName}
+                        </strong>
+                      </div>
+
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        أرشف في: {new Date(snap.archivedAt).toLocaleDateString('ar-EG')}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                        <span className="text-[10px] text-slate-400 block mb-0.5">🏆 البطل الرسمي:</span>
+                        <strong className="text-emerald-400 font-black">{snap.champion || 'غير محدد'}</strong>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                        <span className="text-[10px] text-slate-400 block mb-0.5">🥈 الوصيف:</span>
+                        <strong className="text-slate-200 font-black">{snap.runnerUp || 'غير محدد'}</strong>
+                      </div>
+                    </div>
+
+                    {snap.scorersSummary && (
+                      <div className="text-[11px] text-amber-300 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                        ⚽ أبرز الهدافين: {snap.scorersSummary}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                      <span>عدد الفرق: {snap.teamsCount || 48} فريقاً</span>
+                      <span>عدد المباريات: {snap.matchesCount || 152} مباراة</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-slate-800 flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsAdminArchiveModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating AI Tournament Copilot Button */}
+      <button
+        type="button"
+        onClick={() => setIsGeminiChatbotOpen(true)}
+        className="fixed bottom-6 left-6 z-40 px-4 py-3 rounded-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white shadow-2xl shadow-emerald-600/50 border border-emerald-400/50 flex items-center gap-2.5 transition-all cursor-pointer hover:scale-105 active:scale-95 group"
+        title="المساعد الذكي للبطولة — اسأل بالذكاء الاصطناعي أو أرسل صورة كشف اللاعبين لإضافتها"
+      >
+        <div className="relative">
+          <Bot className="w-5 h-5 text-emerald-100 group-hover:rotate-12 transition-transform" />
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 border-2 border-slate-900 rounded-full animate-ping" />
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 border-2 border-slate-900 rounded-full" />
+        </div>
+        <span className="text-xs font-black hidden sm:inline">
+          المساعد الذكي (AI) 🤖
+        </span>
+        <span className="text-[10px] bg-emerald-950/70 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">
+          إضافة من صورة 📷
+        </span>
+      </button>
 
       {/* Footer */}
       <footer className="border-t border-emerald-950/80 bg-slate-950/90 py-5 px-4 text-center text-xs text-slate-500">

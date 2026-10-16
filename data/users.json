@@ -9,10 +9,10 @@
     "studentId": "20260001",
     "department": "إدارة بطولة دوري النيل",
     "registeredAt": "2026-01-01",
-    "notes": "المدير الدائم المعتمد والوحيد للنظام",
-    "lastLoginAt": "2026-10-15T19:55:00.000Z",
-    "lastActiveAt": "2026-10-15T19:55:00.000Z",
+    "notes": "المدير الدائم المعتمد والوحيد للنظام - محمي من التعديل",
+    "lastLoginAt": "2026-10-16T09:24:01.896Z",
+    "lastActiveAt": "2026-10-16T09:30:01.701Z",
     "isOnline": true,
-    "loginCount": 1
+    "loginCount": 10
   }
 ]

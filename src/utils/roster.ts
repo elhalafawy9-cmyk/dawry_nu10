@@ -134,52 +134,22 @@ export const PARIS_OFFICIAL_ROSTER: Player[] = [
   },
 ];
 
-// Generate default squad for 48 teams
+// Generate empty squads for all teams so admin can add real players cleanly
 export function generateInitialSquads(teamNames: string[]): Record<string, Player[]> {
-  const commonFirstNames = [
-    'أحمد', 'محمد', 'علي', 'عمر', 'كريم', 'يوسف', 'محمود', 'إبراهيم', 
-    'حسن', 'طارق', 'زياد', 'خالد', 'سامر', 'حازم', 'مصطفى', 'ياسين'
-  ];
-  const commonLastNames = [
-    'صلاح', 'رمضان', 'سعيد', 'الشناوي', 'مرموش', 'حجازي', 'عاشور', 
-    'فتحي', 'إمام', 'شريف', 'حمدي', 'سليمان', 'نجيب', 'زكي', 'سالم'
-  ];
-
   const squads: Record<string, Player[]> = {};
-
-  teamNames.forEach((teamName, tIdx) => {
-    if (teamName === 'باريس') {
-      squads[teamName] = PARIS_OFFICIAL_ROSTER;
-      return;
-    }
-
-    const players: Player[] = [];
-    const positions: ('GK' | 'DEF' | 'DEF' | 'MID' | 'MID' | 'FWD' | 'FWD' | 'MID' | 'DEF')[] = [
-      'GK', 'DEF', 'DEF', 'MID', 'MID', 'FWD', 'FWD', 'MID', 'DEF'
-    ];
-
-    for (let i = 0; i < 9; i++) {
-      const fName = commonFirstNames[(tIdx * 3 + i) % commonFirstNames.length];
-      const lName = commonLastNames[(tIdx * 2 + i * 3) % commonLastNames.length];
-      const name = `${fName} ${lName}`;
-      const year = 2021 + ((tIdx + i) % 4);
-      const seq = 1000 + (tIdx * 9) + i;
-      const studentId = `${year}${seq}`;
-      
-      players.push({
-        id: `p_${tIdx}_${i + 1}`,
-        name,
-        number: i === 0 ? 1 : i === 5 ? 10 : i === 6 ? 9 : i === 3 ? 8 : i + 2,
-        position: positions[i] || 'MID',
-        isCaptain: i === 3,
-        studentId,
-        isIdentityLocked: true, // محمي ومقفل
-      });
-    }
-
-    squads[teamName] = players;
+  teamNames.forEach((teamName) => {
+    squads[teamName] = [];
   });
+  return squads;
+}
 
+// Clear all players from all teams
+export function clearAllSquads(teamNames: string[]): Record<string, Player[]> {
+  const squads: Record<string, Player[]> = {};
+  teamNames.forEach((teamName) => {
+    squads[teamName] = [];
+  });
+  saveStoredSquads(squads);
   return squads;
 }
 
@@ -214,68 +184,16 @@ export interface PlayerRegistrationRequest {
   reviewedAt?: string;
 }
 
-export const INITIAL_PLAYER_REQUESTS: PlayerRegistrationRequest[] = [
-  {
-    id: 'req_seed_1',
-    type: 'add',
-    teamName: 'برشلونة',
-    playerName: 'عمر الفاروق عبد الرحمن',
-    playerNumber: 14,
-    playerPosition: 'MID',
-    isCaptain: false,
-    studentId: '20230812',
-    department: 'كلية الهندسة',
-    requestedBy: 'كابتن محمود رضا (مسؤول برشلونة)',
-    requestedAt: '2026-10-09 14:30',
-    status: 'pending',
-  },
-  {
-    id: 'req_seed_2',
-    type: 'add',
-    teamName: 'الاهلي',
-    playerName: 'عبد الله خالد السعيد',
-    playerNumber: 22,
-    playerPosition: 'FWD',
-    isCaptain: false,
-    studentId: '20220944',
-    department: 'كلية علوم الحاسب',
-    requestedBy: 'طارق حسام الدين (مسؤول الاهلي)',
-    requestedAt: '2026-10-09 16:15',
-    status: 'pending',
-  },
-  {
-    id: 'req_seed_3',
-    type: 'edit',
-    playerId: 'p_0_1',
-    teamName: 'برشلونة',
-    playerName: 'أحمد صلاح الدين', // تصحيح الاسم
-    playerNumber: 10,
-    playerPosition: 'FWD',
-    isCaptain: true,
-    studentId: '20211000',
-    department: 'كلية إدارة الأعمال',
-    editReason: 'تصحيح الاسم الثلاثي الرسمي للطالب حسب الكارنيه الجامعي وتغيير المركز إلى هجوم FWD',
-    originalPlayer: {
-      name: 'أحمد صلاح',
-      studentId: '20211000',
-      number: 1,
-      position: 'GK',
-      isCaptain: false,
-    },
-    requestedBy: 'كابتن محمود رضا (مسؤول برشلونة)',
-    requestedAt: '2026-10-10 09:40',
-    status: 'pending',
-  },
-];
+export const INITIAL_PLAYER_REQUESTS: PlayerRegistrationRequest[] = [];
 
-const PLAYER_REQUESTS_KEY = 'dawry_player_requests_v1';
+const PLAYER_REQUESTS_KEY = 'dawry_player_requests_v2';
 
 export function loadStoredPlayerRequests(): PlayerRegistrationRequest[] {
   try {
     const raw = localStorage.getItem(PLAYER_REQUESTS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
@@ -293,21 +211,31 @@ export function saveStoredPlayerRequests(requests: PlayerRegistrationRequest[]):
   }
 }
 
-const SQUADS_STORAGE_KEY = 'dawry_squads_data_v2';
+const SQUADS_STORAGE_KEY = 'dawry_squads_data_v3';
 
 export function loadStoredSquads(defaultTeamNames: string[]): Record<string, Player[]> {
   try {
+    // Clear old versions with mock data
+    localStorage.removeItem('dawry_squads_data_v1');
+    localStorage.removeItem('dawry_squads_data_v2');
+
     const raw = localStorage.getItem(SQUADS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+      if (parsed && typeof parsed === 'object') {
+        // Ensure every default team exists in the record as an array
+        defaultTeamNames.forEach((name) => {
+          if (!parsed[name]) parsed[name] = [];
+        });
         return parsed;
       }
     }
   } catch (err) {
     console.warn('Failed to load squads from storage', err);
   }
-  return generateInitialSquads(defaultTeamNames);
+  const cleanInitial = generateInitialSquads(defaultTeamNames);
+  saveStoredSquads(cleanInitial);
+  return cleanInitial;
 }
 
 export function saveStoredSquads(squads: Record<string, Player[]>): void {

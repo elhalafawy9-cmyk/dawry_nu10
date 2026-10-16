@@ -45,8 +45,6 @@ export const MatchAlertsListModal: React.FC<MatchAlertsListModalProps> = ({
   onDeleteAlert,
   onComposeNewAlert,
 }) => {
-  if (!isOpen) return null;
-
   const [activeTab, setActiveTab] = useState<'my_team' | 'all' | 'unread'>('my_team');
 
   // Filter alerts
@@ -69,6 +67,8 @@ export const MatchAlertsListModal: React.FC<MatchAlertsListModalProps> = ({
     const isTarget = !userTeam || a.targetTeams.includes(userTeam) || isAdmin;
     return isTarget && currentUser && !a.readByUserIds.includes(currentUser.id);
   }).length;
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-slate-950/85 backdrop-blur-md overflow-y-auto" dir="rtl">
