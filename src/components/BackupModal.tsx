@@ -20,7 +20,7 @@ import {
   Layers
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { AppUser } from '../utils/auth';
+import { AppUser, PERMANENT_ADMIN_EMAIL } from '../utils/auth';
 import { Team, Match } from '../App';
 import { Player } from '../utils/roster';
 import { 
@@ -516,7 +516,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                   <li>سيتم إعادة كافة الفرق الـ 48 إلى <strong>0 نقاط، 0 أهداف، و0 مباريات ملعوبة</strong>.</li>
                   <li>سيتم إعادة جميع المباريات إلى حالة (قادمة - Upcoming) وتصفير النتائج.</li>
                   <li>سيتم حذف جميع استمارات التقديم وطلبات القيد.</li>
-                  <li>سيتم <strong>حذف كافة حسابات المستخدمين الوهميين والمسجلين والإبقاء حصرياً على حسابك أنت كمدير عام للنظام</strong> (elhalafawy9@gmail.com).</li>
+                  <li>سيتم <strong>حذف كافة حسابات المستخدمين الوهميين والمسجلين والإبقاء حصرياً على حسابك أنت كمدير عام للنظام</strong> ({PERMANENT_ADMIN_EMAIL}).</li>
                 </ul>
               </div>
 
@@ -545,7 +545,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between text-xs text-slate-500">
-          <span>الحساب الإداري الحالي: <strong className="text-white font-mono">{currentUser?.email || 'elhalafawy9@gmail.com'}</strong></span>
+          <span>الحساب الإداري الحالي: <strong className="text-white font-mono">{currentUser?.email || PERMANENT_ADMIN_EMAIL}</strong></span>
           <button
             type="button"
             onClick={onClose}

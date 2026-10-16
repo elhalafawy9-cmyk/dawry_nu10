@@ -44,7 +44,7 @@ export interface MatchSheet {
 export const PARIS_OFFICIAL_ROSTER: Player[] = [
   {
     id: 'p_paris_1',
-    name: 'samir alhalafawy (سمير الحلفاوي)',
+    name: 's. mohamed (س. محمد)',
     number: 1,
     position: 'GK',
     studentId: '241000442',

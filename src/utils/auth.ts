@@ -22,8 +22,8 @@ export interface AppUser {
   loginCount?: number;        // Number of sessions/logins
 }
 
-export const PERMANENT_ADMIN_EMAIL = 'elhalafawy9@gmail.com';
-export const PERMANENT_ADMIN_PASSWORD = 'Password123';
+export const PERMANENT_ADMIN_EMAIL = 's.mohamed2442@nu.edu.eg';
+export const PERMANENT_ADMIN_PASSWORD = 'Hv102030';
 
 /**
  * Validates that the email is a Nile University address or the system administrator
@@ -36,20 +36,20 @@ export function isValidNileUniversityEmail(email: string): boolean {
 }
 
 /**
- * Seed users list - ONLY the Super Admin account (elhalafawy9@gmail.com)
+ * Seed users list - ONLY the Super Admin account (s.mohamed2442@nu.edu.eg)
  */
 export const INITIAL_USERS: AppUser[] = [
   {
     id: 'user_super_admin',
-    name: 'المدير العام للنظام (الحلفاوي)',
+    name: 'المدير العام للنظام',
     email: PERMANENT_ADMIN_EMAIL,
     password: PERMANENT_ADMIN_PASSWORD,
     role: 'admin',
     isPermanentAdmin: true,
-    studentId: '20260001',
+    studentId: '241000442',
     department: 'إدارة بطولة دوري النيل',
     registeredAt: '2026-01-01',
-    notes: 'المدير الدائم المعتمد والوحيد للنظام - محمي من التعديل',
+    notes: 'المدير الدائم المعتمد والوحيد للنظام - كامل صلاحيات الإدارة',
     lastLoginAt: new Date().toISOString(),
     lastActiveAt: new Date().toISOString(),
     isOnline: true,
@@ -69,11 +69,11 @@ export function loadStoredUsers(): AppUser[] {
     }
     const parsed: AppUser[] = JSON.parse(raw);
     
-    // Purge old demo users if present
+    // Purge old demo users if present (keeping new permanent admin intact)
     const isOldDemoData = parsed.some(u => 
-      u.email.toLowerCase() === 's.mohamed2442@nu.edu.eg' || 
       u.email.toLowerCase() === 'a.sherif@nu.edu.eg' ||
-      u.email.toLowerCase() === 'm.reda@nu.edu.eg'
+      u.email.toLowerCase() === 'm.reda@nu.edu.eg' ||
+      u.email.toLowerCase() === 'elhalafawy9@gmail.com'
     );
     if (isOldDemoData) {
       const cleaned = [INITIAL_USERS[0], ...parsed.filter(u => 
@@ -100,17 +100,21 @@ export function loadStoredUsers(): AppUser[] {
 
     const hasPermAdmin = parsed.some(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
     if (!hasPermAdmin) {
-      const fixed = [INITIAL_USERS[0], ...parsed];
+      const fixed = [INITIAL_USERS[0], ...parsed.filter(u => u.email.toLowerCase() !== 'elhalafawy9@gmail.com')];
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(fixed));
       return fixed;
     }
 
     const sanitized = parsed.map(u => {
-      if (u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
+      if (u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase() || u.email.toLowerCase() === 'elhalafawy9@gmail.com') {
         return {
           ...u,
+          name: 'المدير العام للنظام',
+          email: PERMANENT_ADMIN_EMAIL,
+          password: PERMANENT_ADMIN_PASSWORD,
           role: 'admin' as UserRole,
           isPermanentAdmin: true,
+          studentId: '241000442',
         };
       }
       return u;
@@ -129,8 +133,11 @@ export function saveStoredUsers(users: AppUser[]): void {
       if (u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
         return {
           ...u,
+          name: 'المدير العام للنظام',
+          password: PERMANENT_ADMIN_PASSWORD,
           role: 'admin' as UserRole,
           isPermanentAdmin: true,
+          studentId: '241000442',
         };
       }
       return u;
@@ -152,13 +159,35 @@ export function loadActiveUser(allUsers: AppUser[]): AppUser | null {
     const raw = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      if (parsed.email?.toLowerCase() === 'elhalafawy9@gmail.com') {
+        parsed.email = PERMANENT_ADMIN_EMAIL;
+      }
       const match = allUsers.find(u => u.id === parsed.id || u.email.toLowerCase() === parsed.email?.toLowerCase());
-      if (match) return match;
+      if (match) {
+        if (match.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
+          return {
+            ...match,
+            name: 'المدير العام للنظام',
+            role: 'admin',
+            isPermanentAdmin: true,
+          };
+        }
+        return match;
+      }
     }
   } catch (e) {
     console.error('Error loading active user:', e);
   }
-  return allUsers.find(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) || allUsers[0] || null;
+  const defaultAdmin = allUsers.find(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) || allUsers[0] || INITIAL_USERS[0];
+  if (defaultAdmin && defaultAdmin.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
+    return {
+      ...defaultAdmin,
+      name: 'المدير العام للنظام',
+      role: 'admin',
+      isPermanentAdmin: true,
+    };
+  }
+  return defaultAdmin || null;
 }
 
 export function saveActiveUser(user: AppUser | null): void {

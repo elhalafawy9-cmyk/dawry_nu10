@@ -3,7 +3,9 @@ import {
   AppUser, 
   PERMANENT_ADMIN_EMAIL, 
   PERMANENT_ADMIN_PASSWORD, 
-  isValidNileUniversityEmail 
+  isValidNileUniversityEmail,
+  INITIAL_USERS,
+  saveStoredUsers
 } from '../utils/auth';
 import { fetchServerUsers } from '../utils/apiSync';
 import { 
@@ -71,7 +73,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     if (trimmedEmail === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
       if (password !== PERMANENT_ADMIN_PASSWORD) {
         setIsLoading(false);
-        setError('كلمة المرور غير صحيحة لحساب المدير الدائم للنظام!');
+        setError('كلمة المرور غير صحيحة لحساب المدير العام للنظام!');
         return;
       }
 
@@ -80,15 +82,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         const fresh = await fetchServerUsers();
         adminUser = fresh?.find(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
       }
-
-      if (adminUser) {
-        setIsLoading(false);
-        setSuccess(`أهلاً بك يا ${adminUser.name}، تم التحقق بنجاح والدخول للنظام 👑`);
-        setTimeout(() => {
-          onLogin(adminUser!);
-        }, 400);
-        return;
+      if (!adminUser) {
+        adminUser = INITIAL_USERS[0];
       }
+
+      const resolvedAdmin: AppUser = {
+        ...adminUser,
+        name: 'المدير العام للنظام',
+        email: PERMANENT_ADMIN_EMAIL,
+        password: PERMANENT_ADMIN_PASSWORD,
+        role: 'admin',
+        isPermanentAdmin: true,
+      };
+
+      setIsLoading(false);
+      setSuccess(`أهلاً بك يا ${resolvedAdmin.name}، تم التحقق بنجاح والدخول بصلاحيات الأدمن الكاملة 👑`);
+      setTimeout(() => {
+        onLogin(resolvedAdmin);
+      }, 400);
+      return;
     }
 
     // Match in registered users (check local users, and if not found, check server)
@@ -110,10 +122,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       return;
     }
 
+    const userToLogin: AppUser = (matched.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase())
+      ? { ...matched, role: 'admin', isPermanentAdmin: true }
+      : matched;
+
     setIsLoading(false);
-    setSuccess(`تم تسجيل الدخول بنجاح! مرحباً ${matched.name}`);
+    setSuccess(`تم تسجيل الدخول بنجاح! مرحباً ${userToLogin.name}`);
     setTimeout(() => {
-      onLogin(matched!);
+      onLogin(userToLogin);
     }, 400);
   };
 
@@ -258,23 +274,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </button>
           </form>
 
-          {/* Quick Demo Login One-Click Buttons */}
-          <div className="pt-3 border-t border-slate-800 space-y-2">
-            <span className="text-[11px] font-bold text-slate-400 block text-center">
-              دخول مباشر سريع للنظام:
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                const u = users.find(x => x.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) || users[0];
-                if (u) onLogin(u);
-              }}
-              className="w-full p-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
-            >
-              <Crown className="w-4 h-4 text-amber-400" />
-              <span>دخول فوري بحساب المدير العام (الحلفاوي) 👑</span>
-            </button>
-          </div>
 
           {/* Switch to Signup */}
           <div className="pt-3 border-t border-slate-800 text-center space-y-2">

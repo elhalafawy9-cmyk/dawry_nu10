@@ -1,18 +1,18 @@
 [
   {
     "id": "user_super_admin",
-    "name": "المدير العام للنظام (الحلفاوي)",
-    "email": "elhalafawy9@gmail.com",
-    "password": "Password123",
+    "name": "المدير العام للنظام",
+    "email": "s.mohamed2442@nu.edu.eg",
+    "password": "Hv102030",
     "role": "admin",
     "isPermanentAdmin": true,
-    "studentId": "20260001",
+    "studentId": "241000442",
     "department": "إدارة بطولة دوري النيل",
     "registeredAt": "2026-01-01",
-    "notes": "المدير الدائم المعتمد والوحيد للنظام - محمي من التعديل",
-    "lastLoginAt": "2026-10-16T09:24:01.896Z",
-    "lastActiveAt": "2026-10-16T09:30:01.701Z",
+    "notes": "المدير الدائم المعتمد والوحيد للنظام - كامل صلاحيات الإدارة",
+    "lastLoginAt": "2026-10-16T19:00:00.000Z",
+    "lastActiveAt": "2026-10-16T19:05:00.000Z",
     "isOnline": true,
-    "loginCount": 10
+    "loginCount": 1
   }
 ]

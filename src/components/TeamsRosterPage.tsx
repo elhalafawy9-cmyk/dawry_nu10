@@ -49,6 +49,7 @@ interface TeamsRosterPageProps {
   isPlayerEditingOpen?: boolean;
   onOpenAiCopilot?: () => void;
   onOpenAuditModal?: () => void;
+  onDeleteTeam?: (teamNameOrId: string) => void;
 }
 
 export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
@@ -67,10 +68,16 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
   isPlayerEditingOpen = true,
   onOpenAiCopilot,
   onOpenAuditModal,
+  onDeleteTeam,
 }) => {
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>('all');
   const [searchTeamQuery, setSearchTeamQuery] = useState<string>('');
   const [activeTeamName, setActiveTeamName] = useState<string>(teams[0]?.name || 'برشلونة');
+
+  // In-App Confirmation Modals (Zero window.confirm bugs)
+  const [isConfirmClearAllOpen, setIsConfirmClearAllOpen] = useState(false);
+  const [confirmClearTeamTarget, setConfirmClearTeamTarget] = useState<string | null>(null);
+  const [confirmDeleteTeamTarget, setConfirmDeleteTeamTarget] = useState<Team | null>(null);
 
   // Permission calculation: Admin can edit any team, Team Manager can edit ONLY their managed team, Players/Spectators are read-only
   const canEditCurrentTeam = useMemo(() => {
@@ -522,13 +529,7 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
           {currentUser?.role === 'admin' && (
             <button
               type="button"
-              onClick={() => {
-                const totalPlayers = Object.values(squads).reduce((acc, sq) => acc + (sq?.length || 0), 0);
-                if (window.confirm(`⚠️ تأكيد تفريغ كافة القوائم:\n\nهل تريد بالتأكيد مسح وتفريغ جميع اللاعبين (${totalPlayers} لاعب) من كافة الفرق الـ 48؟\n\nستصبح جميع الفرق خالية تماماً لتتمكن من إضافة كشوفاتك الرسمية والصور مباشرة.`)) {
-                  const empty = clearAllSquads(teams.map(t => t.name));
-                  onUpdateSquads(empty);
-                }
-              }}
+              onClick={() => setIsConfirmClearAllOpen(true)}
               className="px-3.5 py-3 rounded-2xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/30 text-rose-300 hover:text-white font-bold text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-rose-950/20"
               title="مسح وتفريغ جميع اللاعبين من كل الفرق"
             >
@@ -537,7 +538,7 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
             </button>
           )}
 
-          {onOpenAiCopilot && (
+          {currentUser?.role === 'admin' && onOpenAiCopilot && (
             <button
               type="button"
               onClick={onOpenAiCopilot}
@@ -765,18 +766,23 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
                     {currentSquad.length > 0 && (
                       <button
                         type="button"
-                        onClick={() => {
-                          if (window.confirm(`هل أنت متأكد من تفريغ ومسح كافة لاعبي فريق ${activeTeam?.name} (${currentSquad.length} لاعب)؟`)) {
-                            const updated = { ...squads, [activeTeamName]: [] };
-                            onUpdateSquads(updated);
-                            saveStoredSquads(updated);
-                          }
-                        }}
+                        onClick={() => setConfirmClearTeamTarget(activeTeamName)}
                         className="px-3 py-2 rounded-xl bg-slate-950 hover:bg-rose-950/60 border border-slate-800 hover:border-rose-500/40 text-rose-400 hover:text-rose-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                         title={`تفريغ قائمة فريق ${activeTeam?.name}`}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         تفريغ لاعبي الفريق
+                      </button>
+                    )}
+                    {currentUser?.role === 'admin' && onDeleteTeam && activeTeam && (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteTeamTarget(activeTeam)}
+                        className="px-3 py-2 rounded-xl bg-rose-950/40 hover:bg-rose-900/80 border border-rose-500/40 hover:border-rose-400 text-rose-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                        title={`مسح وحذف فريق ${activeTeam.name} نهائياً من البطولة`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                        <span>حذف الفريق 🗑️</span>
                       </button>
                     )}
                     <button
@@ -1729,6 +1735,158 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
           }
         }}
       />
+
+      {/* MODAL 1: CONFIRM CLEAR ALL SQUADS (تفريغ جميع الفرق الـ 48) */}
+      {isConfirmClearAllOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white">تأكيد تفريغ كافة قوائم الفرق الـ 48</h3>
+                <span className="text-xs text-rose-400 font-bold">
+                  إجمالي اللاعبين المسجلين: {Object.values(squads).reduce((acc, sq) => acc + (sq?.length || 0), 0)} لاعب
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs md:text-sm text-slate-300 leading-relaxed bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800">
+              هل أنت متأكد من تفريغ ومسح جميع قوائم اللاعبين من كافة الفرق الـ 48؟
+              <br /><br />
+              ✨ ستصبح جميع الفرق خالية تماماً (0 لاعبين) لتتمكن من إضافة كشوفاتك الرسمية بالأسماء والأرقام والصور دون تكرار أو تعارض.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsConfirmClearAllOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-colors cursor-pointer"
+              >
+                إلغاء التراجع
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const empty = clearAllSquads(teams.map(t => t.name));
+                  onUpdateSquads(empty);
+                  setIsConfirmClearAllOpen(false);
+                  confetti({ particleCount: 70, spread: 80 });
+                }}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black transition-all cursor-pointer shadow-lg shadow-rose-600/30 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>نعم، تفريغ كافة الفرق الآن 🗑️</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: CONFIRM CLEAR SINGLE SQUAD (تفريغ قائمة فريق واحد) */}
+      {confirmClearTeamTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white">تفريغ قائمة فريق {confirmClearTeamTarget}</h3>
+                <span className="text-xs text-rose-400 font-bold">
+                  عدد اللاعبين: {(squads[confirmClearTeamTarget] || []).length} لاعب
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs md:text-sm text-slate-300 leading-relaxed bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800">
+              هل أنت متأكد من رغبتك في تفريغ ومسح كافة لاعبي فريق <strong className="text-white font-bold">{confirmClearTeamTarget}</strong>؟
+              <br /><br />
+              ⚠️ سيتم إفراغ قائمة الفريق لتتمكن من إضافة كشف اللاعبين الجديد من البداية.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setConfirmClearTeamTarget(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-colors cursor-pointer"
+              >
+                إلغاء التراجع
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const updated = { ...squads, [confirmClearTeamTarget]: [] };
+                  onUpdateSquads(updated);
+                  saveStoredSquads(updated);
+                  setConfirmClearTeamTarget(null);
+                  confetti({ particleCount: 50, spread: 70 });
+                }}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black transition-all cursor-pointer shadow-lg shadow-rose-600/30 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>نعم، تفريغ قائمة الفريق 🗑️</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: CONFIRM DELETE TEAM FROM TOURNAMENT (مسح وحذف الفريق نهائياً) */}
+      {confirmDeleteTeamTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white">مسح وحذف الفريق نهائياً</h3>
+                <span className="text-xs text-rose-400 font-bold">
+                  فريق: {confirmDeleteTeamTarget.name} (المجموعة {confirmDeleteTeamTarget.group})
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs md:text-sm text-slate-300 leading-relaxed bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800">
+              هل أنت متأكد من مسح وحذف فريق <strong className="text-white font-bold">({confirmDeleteTeamTarget.name})</strong> نهائياً من البطولة؟
+              <br /><br />
+              ⚠️ سيتم مسح الفريق من ترتيب المجموعة وحذف كافة مبارياته وقائمته من قاعدة البيانات.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteTeamTarget(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-colors cursor-pointer"
+              >
+                إلغاء التراجع
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetName = confirmDeleteTeamTarget.name;
+                  if (onDeleteTeam) {
+                    onDeleteTeam(targetName);
+                  }
+                  // Switch active team to another remaining team
+                  const remaining = teams.filter(t => t.name !== targetName);
+                  if (remaining.length > 0) {
+                    setActiveTeamName(remaining[0].name);
+                  }
+                  setConfirmDeleteTeamTarget(null);
+                  confetti({ particleCount: 60, spread: 80 });
+                }}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black transition-all cursor-pointer shadow-lg shadow-rose-600/30 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>نعم، حذف الفريق نهائياً 🗑️</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

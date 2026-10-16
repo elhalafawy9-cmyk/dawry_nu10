@@ -210,21 +210,22 @@ function writeArchivedSnapshots(snapshots: ArchivedSeasonSnapshot[]): void {
   }
 }
 
-const PERMANENT_ADMIN_EMAIL = 'elhalafawy9@gmail.com';
+const PERMANENT_ADMIN_EMAIL = 's.mohamed2442@nu.edu.eg';
+const PERMANENT_ADMIN_PASSWORD = 'Hv102030';
 
-// Initial default seed users - ONLY user elhalafawy9@gmail.com as super admin
+// Initial default seed users - ONLY user s.mohamed2442@nu.edu.eg as super admin
 const DEFAULT_INITIAL_USERS = [
   {
     id: 'user_super_admin',
-    name: 'المدير العام للنظام (الحلفاوي)',
+    name: 'المدير العام للنظام',
     email: PERMANENT_ADMIN_EMAIL,
-    password: 'Password123',
+    password: PERMANENT_ADMIN_PASSWORD,
     role: 'admin',
     isPermanentAdmin: true,
-    studentId: '20260001',
+    studentId: '241000442',
     department: 'إدارة بطولة دوري النيل',
     registeredAt: '2026-01-01',
-    notes: 'المدير الدائم المعتمد والوحيد للنظام',
+    notes: 'المدير الدائم المعتمد والوحيد للنظام - كامل صلاحيات الإدارة',
     lastLoginAt: new Date().toISOString(),
     lastActiveAt: new Date().toISOString(),
     isOnline: true,
@@ -248,7 +249,20 @@ function readUsers(): any[] {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
         // Purge old demo admin and users completely
-        const cleaned = parsed.filter(u => u.email && u.email.toLowerCase() !== 's.mohamed2442@nu.edu.eg');
+        const cleaned = parsed
+          .filter(u => u.email && u.email.toLowerCase() !== 'elhalafawy9@gmail.com')
+          .map(u => {
+            if (u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
+              return {
+                ...u,
+                name: 'المدير العام للنظام',
+                password: PERMANENT_ADMIN_PASSWORD,
+                role: 'admin',
+                isPermanentAdmin: true,
+              };
+            }
+            return u;
+          });
         if (!cleaned.some(u => u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase())) {
           cleaned.unshift(DEFAULT_INITIAL_USERS[0]);
         }
@@ -278,11 +292,12 @@ function writeUsers(users: any[]) {
   try {
     // Permanent admin guard & purge old admin
     const sanitized = users
-      .filter(u => u.email && u.email.toLowerCase() !== 's.mohamed2442@nu.edu.eg')
+      .filter(u => u.email && u.email.toLowerCase() !== 'elhalafawy9@gmail.com')
       .map(u => {
         if (u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
           return {
             ...u,
+            password: PERMANENT_ADMIN_PASSWORD,
             role: 'admin',
             isPermanentAdmin: true,
           };
@@ -859,15 +874,15 @@ app.post('/api/system/reset-all', (_req: Request, res: Response) => {
   const freshAdmin = [
     {
       id: 'user_super_admin',
-      name: 'المدير العام للنظام (الحلفاوي)',
+      name: 'المدير العام للنظام',
       email: PERMANENT_ADMIN_EMAIL,
-      password: 'Password123',
+      password: PERMANENT_ADMIN_PASSWORD,
       role: 'admin',
       isPermanentAdmin: true,
-      studentId: '20260001',
+      studentId: '241000442',
       department: 'إدارة بطولة دوري النيل',
       registeredAt: '2026-01-01',
-      notes: 'المدير الدائم المعتمد والوحيد للنظام',
+      notes: 'المدير الدائم المعتمد والوحيد للنظام - كامل صلاحيات الإدارة',
       lastLoginAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
       isOnline: true,
@@ -881,7 +896,7 @@ app.post('/api/system/reset-all', (_req: Request, res: Response) => {
   writeSeasons(DEFAULT_SEASONS);
   writeSettings(DEFAULT_SETTINGS);
 
-  console.log('[SYSTEM RESET] System hard reset to zero. All users purged except elhalafawy9@gmail.com.');
+  console.log(`[SYSTEM RESET] System hard reset to zero. All users purged except ${PERMANENT_ADMIN_EMAIL}.`);
   res.json({
     success: true,
     message: 'تم تصفير جميع البيانات بنجاح وحذف كافة المستخدمين عدا حساب المدير العام',

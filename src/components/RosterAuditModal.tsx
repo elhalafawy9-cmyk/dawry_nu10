@@ -26,6 +26,8 @@ import {
   checkTeamExistence,
   parseRosterText,
   normalizeArabicText,
+  DuplicatePlayerReport,
+  DuplicateOccurrence,
 } from '../utils/auditDuplicates';
 import { TeamLogo } from '../utils/teamLogos';
 import { getTeamBilingualInfo } from '../utils/teamAliases';
@@ -125,7 +127,7 @@ export const RosterAuditModal: React.FC<RosterAuditModalProps> = ({
       return;
     }
     const newSquads = { ...squads };
-    rep.occurrences.forEach((occ) => {
+    rep.occurrences.forEach((occ: DuplicateOccurrence) => {
       if (occ.teamName !== keepTeamName) {
         newSquads[occ.teamName] = (newSquads[occ.teamName] || []).filter((p) => p.id !== occ.playerId);
       }
@@ -344,7 +346,7 @@ export const RosterAuditModal: React.FC<RosterAuditModalProps> = ({
                             الفرق التي تم قيد اللاعب بها ({rep.occurrences.length} فرق):
                           </span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {rep.occurrences.map((occ) => (
+                            {rep.occurrences.map((occ: DuplicateOccurrence) => (
                               <div
                                 key={`${occ.teamName}_${occ.playerId}`}
                                 className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2"

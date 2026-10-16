@@ -495,49 +495,70 @@ function calcStringSimilarity(s1: string, s2: string): number {
 }
 
 /**
- * Sanitizes a teams list:
- * - Drops any extra newly added teams (like "Atlético Madrid")
- * - Unifies English/Arabic duplicates so only the 48 official Arabic teams remain
- * - Preserves stats of the canonical team
+ * Deleted teams storage helpers
+ */
+const DELETED_TEAMS_KEY = 'dawry_deleted_teams_v1';
+
+export function getDeletedTeamNames(): string[] {
+  try {
+    const raw = localStorage.getItem(DELETED_TEAMS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
+export function addDeletedTeamName(name: string): void {
+  try {
+    const current = getDeletedTeamNames();
+    const canonical = resolveCanonicalTeamName(name);
+    const updated = Array.from(new Set([...current, name, canonical]));
+    localStorage.setItem(DELETED_TEAMS_KEY, JSON.stringify(updated));
+  } catch {}
+}
+
+export function clearDeletedTeamNames(): void {
+  try {
+    localStorage.removeItem(DELETED_TEAMS_KEY);
+  } catch {}
+}
+
+/**
+ * Sanitizes teams list:
+ * - Respects explicitly deleted teams by the admin
+ * - Unifies English/Arabic duplicates
+ * - Preserves stats, groups, and custom logos
  */
 export function sanitizeTeamsList(
   inputTeams: any[],
   officialDefaultTeams: any[]
 ): any[] {
-  const officialNamesSet = new Set(officialDefaultTeams.map((t) => t.name));
-
-  // Map of canonical name -> official team template
+  const deletedSet = new Set(getDeletedTeamNames().map(n => resolveCanonicalTeamName(n)));
   const canonicalMap = new Map<string, any>();
-  officialDefaultTeams.forEach((t) => {
-    canonicalMap.set(t.name, { ...t });
-  });
 
-  if (Array.isArray(inputTeams)) {
+  if (Array.isArray(inputTeams) && inputTeams.length > 0) {
     inputTeams.forEach((team) => {
       if (!team || !team.name) return;
       const canonical = resolveCanonicalTeamName(team.name);
-      if (canonicalMap.has(canonical)) {
-        // If team was in the official list, keep any updated stats or custom logo
-        const existing = canonicalMap.get(canonical)!;
-        if (team.played || team.points || team.won) {
-          existing.played = team.played || existing.played;
-          existing.won = team.won || existing.won;
-          existing.drawn = team.drawn || existing.drawn;
-          existing.lost = team.lost || existing.lost;
-          existing.gf = team.gf || existing.gf;
-          existing.ga = team.ga || existing.ga;
-          existing.gd = team.gd || existing.gd;
-          existing.points = team.points || existing.points;
-        }
-        if (team.logoUrl && !existing.logoUrl) {
-          existing.logoUrl = team.logoUrl;
-        }
-      }
+      if (deletedSet.has(canonical)) return;
+
+      const defaultTemplate = officialDefaultTeams.find(
+        (t) => resolveCanonicalTeamName(t.name) === canonical
+      );
+
+      canonicalMap.set(canonical, {
+        ...(defaultTemplate || {}),
+        ...team,
+        name: defaultTemplate ? defaultTemplate.name : team.name,
+      });
     });
+    return Array.from(canonicalMap.values());
   }
 
-  // Strictly return the 48 official teams with canonical names
-  return officialDefaultTeams.map((t) => canonicalMap.get(t.name) || t);
+  // Fallback to official default teams minus explicitly deleted ones
+  return officialDefaultTeams.filter(t => !deletedSet.has(resolveCanonicalTeamName(t.name)));
 }
 
 /**

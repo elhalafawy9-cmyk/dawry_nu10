@@ -28,7 +28,9 @@ import {
   sanitizeSquads, 
   resolveCanonicalTeamName, 
   isSameTeam,
-  getTeamBilingualInfo 
+  getTeamBilingualInfo,
+  addDeletedTeamName,
+  clearDeletedTeamNames 
 } from './utils/teamAliases';
 import { 
   fetchServerUsers, 
@@ -90,6 +92,7 @@ import {
   CardType, 
   MAX_SUBS_PER_TEAM, 
   generateInitialSquads,
+  clearAllSquads,
   PlayerRegistrationRequest,
   loadStoredPlayerRequests,
   saveStoredPlayerRequests,
@@ -1035,6 +1038,7 @@ export default function App() {
   const [schedulingMatch, setSchedulingMatch] = useState<Match | null>(null);
   const [recordingResultMatch, setRecordingResultMatch] = useState<Match | null>(null);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [globalDeleteTeamTarget, setGlobalDeleteTeamTarget] = useState<Team | null>(null);
   const [isAddingMatch, setIsAddingMatch] = useState<boolean>(false);
 
   // Form states for Match Schedule / Reschedule
@@ -1261,11 +1265,68 @@ export default function App() {
     saveStoredPlayerRequests([]);
   };
 
+  // Unified Squads Updater that persists to storage automatically
+  const handleUpdateSquads = (updatedSquads: Record<string, Player[]>) => {
+    setSquads(updatedSquads);
+    saveStoredSquads(updatedSquads);
+  };
+
+  // Action to empty all player rosters across all teams (تفريغ جميع الفرق)
+  const handleClearAllSquads = () => {
+    const empty = clearAllSquads(teams.map(t => t.name));
+    setSquads(empty);
+    saveStoredSquads(empty);
+    confetti({ particleCount: 70, spread: 80 });
+  };
+
+  // Action to delete a single team completely from the tournament (مسح / حذف فريق)
+  const handleDeleteTeam = (teamNameOrId: string) => {
+    const target = teams.find(t => t.id === teamNameOrId || t.name === teamNameOrId);
+    if (!target) return;
+    const teamName = target.name;
+
+    // 1. Mark as deleted in storage so sanitizer doesn't resurrect it
+    addDeletedTeamName(teamName);
+
+    // 2. Remove team from teams state and storage
+    const updatedTeams = teams.filter(t => t.id !== target.id && t.name !== teamName);
+    setTeams(updatedTeams);
+    try {
+      localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(updatedTeams));
+    } catch {}
+
+    // 3. Remove team squad
+    setSquads(prev => {
+      const next = { ...prev };
+      delete next[teamName];
+      saveStoredSquads(next);
+      return next;
+    });
+
+    // 4. Remove matches involving this team
+    setMatches(prev => {
+      const next = prev.filter(m => m.teamA !== teamName && m.teamB !== teamName);
+      try {
+        localStorage.setItem('dawry_matches_storage_v1', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    // 5. Unassign any manager registered for this team
+    setUsers(prev => {
+      const next = prev.map(u => u.managedTeamName === teamName ? { ...u, managedTeamName: undefined, role: 'spectator' as const } : u);
+      try {
+        localStorage.setItem('dawry_users_data_v1', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    confetti({ particleCount: 50, spread: 70 });
+  };
+
   // Action to purge newly added teams (like "Atlético Madrid") and players, and unify bilingual names
   const handlePurgeNewTeamsAndUnifyBilingual = () => {
-    if (!confirm('هل تريد بالتأكيد مسح جميع الفرق واللاعبين المضافين الجدد، وإعادة ضبط البطولة على الفرق الـ 48 المعتمدة فقط مع توحيد أسمائها العربية والإنجليزية (مثل اتلتيكو مدريد = Atlético Madrid كفريق واحد)؟')) {
-      return;
-    }
+    clearDeletedTeamNames();
 
     // 1. Reset teams strictly to 48 official teams
     const cleanZeroTeams = INITIAL_TEAMS.map(t => ({
@@ -1292,7 +1353,6 @@ export default function App() {
     saveStoredSquads(cleanSquads);
 
     confetti({ particleCount: 60, spread: 80 });
-    alert('تم بنجاح حذف جميع الفرق واللاعبين المضافين الجدد، وتوحيد الفرق الـ 48 بالعربية والإنجليزية (اتلتيكو مدريد = Atlético Madrid كفريق واحد)! 🧹✅');
   };
 
   // Tournament Statistics Leaders memo (Scorers & Playmakers / Assists)
@@ -3251,15 +3311,17 @@ export default function App() {
               الهداف والصانع ({tournamentStatsData.scorers.length + tournamentStatsData.playmakers.length})
             </button>
 
-            {/* Tab: AI Copilot Assistant */}
-            <button
-              onClick={() => setIsGeminiChatbotOpen(true)}
-              className="px-3 py-2 rounded-xl text-xs md:text-sm font-black flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-emerald-600/90 to-teal-600/90 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md border border-emerald-400/40 hover:scale-[1.02]"
-              title="المساعد الذكي للبطولة — إضافة فرق ولاعبين من صورة"
-            >
-              <Bot className="w-4 h-4 text-emerald-200" />
-              <span>المساعد الذكي 🤖</span>
-            </button>
+            {/* Tab: AI Copilot Assistant (Admin Only) */}
+            {isAdmin && (
+              <button
+                onClick={() => setIsGeminiChatbotOpen(true)}
+                className="px-3 py-2 rounded-xl text-xs md:text-sm font-black flex items-center gap-1.5 transition-all cursor-pointer bg-gradient-to-r from-emerald-600/90 to-teal-600/90 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md border border-emerald-400/40 hover:scale-[1.02]"
+                title="المساعد الذكي للبطولة — إضافة فرق ولاعبين من صورة (للأدمن فقط)"
+              >
+                <Bot className="w-4 h-4 text-emerald-200" />
+                <span>المساعد الذكي 🤖</span>
+              </button>
+            )}
 
             {/* Tab: League Season Application (Visible to all when isLeagueRegistrationVisible, or only Admin when hidden) */}
             {(isLeagueRegistrationVisible || isAdmin) && (
@@ -3384,7 +3446,7 @@ export default function App() {
               teams={teams}
               matches={matches}
               squads={squads}
-              onUpdateSquads={setSquads}
+              onUpdateSquads={handleUpdateSquads}
               onUpdateMatchLineups={handleUpdateMatchLineups}
               isAdmin={isAdmin}
               assignedTeamName={currentUser.managedTeamName}
@@ -4599,7 +4661,7 @@ export default function App() {
             teams={teams}
             matches={matches}
             squads={squads}
-            onUpdateSquads={setSquads}
+            onUpdateSquads={handleUpdateSquads}
             onUpdateMatchLineups={handleUpdateMatchLineups}
             currentUser={{ ...currentUser, role: effectiveRole }}
             onRequestAddPlayer={handleRequestAddPlayer}
@@ -4609,6 +4671,7 @@ export default function App() {
             isPlayerEditingOpen={isPlayerEditingOpen}
             onOpenAiCopilot={() => setIsGeminiChatbotOpen(true)}
             onOpenAuditModal={() => setIsRosterAuditModalOpen(true)}
+            onDeleteTeam={handleDeleteTeam}
           />
         )}
 
@@ -4678,6 +4741,8 @@ export default function App() {
               onOpenAuditModal={() => setIsRosterAuditModalOpen(true)}
               duplicatePlayersCount={duplicatePlayersCount}
               onPurgeNewTeamsAndUnifyBilingual={handlePurgeNewTeamsAndUnifyBilingual}
+              onDeleteTeam={handleDeleteTeam}
+              onClearAllSquads={handleClearAllSquads}
             />
           ) : (
             <div className="bg-slate-900 border border-amber-500/30 rounded-3xl p-8 text-center max-w-lg mx-auto my-12 shadow-2xl space-y-4">
@@ -6646,22 +6711,82 @@ export default function App() {
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setEditingTeam(null)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold cursor-pointer"
+                  onClick={() => {
+                    const toDelete = editingTeam;
+                    setEditingTeam(null);
+                    setGlobalDeleteTeamTarget(toDelete);
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title={`حذف فريق ${editingTeam.name} نهائياً`}
                 >
-                  إلغاء
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>حذف الفريق 🗑️</span>
                 </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 cursor-pointer"
-                >
-                  حفظ التعديل
-                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTeam(null)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold cursor-pointer"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 cursor-pointer"
+                  >
+                    حفظ التعديل
+                  </button>
+                </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Global Delete Team Confirmation Modal */}
+      {globalDeleteTeamTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center shrink-0">
+                <Trash2 className="w-6 h-6 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white">تأكيد حذف الفريق نهائياً</h3>
+                <span className="text-xs text-rose-400 font-bold">فريق: {globalDeleteTeamTarget.name} (المجموعة {globalDeleteTeamTarget.group})</span>
+              </div>
+            </div>
+
+            <p className="text-xs md:text-sm text-slate-300 leading-relaxed bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800">
+              هل أنت متأكد من رغبتك في حذف فريق <strong className="text-white">({globalDeleteTeamTarget.name})</strong> نهائياً من البطولة؟
+              <br /><br />
+              ⚠️ سيتم مسح الفريق من ترتيب المجموعة وحذف كافة مبارياته وقائمته من قاعدة البيانات.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setGlobalDeleteTeamTarget(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-colors cursor-pointer"
+              >
+                إلغاء التراجع
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleDeleteTeam(globalDeleteTeamTarget.name);
+                  setGlobalDeleteTeamTarget(null);
+                }}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black transition-all cursor-pointer shadow-lg shadow-rose-600/30 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>نعم، حذف الفريق نهائياً 🗑️</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -7383,25 +7508,27 @@ export default function App() {
         </div>
       )}
 
-      {/* Floating AI Tournament Copilot Button */}
-      <button
-        type="button"
-        onClick={() => setIsGeminiChatbotOpen(true)}
-        className="fixed bottom-6 left-6 z-40 px-4 py-3 rounded-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white shadow-2xl shadow-emerald-600/50 border border-emerald-400/50 flex items-center gap-2.5 transition-all cursor-pointer hover:scale-105 active:scale-95 group"
-        title="المساعد الذكي للبطولة — اسأل بالذكاء الاصطناعي أو أرسل صورة كشف اللاعبين لإضافتها"
-      >
-        <div className="relative">
-          <Bot className="w-5 h-5 text-emerald-100 group-hover:rotate-12 transition-transform" />
-          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 border-2 border-slate-900 rounded-full animate-ping" />
-          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 border-2 border-slate-900 rounded-full" />
-        </div>
-        <span className="text-xs font-black hidden sm:inline">
-          المساعد الذكي (AI) 🤖
-        </span>
-        <span className="text-[10px] bg-emerald-950/70 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">
-          إضافة من صورة 📷
-        </span>
-      </button>
+      {/* Floating AI Tournament Copilot Button (Admin Only) */}
+      {isAdmin && (
+        <button
+          type="button"
+          onClick={() => setIsGeminiChatbotOpen(true)}
+          className="fixed bottom-6 left-6 z-40 px-4 py-3 rounded-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white shadow-2xl shadow-emerald-600/50 border border-emerald-400/50 flex items-center gap-2.5 transition-all cursor-pointer hover:scale-105 active:scale-95 group"
+          title="المساعد الذكي للبطولة — اسأل بالذكاء الاصطناعي أو أرسل صورة كشف اللاعبين لإضافتها (للأدمن فقط)"
+        >
+          <div className="relative">
+            <Bot className="w-5 h-5 text-emerald-100 group-hover:rotate-12 transition-transform" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 border-2 border-slate-900 rounded-full animate-ping" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 border-2 border-slate-900 rounded-full" />
+          </div>
+          <span className="text-xs font-black hidden sm:inline">
+            المساعد الذكي (AI) 🤖
+          </span>
+          <span className="text-[10px] bg-emerald-950/70 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">
+            إضافة من صورة 📷
+          </span>
+        </button>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-emerald-950/80 bg-slate-950/90 py-5 px-4 text-center text-xs text-slate-500">

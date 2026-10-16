@@ -101,19 +101,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     // Check against permanent admin credentials
     if (trimmedEmail === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
       if (loginPassword !== PERMANENT_ADMIN_PASSWORD) {
-        setLoginError('كلمة المرور غير صحيحة لحساب المدير الدائم!');
+        setLoginError('كلمة المرور غير صحيحة لحساب المدير العام للنظام!');
         return;
       }
-      const adminUser = users.find(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
-      if (adminUser) {
-        onLogin(adminUser);
-        setLoginSuccess('مرحباً بك يا م. محمد، تم تسجيل الدخول كـ مدير دائم للنظام 🛡️');
-        setTimeout(() => {
-          onClose();
-          setLoginSuccess('');
-        }, 800);
-        return;
-      }
+      let adminUser = users.find(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) || INITIAL_USERS[0];
+      const resolvedAdmin: AppUser = {
+        ...adminUser,
+        name: 'المدير العام للنظام',
+        email: PERMANENT_ADMIN_EMAIL,
+        password: PERMANENT_ADMIN_PASSWORD,
+        role: 'admin',
+        isPermanentAdmin: true,
+      };
+      onLogin(resolvedAdmin);
+      setLoginSuccess('مرحباً بك، تم تسجيل الدخول بصلاحيات الأدمن الكاملة 👑');
+      setTimeout(() => {
+        onClose();
+        setLoginSuccess('');
+      }, 800);
+      return;
     }
 
     // Check against all registered users
@@ -128,8 +134,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    onLogin(matchedUser);
-    setLoginSuccess(`تم تسجيل الدخول بنجاح! مرحباً ${matchedUser.name}`);
+    const userToLogin: AppUser = (matchedUser.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase())
+      ? { ...matchedUser, role: 'admin', isPermanentAdmin: true }
+      : matchedUser;
+
+    onLogin(userToLogin);
+    setLoginSuccess(`تم تسجيل الدخول بنجاح! مرحباً ${userToLogin.name}`);
     setTimeout(() => {
       onClose();
       setLoginSuccess('');
@@ -155,6 +165,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     if (regPassword.length < 4) {
       setRegError('يجب أن تتكون كلمة المرور من 4 أحرف أو أرقام على الأقل');
+      return;
+    }
+
+    // Admin direct registration/activation
+    if (trimmedEmail === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
+      const adminAcc: AppUser = {
+        id: 'user_super_admin',
+        name: regName.trim() || 'المدير العام للنظام',
+        email: PERMANENT_ADMIN_EMAIL,
+        password: regPassword,
+        role: 'admin',
+        isPermanentAdmin: true,
+        studentId: regStudentId.trim() || '241000442',
+        department: regDepartment,
+        registeredAt: new Date().toISOString().split('T')[0],
+        notes: 'المدير العام للنظام - كامل صلاحيات الإدارة',
+        isOnline: true,
+      };
+      onRegister(adminAcc);
+      onLogin(adminAcc);
+      setRegSuccess('تم تفعيل حسابك كمدير عام للنظام بنجاح! 👑');
+      setTimeout(() => {
+        onClose();
+        setRegSuccess('');
+      }, 800);
       return;
     }
 
@@ -315,29 +350,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="p-5 overflow-y-auto space-y-4">
           {tab === 'login' && (
             <div className="space-y-4">
-              {/* Quick Login Banner for Permanent Super Admin */}
-              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-slate-800/80 to-amber-500/10 border border-amber-500/30 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-amber-400" />
-                    <span className="text-xs font-black text-amber-300">حساب الأدمن الدائم المثبت 🛡️</span>
-                  </div>
-                  <span className="text-[10px] text-amber-400/80 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-                    محدش يقدر يغيره
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-300 font-medium">
-                  البريد: <strong className="text-amber-200 font-mono">elhalafawy9@gmail.com</strong>
-                </p>
-                <button
-                  type="button"
-                  onClick={handleQuickAdminLogin}
-                  className="w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer transition-all"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-slate-950" />
-                  دخول سريع فوري كـ أدمن دائم للنظام
-                </button>
-              </div>
 
               {loginError && (
                 <div className="p-3 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">

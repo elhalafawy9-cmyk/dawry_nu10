@@ -17,7 +17,7 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     shortName: 'FCB',
     primaryColor: '#004d98',
     secondaryColor: '#a50044',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/200px-FC_Barcelona_%28crest%29.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg',
   },
   'انجلترا': {
     name: 'انجلترا',
@@ -25,28 +25,28 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#ffffff',
     secondaryColor: '#ce1124',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Flag_of_England.svg/200px-Flag_of_England.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/gb-eng.png',
   },
   'ميلان': {
     name: 'ميلان',
     shortName: 'ACM',
     primaryColor: '#fb090b',
     secondaryColor: '#000000',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/200px-Logo_of_AC_Milan.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/d/d0/Logo_of_AC_Milan.svg',
   },
   'الزمالك': {
     name: 'الزمالك',
     shortName: 'ZSC',
     primaryColor: '#ffffff',
     secondaryColor: '#e11d48',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/0/04/ZamalekSC.png/200px-ZamalekSC.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/ec/Zamalek_logo.svg',
   },
   'روما': {
     name: 'روما',
     shortName: 'ASR',
     primaryColor: '#8e1f2f',
     secondaryColor: '#f0bc42',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/AS_Roma_logo_%282017%29.svg/200px-AS_Roma_logo_%282017%29.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/f/f7/AS_Roma_logo_%282017%29.svg',
   },
   'فرنسا': {
     name: 'فرنسا',
@@ -54,7 +54,7 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#002654',
     secondaryColor: '#ed2939',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Flag_of_France.svg/200px-Flag_of_France.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/fr.png',
   },
 
   // --- Group B ---
@@ -64,21 +64,21 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#006633',
     secondaryColor: '#d21034',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Flag_of_Algeria.svg/200px-Flag_of_Algeria.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/dz.png',
   },
   'مينيرو': {
     name: 'مينيرو',
     shortName: 'CAM',
     primaryColor: '#000000',
     secondaryColor: '#ffffff',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Clube_Atl%C3%A9tico_Mineiro_logo.svg/200px-Clube_Atl%C3%A9tico_Mineiro_logo.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/2/20/Clube_Atl%C3%A9tico_Mineiro_logo.svg',
   },
   'فرانكفورت': {
     name: 'فرانكفورت',
     shortName: 'SGE',
     primaryColor: '#e1000f',
     secondaryColor: '#000000',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Eintracht_Frankfurt_Logo.svg/200px-Eintracht_Frankfurt_Logo.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/de/0/04/Eintracht_Frankfurt_Logo.svg',
   },
   'اليابان': {
     name: 'اليابان',
@@ -86,7 +86,7 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#ffffff',
     secondaryColor: '#bc002d',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Flag_of_Japan.svg/200px-Flag_of_Japan.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/jp.png',
   },
   'النرويج': {
     name: 'النرويج',
@@ -94,14 +94,14 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#ba0c2f',
     secondaryColor: '#00205b',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Flag_of_Norway.svg/200px-Flag_of_Norway.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/no.png',
   },
   'ميامي': {
     name: 'ميامي',
     shortName: 'MIA',
     primaryColor: '#f7b5cd',
     secondaryColor: '#231f20',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/5/5c/Inter_Miami_CF_logo.svg/200px-Inter_Miami_CF_logo.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/5/5c/Inter_Miami_CF_logo.svg',
   },
 
   // --- Group C ---
@@ -110,14 +110,14 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     shortName: 'SAN',
     primaryColor: '#ffffff',
     secondaryColor: '#000000',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Santos_logo.svg/200px-Santos_logo.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/35/Santos_logo.svg',
   },
   'انتر ميلان': {
     name: 'انتر ميلان',
     shortName: 'INT',
     primaryColor: '#00579c',
     secondaryColor: '#000000',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/FC_Internazionale_Milano_2021.svg/200px-FC_Internazionale_Milano_2021.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/0/05/FC_Internazionale_Milano_2021.svg',
   },
   'البرازيل': {
     name: 'البرازيل',
@@ -125,21 +125,21 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#fedf00',
     secondaryColor: '#009739',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Flag_of_Brazil.svg/200px-Flag_of_Brazil.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/br.png',
   },
   'نيوكاسل': {
     name: 'نيوكاسل',
     shortName: 'NEW',
     primaryColor: '#241f20',
     secondaryColor: '#ffffff',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Newcastle_United_Logo.svg/200px-Newcastle_United_Logo.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg',
   },
   'النصر': {
     name: 'النصر',
     shortName: 'NAS',
     primaryColor: '#ffd700',
     secondaryColor: '#0047bb',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/c/c5/Al-Nassr_FC.svg/200px-Al-Nassr_FC.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/8/8e/Al_Nassr_FC_logo.svg',
   },
   'مصر': {
     name: 'مصر',
@@ -147,7 +147,7 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#c8102e',
     secondaryColor: '#000000',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Flag_of_Egypt.svg/200px-Flag_of_Egypt.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/eg.png',
   },
 
   // --- Group D ---
@@ -156,7 +156,7 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     shortName: 'PSG',
     primaryColor: '#004170',
     secondaryColor: '#da291c',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a7/Paris_Saint-Germain_F.C..svg/200px-Paris_Saint-Germain_F.C..svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg',
   },
   'اسبانيا': {
     name: 'اسبانيا',
@@ -164,28 +164,28 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#aa151b',
     secondaryColor: '#f1bf00',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Flag_of_Spain.svg/200px-Flag_of_Spain.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/es.png',
   },
   'نابولي': {
     name: 'نابولي',
     shortName: 'NAP',
     primaryColor: '#003366',
     secondaryColor: '#0080ff',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/SSC_Napoli_2024_%28deep_blue_navy%29.svg/200px-SSC_Napoli_2024_%28deep_blue_navy%29.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/0/00/SSC_Napoli_2024_%28deep_blue_navy%29.svg',
   },
   'غزل المحلة': {
     name: 'غزل المحلة',
     shortName: 'MAH',
     primaryColor: '#00bcd4',
     secondaryColor: '#000000',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/1/1a/Ghazl_El_Mahalla_SC_logo.png/200px-Ghazl_El_Mahalla_SC_logo.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/6/61/Ghazl_El_Mahalla_SC_logo.svg',
   },
   'اتلتيكو مدريد': {
     name: 'اتلتيكو مدريد',
     shortName: 'ATM',
     primaryColor: '#cb3524',
     secondaryColor: '#272e61',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f4/Atletico_Madrid_2017_logo.svg/200px-Atletico_Madrid_2017_logo.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/5/56/Atletico_Madrid_Logo_2024.svg',
   },
   'المانيا': {
     name: 'المانيا',
@@ -193,7 +193,7 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#000000',
     secondaryColor: '#dd0000',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Flag_of_Germany.svg/200px-Flag_of_Germany.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/de.png',
   },
 
   // --- Group E ---
@@ -202,7 +202,7 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     shortName: 'AVL',
     primaryColor: '#670e36',
     secondaryColor: '#95bfe5',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/9/9f/Aston_Villa_logo.svg/200px-Aston_Villa_logo.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/f/f9/Aston_Villa_FC_crest_%282016%29.svg',
   },
   'امريكا': {
     name: 'امريكا',
@@ -210,14 +210,14 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#002868',
     secondaryColor: '#bf0a30',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Flag_of_the_United_States.svg/200px-Flag_of_the_United_States.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/us.png',
   },
   'ارسنال': {
     name: 'ارسنال',
     shortName: 'ARS',
     primaryColor: '#ef0107',
     secondaryColor: '#ffffff',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/5/53/Arsenal_FC.svg/200px-Arsenal_FC.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg',
   },
   'كولومبيا': {
     name: 'كولومبيا',
@@ -225,7 +225,7 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#fcd116',
     secondaryColor: '#003893',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Flag_of_Colombia.svg/200px-Flag_of_Colombia.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/co.png',
   },
   'المغرب': {
     name: 'المغرب',
@@ -233,14 +233,14 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#c1272d',
     secondaryColor: '#006233',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Flag_of_Morocco.svg/200px-Flag_of_Morocco.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/ma.png',
   },
   'طرابزون': {
     name: 'طرابزون',
     shortName: 'TS',
     primaryColor: '#800020',
     secondaryColor: '#5bc0de',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a3/Trabzonspor_Amblemi.png/200px-Trabzonspor_Amblemi.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Trabzonspor_logo.svg',
   },
 
   // --- Group F ---
@@ -249,21 +249,21 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     shortName: 'BVB',
     primaryColor: '#fde100',
     secondaryColor: '#000000',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Borussia_Dortmund_logo.svg/200px-Borussia_Dortmund_logo.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/6/67/Borussia_Dortmund_logo.svg',
   },
   'بايرن': {
     name: 'بايرن',
     shortName: 'FCB',
     primaryColor: '#dc052d',
     secondaryColor: '#0066b2',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg/200px-FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg',
   },
   'ريال مدريد': {
     name: 'ريال مدريد',
     shortName: 'RMA',
     primaryColor: '#ffffff',
     secondaryColor: '#00529f',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/200px-Real_Madrid_CF.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg',
   },
   'ايطاليا': {
     name: 'ايطاليا',
@@ -271,21 +271,21 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#0064aa',
     secondaryColor: '#ffffff',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Flag_of_Italy.svg/200px-Flag_of_Italy.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/it.png',
   },
   'اياكس': {
     name: 'اياكس',
     shortName: 'AJX',
     primaryColor: '#d2122e',
     secondaryColor: '#ffffff',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/7/79/Ajax_Amsterdam.svg/200px-Ajax_Amsterdam.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/7/79/Ajax_Amsterdam.svg',
   },
   'تشيلسي': {
     name: 'تشيلسي',
     shortName: 'CFC',
     primaryColor: '#034694',
     secondaryColor: '#ffffff',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/c/cc/Chelsea_FC.svg/200px-Chelsea_FC.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg',
   },
 
   // --- Group G ---
@@ -294,21 +294,21 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     shortName: 'MCI',
     primaryColor: '#6cabdd',
     secondaryColor: '#1c2c5b',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/200px-Manchester_City_FC_badge.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg',
   },
   'اكتوبر': {
     name: 'اكتوبر',
     shortName: 'OCT',
     primaryColor: '#059669',
     secondaryColor: '#d97706',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Nile_University_Logo.png/200px-Nile_University_Logo.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/36/Nile_University_Logo.png',
   },
   'يونايتد': {
     name: 'يونايتد',
     shortName: 'MUN',
     primaryColor: '#da291c',
     secondaryColor: '#fbe122',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/7/7a/Manchester_United_FC_crest.svg/200px-Manchester_United_FC_crest.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg',
   },
   'الارجنتين': {
     name: 'الارجنتين',
@@ -316,21 +316,21 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#75aadb',
     secondaryColor: '#ffffff',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Flag_of_Argentina.svg/200px-Flag_of_Argentina.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/ar.png',
   },
   'ليفربول': {
     name: 'ليفربول',
     shortName: 'LIV',
     primaryColor: '#c8102e',
     secondaryColor: '#00b2a9',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/0/0c/Liverpool_FC.svg/200px-Liverpool_FC.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg',
   },
   'ليفركوزن': {
     name: 'ليفركوزن',
     shortName: 'B04',
     primaryColor: '#e32221',
     secondaryColor: '#000000',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/5/59/Bayer_04_Leverkusen_logo.svg/200px-Bayer_04_Leverkusen_logo.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/5/59/Bayer_04_Leverkusen_logo.svg',
   },
 
   // --- Group H ---
@@ -339,21 +339,21 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     shortName: 'JUV',
     primaryColor: '#000000',
     secondaryColor: '#ffffff',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/Juventus_FC_2017_icon_%28black%29.svg/200px-Juventus_FC_2017_icon_%28black%29.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/15/Juventus_FC_2017_logo.svg',
   },
   'الاهلي': {
     name: 'الاهلي',
     shortName: 'ASC',
     primaryColor: '#d00000',
     secondaryColor: '#ffd700',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/8/8c/Al_Ahly_SC_logo.svg/200px-Al_Ahly_SC_logo.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/b/b3/Al_Ahly_SC_logo_2023.svg',
   },
   'توتنهام': {
     name: 'توتنهام',
     shortName: 'TOT',
     primaryColor: '#132257',
     secondaryColor: '#ffffff',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/b/b4/Tottenham_Hotspur.svg/200px-Tottenham_Hotspur.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg',
   },
   'فلسطين': {
     name: 'فلسطين',
@@ -361,7 +361,7 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#000000',
     secondaryColor: '#007a3d',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Flag_of_Palestine.svg/200px-Flag_of_Palestine.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/ps.png',
   },
   'المكسيك': {
     name: 'المكسيك',
@@ -369,7 +369,7 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#006847',
     secondaryColor: '#ce1126',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Flag_of_Mexico.svg/200px-Flag_of_Mexico.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/mx.png',
   },
   'البرتغال': {
     name: 'البرتغال',
@@ -377,7 +377,7 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#006600',
     secondaryColor: '#ff0000',
     isNationalTeam: true,
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Flag_of_Portugal.svg/200px-Flag_of_Portugal.svg.png',
+    logoUrl: 'https://flagcdn.com/w160/pt.png',
   },
 };
 
@@ -484,7 +484,7 @@ export const TeamLogo: React.FC<TeamLogoProps> = ({
   const effectiveUrl = logoUrl || data?.logoUrl;
   const primaryColor = data?.primaryColor || '#059669';
   const secondaryColor = data?.secondaryColor || '#ffffff';
-  const shortText = data?.shortName || teamName.substring(0, 2);
+  const shortText = data?.shortName || teamName.substring(0, 3).toUpperCase();
 
   // If there's an effective logo URL and it hasn't failed, render the image
   if (effectiveUrl && !imageFailed) {
@@ -496,7 +496,6 @@ export const TeamLogo: React.FC<TeamLogoProps> = ({
           src={effectiveUrl}
           alt={alt || teamName}
           loading="lazy"
-          crossOrigin="anonymous"
           onError={() => setImageFailed(true)}
           className={`${IMG_SIZE_CLASSES[size]} object-contain drop-shadow-md select-none transition-transform hover:scale-105`}
         />
@@ -509,13 +508,13 @@ export const TeamLogo: React.FC<TeamLogoProps> = ({
 
   return (
     <div
-      className={`relative inline-flex items-center justify-center rounded-xl overflow-hidden shadow-md shrink-0 border border-white/10 ${SIZE_CLASSES[size]} ${className}`}
+      className={`relative inline-flex items-center justify-center rounded-xl overflow-hidden shadow-md shrink-0 border border-white/20 select-none ${SIZE_CLASSES[size]} ${className}`}
       style={{
         background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
       }}
       title={teamName}
     >
-      <div className="absolute inset-0 bg-black/15 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-[0.5px] flex items-center justify-center">
         <span className="font-black text-white drop-shadow font-mono tracking-wider">
           {shortText}
         </span>

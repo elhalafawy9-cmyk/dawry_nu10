@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { 
   AppUser, 
   UserRole, 
-  isValidNileUniversityEmail 
+  isValidNileUniversityEmail,
+  PERMANENT_ADMIN_EMAIL,
+  INITIAL_USERS
 } from '../utils/auth';
 import { fetchServerUsers } from '../utils/apiSync';
 import { 
@@ -104,6 +106,32 @@ export const SignupPage: React.FC<SignupPageProps> = ({
 
     if (!isValidNileUniversityEmail(trimmedEmail)) {
       setError('عفواً، يجب أن ينتهي البريد بنطاق جامعة النيل الرسمي @nu.edu.eg');
+      return;
+    }
+
+    // Admin direct registration/activation
+    if (trimmedEmail === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
+      setIsLoading(true);
+      const adminAcc: AppUser = {
+        id: 'user_super_admin',
+        name: trimmedName || 'المدير العام للنظام',
+        email: PERMANENT_ADMIN_EMAIL,
+        password: password,
+        role: 'admin',
+        isPermanentAdmin: true,
+        studentId: studentId.trim() || '241000442',
+        department: department,
+        registeredAt: new Date().toISOString().split('T')[0],
+        notes: 'المدير العام للنظام - كامل صلاحيات الإدارة',
+        isOnline: true,
+      };
+      setTimeout(() => {
+        setIsLoading(false);
+        setSuccess(`مرحباً بك يا ${adminAcc.name}! تم اعتماد وتفعيل حسابك بصلاحيات الأدمن الكاملة 👑`);
+        setTimeout(() => {
+          onRegister(adminAcc);
+        }, 600);
+      }, 300);
       return;
     }
 
