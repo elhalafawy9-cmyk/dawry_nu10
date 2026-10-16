@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Team } from '../App';
 import { Player, saveStoredSquads, loadStoredSquads } from '../utils/roster';
+import { resolveCanonicalTeamName, isSameTeam, getTeamBilingualInfo } from '../utils/teamAliases';
 
 export interface ExtractedTeamItem {
   name: string;
@@ -260,20 +261,22 @@ export const GeminiChatbotModal: React.FC<GeminiChatbotModalProps> = ({
     const newTeamsList = [...teams];
     const newSquadsRecord = { ...squads };
 
-    // 1. Process teams
+    // 1. Process teams (Enforce bilingual canonical mapping - never create English duplicates)
     if (payload.teams && Array.isArray(payload.teams)) {
       payload.teams.forEach((t) => {
         if (!t.name) return;
         const cleanName = t.name.trim();
-        const existing = newTeamsList.find((et) => et.name.toLowerCase() === cleanName.toLowerCase());
+        const canonical = resolveCanonicalTeamName(cleanName);
+        const existing = newTeamsList.find((et) => isSameTeam(et.name, canonical));
         if (!existing) {
+          const bilingual = getTeamBilingualInfo(canonical);
           const groupLetter = (t.group && ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].includes(t.group.toUpperCase()))
             ? t.group.toUpperCase()
-            : 'A';
+            : (bilingual?.group || 'A');
 
           const newTeam: Team = {
             id: `t_ai_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-            name: cleanName,
+            name: canonical,
             group: groupLetter,
             played: 0,
             won: 0,
@@ -291,21 +294,24 @@ export const GeminiChatbotModal: React.FC<GeminiChatbotModalProps> = ({
       });
     }
 
-    // 2. Process players
+    // 2. Process players (Always attach to the single canonical Arabic team)
     if (payload.players && Array.isArray(payload.players)) {
       payload.players.forEach((p, idx) => {
         if (!p.name) return;
         const cleanPlayerName = p.name.trim();
-        const teamTarget = p.teamName?.trim() || (payload.teams?.[0]?.name?.trim() || 'فريق جديد');
+        const rawTarget = p.teamName?.trim() || (payload.teams?.[0]?.name?.trim() || 'فريق جديد');
+        const teamTarget = resolveCanonicalTeamName(rawTarget);
 
-        // Ensure team squad list exists
+        // Ensure canonical team squad list exists
         if (!newSquadsRecord[teamTarget]) {
           newSquadsRecord[teamTarget] = [];
         }
 
-        // Avoid adding exact duplicate player name in the same team
+        // Avoid adding duplicate player by studentId or normalized name
         const alreadyExists = newSquadsRecord[teamTarget].some(
-          (ep) => ep.name.toLowerCase() === cleanPlayerName.toLowerCase()
+          (ep) =>
+            ep.name.trim().toLowerCase() === cleanPlayerName.toLowerCase() ||
+            (p.studentId && ep.studentId && ep.studentId.trim() === p.studentId.trim())
         );
 
         if (!alreadyExists) {

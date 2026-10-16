@@ -34,7 +34,8 @@ import {
   Zap,
   ArrowRight,
   Bot,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ShieldAlert
 } from 'lucide-react';
 import { Team, Match } from '../App';
 import { AppUser, UserRole, PERMANENT_ADMIN_EMAIL } from '../utils/auth';
@@ -91,6 +92,9 @@ interface AdminControlCenterProps {
   onNavigateTab: (tab: any) => void;
   onOpenAiCopilot?: () => void;
   onOpenCsvUploadModal?: () => void;
+  onOpenAuditModal?: () => void;
+  duplicatePlayersCount?: number;
+  onPurgeNewTeamsAndUnifyBilingual?: () => void;
 }
 
 export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
@@ -134,6 +138,9 @@ export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
   onNavigateTab,
   onOpenAiCopilot,
   onOpenCsvUploadModal,
+  onOpenAuditModal,
+  duplicatePlayersCount,
+  onPurgeNewTeamsAndUnifyBilingual,
 }) => {
   // Internal tab in Admin Center: 'overview' | 'teams' | 'matches' | 'applications' | 'users'
   const [adminTab, setAdminTab] = useState<'overview' | 'teams' | 'matches' | 'applications' | 'users'>('overview');
@@ -316,6 +323,35 @@ export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
               >
                 <Bot className="w-4 h-4 text-emerald-200" />
                 <span>إضافة من صورة (AI) 📷</span>
+              </button>
+            )}
+
+            {onOpenAuditModal && (
+              <button
+                type="button"
+                onClick={onOpenAuditModal}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 via-amber-600 to-rose-700 hover:from-rose-500 hover:to-amber-500 text-white font-black text-xs flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-rose-600/20 border border-rose-400/40 hover:scale-[1.02] active:scale-[0.98]"
+                title="فاحص الازدواجية وتدقيق الفرق واللاعبين المكررين"
+              >
+                <ShieldAlert className="w-4 h-4 text-amber-200" />
+                <span>فاحص الازدواجية والفرق ⚠️</span>
+                {duplicatePlayersCount !== undefined && duplicatePlayersCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-white text-rose-600 font-mono text-[10px] font-black">
+                    {duplicatePlayersCount}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {onPurgeNewTeamsAndUnifyBilingual && (
+              <button
+                type="button"
+                onClick={onPurgeNewTeamsAndUnifyBilingual}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-800 hover:from-purple-600 hover:to-indigo-600 text-white font-black text-xs flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-purple-900/30 border border-purple-400/40 hover:scale-[1.02] active:scale-[0.98]"
+                title="مسح الفرق واللاعبين المضافين الجدد وتوحيد العربي والإنجليزي كفريق واحد"
+              >
+                <Sparkles className="w-4 h-4 text-purple-200" />
+                <span>حذف الجدد وتوحيد العربي/الإنجليزي 🧹</span>
               </button>
             )}
 

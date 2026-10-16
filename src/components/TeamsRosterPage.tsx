@@ -22,7 +22,8 @@ import {
   Check,
   Camera,
   Image as ImageIcon,
-  Bot
+  Bot,
+  ShieldAlert
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Match, Team } from '../App';
@@ -30,6 +31,7 @@ import { AppUser } from '../utils/auth';
 import { Player, MatchSubstitution, MatchCardEvent, CardType, MAX_SUBS_PER_TEAM, PlayerRegistrationRequest, clearAllSquads, saveStoredSquads } from '../utils/roster';
 import { ImageUploadModal } from './ImageUploadModal';
 import { TeamLogo } from '../utils/teamLogos';
+import { getTeamBilingualInfo, resolveCanonicalTeamName, isSameTeam } from '../utils/teamAliases';
 
 interface TeamsRosterPageProps {
   teams: Team[];
@@ -46,6 +48,7 @@ interface TeamsRosterPageProps {
   onUpdatePlayerPhoto?: (teamName: string, playerId: string, newPhotoUrl: string) => void;
   isPlayerEditingOpen?: boolean;
   onOpenAiCopilot?: () => void;
+  onOpenAuditModal?: () => void;
 }
 
 export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
@@ -63,6 +66,7 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
   onUpdatePlayerPhoto,
   isPlayerEditingOpen = true,
   onOpenAiCopilot,
+  onOpenAuditModal,
 }) => {
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>('all');
   const [searchTeamQuery, setSearchTeamQuery] = useState<string>('');
@@ -134,13 +138,19 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
     playerIn: '',
   });
 
-  // Filtered teams list
+  // Filtered teams list with bilingual search (Arabic & English)
   const filteredTeams = useMemo(() => {
     return teams.filter(t => {
       if (selectedGroupFilter !== 'all' && t.group !== selectedGroupFilter) return false;
       if (searchTeamQuery.trim()) {
-        const q = searchTeamQuery.toLowerCase();
-        if (!t.name.toLowerCase().includes(q)) return false;
+        const q = searchTeamQuery.toLowerCase().trim();
+        const bInfo = getTeamBilingualInfo(t.name);
+        const englishName = bInfo?.englishName?.toLowerCase() || '';
+        const aliases = (bInfo?.aliases || []).map(a => a.toLowerCase());
+        const matchArabic = t.name.toLowerCase().includes(q);
+        const matchEnglish = englishName.includes(q);
+        const matchAlias = aliases.some(a => a.includes(q));
+        if (!matchArabic && !matchEnglish && !matchAlias) return false;
       }
       return true;
     });
@@ -347,6 +357,37 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
     e.preventDefault();
     if (!playerForm.name.trim()) return;
 
+    // Cross-team duplicate detection (by studentId or name)
+    const checkId = playerForm.studentId.trim();
+    const checkName = playerForm.name.trim().toLowerCase();
+    let duplicateConflict: { teamName: string; playerName: string; studentId: string } | null = null;
+
+    for (const [tName, squadPlayers] of Object.entries(squads)) {
+      if (tName === activeTeamName && !editingPlayer) continue;
+      for (const sp of squadPlayers) {
+        if (editingPlayer && sp.id === editingPlayer.id) continue;
+        const sameId = Boolean(checkId && sp.studentId && sp.studentId.trim().toLowerCase() === checkId.toLowerCase());
+        const sameName = Boolean(checkName && sp.name.trim().toLowerCase() === checkName);
+        if (sameId || sameName) {
+          duplicateConflict = { teamName: tName, playerName: sp.name, studentId: sp.studentId };
+          break;
+        }
+      }
+      if (duplicateConflict) break;
+    }
+
+    if (duplicateConflict) {
+      const msg = `⚠️ تحذير ازدواجية وتكرار!\nاللاعب (${playerForm.name.trim()}) أو الرقم الجامعي (${checkId || '—'}) مسجل بالفعل في فريق [${duplicateConflict.teamName}] باسم (${duplicateConflict.playerName})!\n\nوفقاً للائحة دوري جامعة النيل، يمنع تسجيل اللاعب في أكثر من فريق.`;
+      if (canDirectEdit) {
+        if (!confirm(`${msg}\n\nهل أنت متأكد من رغبتك في حفظ اللاعب وتجاوز التحذير؟`)) {
+          return;
+        }
+      } else {
+        alert(`${msg}\n\nلا يمكن إرسال طلب القيد لوجود ازدواجية.`);
+        return;
+      }
+    }
+
     if (editingPlayer) {
       if (canDirectEdit) {
         // DIRECT EDIT: (Admin or Player Editing Window is Open)
@@ -508,6 +549,18 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
             </button>
           )}
 
+          {onOpenAuditModal && (
+            <button
+              type="button"
+              onClick={onOpenAuditModal}
+              className="px-4 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-black text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-rose-600/20 border border-rose-400/30"
+              title="فاحص الازدواجية وتدقيق الفرق واللاعبين المكررين"
+            >
+              <ShieldAlert className="w-4 h-4 text-amber-200" />
+              <span>فاحص الازدواجية ⚠️</span>
+            </button>
+          )}
+
           <button
             onClick={() => {
               setEditingPlayer(null);
@@ -594,7 +647,14 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
                     <div className="flex items-center gap-2.5">
                       <TeamLogo teamName={t.name} logoUrl={t.logoUrl} size="md" />
                       <div>
-                        <strong className="text-xs md:text-sm font-bold text-white block">{t.name}</strong>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <strong className="text-xs md:text-sm font-bold text-white block">{t.name}</strong>
+                          {getTeamBilingualInfo(t.name)?.englishName && (
+                            <span className="text-[10px] text-teal-300 font-semibold bg-teal-950/80 px-1.5 py-0.2 rounded border border-teal-700/50">
+                              {getTeamBilingualInfo(t.name)?.englishName}
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[10px] text-slate-400">المجموعة {t.group} • {squadCount} لاعبين</span>
                       </div>
                     </div>
@@ -646,9 +706,16 @@ export const TeamsRosterPage: React.FC<TeamsRosterPageProps> = ({
                     </button>
                   )}
                 </div>
-                <h3 className="text-xl md:text-2xl font-black text-white">
-                  فريق: {activeTeam?.name}
-                </h3>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h3 className="text-xl md:text-2xl font-black text-white">
+                    فريق: {activeTeam?.name}
+                  </h3>
+                  {getTeamBilingualInfo(activeTeam?.name || '')?.englishName && (
+                    <span className="text-xs font-bold text-teal-300 bg-teal-950/90 px-2.5 py-1 rounded-xl border border-teal-500/40">
+                      {getTeamBilingualInfo(activeTeam?.name || '')?.englishName}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 

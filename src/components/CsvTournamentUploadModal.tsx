@@ -22,6 +22,7 @@ import confetti from 'canvas-confetti';
 import { Team } from '../App';
 import { Player } from '../utils/roster';
 import { getTeamLogoUrl } from '../utils/teamLogos';
+import { resolveCanonicalTeamName } from '../utils/teamAliases';
 
 export interface CsvParsedRow {
   teamName: string;
@@ -145,8 +146,9 @@ export const CsvTournamentUploadModal: React.FC<CsvTournamentUploadModalProps> =
 
       for (let i = 1; i < lines.length; i++) {
         const tokens = parseLine(lines[i]);
-        const teamName = tokens[teamCol]?.trim();
-        if (!teamName) continue; // Skip empty rows
+        const rawTeam = tokens[teamCol]?.trim();
+        if (!rawTeam) continue; // Skip empty rows
+        const teamName = resolveCanonicalTeamName(rawTeam);
 
         let rawGroup = groupCol !== -1 ? tokens[groupCol]?.trim().toUpperCase() : '';
         if (rawGroup && !['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].includes(rawGroup)) {

@@ -20,6 +20,16 @@ import { BackupModal } from './components/BackupModal';
 import { AdminControlCenter } from './components/AdminControlCenter';
 import { ExportStandingsPDFModal } from './components/ExportStandingsPDFModal';
 import { GeminiChatbotModal } from './components/GeminiChatbotModal';
+import { CsvTournamentUploadModal } from './components/CsvTournamentUploadModal';
+import { RosterAuditModal } from './components/RosterAuditModal';
+import { findDuplicatePlayers } from './utils/auditDuplicates';
+import { 
+  sanitizeTeamsList, 
+  sanitizeSquads, 
+  resolveCanonicalTeamName, 
+  isSameTeam,
+  getTeamBilingualInfo 
+} from './utils/teamAliases';
 import { 
   fetchServerUsers, 
   recordUserEnter, 
@@ -890,17 +900,51 @@ export default function App() {
     const hbInterval = setInterval(() => {
       sendUserHeartbeat(currentUser.id);
     }, 20000);
-    return () => clearInterval(hbInterval);
   }, [currentUser?.id]);
 
-  // Data States - All 48 teams start with clean 0 points
+  // One-time automatic cleanup of localStorage to eliminate duplicate English teams like "Atlético Madrid"
+  // and wipe out newly added AI dummy players to guarantee a clean 48-team tournament
+  useEffect(() => {
+    try {
+      const storedTeamsRaw = localStorage.getItem('dawry_teams_custom_v2');
+      if (storedTeamsRaw) {
+        const parsed = JSON.parse(storedTeamsRaw);
+        if (Array.isArray(parsed)) {
+          const hasRogue = parsed.some((t: any) => t.name === 'Atlético Madrid' || (isSameTeam(t.name, 'اتلتيكو مدريد') && t.name !== 'اتلتيكو مدريد'));
+          if (hasRogue || parsed.length > 48) {
+            const cleaned = sanitizeTeamsList(parsed, INITIAL_TEAMS);
+            setTeams(cleaned);
+            localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(cleaned));
+          }
+        }
+      }
+      const defaultTeamNames = INITIAL_TEAMS.map(t => t.name);
+      const storedSquadsRaw = localStorage.getItem('dawry_squads_data_v3');
+      if (storedSquadsRaw) {
+        const parsedSquads = JSON.parse(storedSquadsRaw);
+        if (parsedSquads && typeof parsedSquads === 'object') {
+          if (parsedSquads['Atlético Madrid'] || Object.keys(parsedSquads).some(k => k === 'Atlético Madrid' || k.toLowerCase().includes('atletico'))) {
+            const cleanedSquads = sanitizeSquads(parsedSquads, defaultTeamNames, true);
+            setSquads(cleanedSquads);
+            saveStoredSquads(cleanedSquads);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Auto cleanup migration error:', e);
+    }
+  }, []);
+
+  // Data States - All 48 teams start with clean 0 points (Sanitized against rogue/duplicate teams like "Atlético Madrid")
   const [teams, setTeams] = useState<Team[]>(() => {
     try {
       const raw = localStorage.getItem('dawry_teams_custom_v2');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((t: Team) => ({
+          // Strictly sanitize and drop any newly added extra/duplicate teams (e.g. "Atlético Madrid")
+          const cleaned = sanitizeTeamsList(parsed, INITIAL_TEAMS);
+          return cleaned.map((t: Team) => ({
             ...t,
             logoUrl: t.logoUrl || getTeamLogoUrl(t.name) || undefined,
           }));
@@ -933,10 +977,13 @@ export default function App() {
   });
   const [scorekeepers, setScorekeepers] = useState<Scorekeeper[]>(INITIAL_SCOREKEEPERS);
 
-  // Squads State (all 48 teams players)
+  // Squads State (all 48 teams players) - Purged of newly added dummy players and non-official keys
   const [squads, setSquads] = useState<Record<string, Player[]>>(() => {
-    const allTeamNames = Array.from(new Set([...INITIAL_TEAMS.map(t => t.name), ...teams.map(t => t.name)]));
-    return loadStoredSquads(allTeamNames);
+    const defaultTeamNames = INITIAL_TEAMS.map(t => t.name);
+    const loaded = loadStoredSquads(defaultTeamNames);
+    const sanitized = sanitizeSquads(loaded, defaultTeamNames, true);
+    saveStoredSquads(sanitized);
+    return sanitized;
   });
 
   // Player Registration Requests State (طلبات قيد وتسجيل اللاعبين من مسؤولي الفرق)
@@ -1005,6 +1052,12 @@ export default function App() {
   const [isAlertComposerOpen, setIsAlertComposerOpen] = useState<boolean>(false);
   const [alertComposerMatch, setAlertComposerMatch] = useState<Match | null>(null);
   const [isAlertsListOpen, setIsAlertsListOpen] = useState<boolean>(false);
+  const [isRosterAuditModalOpen, setIsRosterAuditModalOpen] = useState<boolean>(false);
+  const [isCsvUploadModalOpen, setIsCsvUploadModalOpen] = useState<boolean>(false);
+
+  const duplicatePlayersCount = useMemo(() => {
+    return findDuplicatePlayers(squads).length;
+  }, [squads]);
 
   // Result Recording Form
   const [resultForm, setResultForm] = useState({
@@ -1206,6 +1259,40 @@ export default function App() {
     saveStoredMatchAlerts([]);
     setPlayerRequests([]);
     saveStoredPlayerRequests([]);
+  };
+
+  // Action to purge newly added teams (like "Atlético Madrid") and players, and unify bilingual names
+  const handlePurgeNewTeamsAndUnifyBilingual = () => {
+    if (!confirm('هل تريد بالتأكيد مسح جميع الفرق واللاعبين المضافين الجدد، وإعادة ضبط البطولة على الفرق الـ 48 المعتمدة فقط مع توحيد أسمائها العربية والإنجليزية (مثل اتلتيكو مدريد = Atlético Madrid كفريق واحد)؟')) {
+      return;
+    }
+
+    // 1. Reset teams strictly to 48 official teams
+    const cleanZeroTeams = INITIAL_TEAMS.map(t => ({
+      ...t,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      gf: 0,
+      ga: 0,
+      gd: 0,
+      points: 0,
+      logoUrl: t.logoUrl || getTeamLogoUrl(t.name) || undefined,
+    }));
+    setTeams(cleanZeroTeams);
+    try {
+      localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(cleanZeroTeams));
+      localStorage.removeItem('dawry_teams_custom_v1');
+    } catch {}
+
+    // 2. Reset squads strictly to clean 48 teams
+    const cleanSquads = generateInitialSquads(INITIAL_TEAMS.map(t => t.name));
+    setSquads(cleanSquads);
+    saveStoredSquads(cleanSquads);
+
+    confetti({ particleCount: 60, spread: 80 });
+    alert('تم بنجاح حذف جميع الفرق واللاعبين المضافين الجدد، وتوحيد الفرق الـ 48 بالعربية والإنجليزية (اتلتيكو مدريد = Atlético Madrid كفريق واحد)! 🧹✅');
   };
 
   // Tournament Statistics Leaders memo (Scorers & Playmakers / Assists)
@@ -4521,6 +4608,7 @@ export default function App() {
             onOpenApprovalsModal={() => setIsApprovalsModalOpen(true)}
             isPlayerEditingOpen={isPlayerEditingOpen}
             onOpenAiCopilot={() => setIsGeminiChatbotOpen(true)}
+            onOpenAuditModal={() => setIsRosterAuditModalOpen(true)}
           />
         )}
 
@@ -4586,6 +4674,10 @@ export default function App() {
               onReviewApplication={handleReviewApplication}
               onNavigateTab={(tab) => setCurrentTab(tab)}
               onOpenAiCopilot={() => setIsGeminiChatbotOpen(true)}
+              onOpenCsvUploadModal={() => setIsCsvUploadModalOpen(true)}
+              onOpenAuditModal={() => setIsRosterAuditModalOpen(true)}
+              duplicatePlayersCount={duplicatePlayersCount}
+              onPurgeNewTeamsAndUnifyBilingual={handlePurgeNewTeamsAndUnifyBilingual}
             />
           ) : (
             <div className="bg-slate-900 border border-amber-500/30 rounded-3xl p-8 text-center max-w-lg mx-auto my-12 shadow-2xl space-y-4">
@@ -6977,6 +7069,60 @@ export default function App() {
         currentSeasonName={currentSeasonName}
         currentAcademicYear={currentAcademicYear}
         isAdmin={isAdmin}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL: ROSTER & DUPLICATE PLAYERS AUDIT MODAL */}
+      {/* ========================================================================= */}
+      <RosterAuditModal
+        isOpen={isRosterAuditModalOpen}
+        onClose={() => setIsRosterAuditModalOpen(false)}
+        teams={teams}
+        squads={squads}
+        onUpdateSquads={(newSquads) => {
+          setSquads(newSquads);
+          saveStoredSquads(newSquads);
+        }}
+        onSelectTeamForView={(teamName) => {
+          setSelectedTeamNameForMatches(teamName);
+          setCurrentTab('teams_roster');
+        }}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL: CSV / BULK TOURNAMENT UPLOAD MODAL */}
+      {/* ========================================================================= */}
+      <CsvTournamentUploadModal
+        isOpen={isCsvUploadModalOpen}
+        onClose={() => setIsCsvUploadModalOpen(false)}
+        currentTeams={teams}
+        currentSquads={squads}
+        onApplyImport={({ teams: importedTeams, squads: importedSquads, mode }) => {
+          if (mode === 'replace') {
+            setTeams(importedTeams);
+            setSquads(importedSquads);
+            saveStoredSquads(importedSquads);
+            try {
+              localStorage.setItem('dawry_teams_custom_v1', JSON.stringify(importedTeams));
+            } catch {}
+          } else {
+            const mergedTeams = [...teams];
+            importedTeams.forEach(it => {
+              if (!mergedTeams.some(t => t.name === it.name)) {
+                mergedTeams.push(it);
+              }
+            });
+            setTeams(mergedTeams);
+            try {
+              localStorage.setItem('dawry_teams_custom_v1', JSON.stringify(mergedTeams));
+            } catch {}
+            const mergedSquads = { ...squads, ...importedSquads };
+            setSquads(mergedSquads);
+            saveStoredSquads(mergedSquads);
+          }
+          setIsCsvUploadModalOpen(false);
+          confetti({ particleCount: 50, spread: 70 });
+        }}
       />
 
       {/* ========================================================================= */}
