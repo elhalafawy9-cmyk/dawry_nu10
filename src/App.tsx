@@ -22,6 +22,10 @@ import { ExportStandingsPDFModal } from './components/ExportStandingsPDFModal';
 import { GeminiChatbotModal } from './components/GeminiChatbotModal';
 import { CsvTournamentUploadModal } from './components/CsvTournamentUploadModal';
 import { RosterAuditModal } from './components/RosterAuditModal';
+import { FantasyLeaguePage } from './components/FantasyLeaguePage';
+import { MatchPredictionsPage } from './components/MatchPredictionsPage';
+import { MatchVoteModal } from './components/MatchVoteModal';
+import { getMatchVotingState, loadUserVotes, MatchVoteOption } from './utils/predictions';
 import { findDuplicatePlayers } from './utils/auditDuplicates';
 import { 
   sanitizeTeamsList, 
@@ -145,7 +149,8 @@ import {
   Archive,
   Database,
   FileDown,
-  Bot
+  Bot,
+  Vote
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -417,7 +422,7 @@ const INITIAL_SCOREKEEPERS: Scorekeeper[] = [
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<
-    'matches_control' | 'spectator_portal' | 'team_manager' | 'my_team' | 'users_directory' | 'assign_managers' | 'groups' | 'bracket' | 'teams_roster' | 'stats_leaders' | 'manage' | 'league_registration'
+    'matches_control' | 'spectator_portal' | 'team_manager' | 'my_team' | 'users_directory' | 'assign_managers' | 'groups' | 'bracket' | 'teams_roster' | 'stats_leaders' | 'manage' | 'league_registration' | 'fantasy_league' | 'match_predictions'
   >('matches_control');
   
   // Auth & Nile University Users State
@@ -469,6 +474,24 @@ export default function App() {
   const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
   const [isPdfExportModalOpen, setIsPdfExportModalOpen] = useState<boolean>(false);
   const [isGeminiChatbotOpen, setIsGeminiChatbotOpen] = useState<boolean>(false);
+
+  // Match Voting Modal State (صوّت لمباراة)
+  const [isMatchVoteModalOpen, setIsMatchVoteModalOpen] = useState<boolean>(false);
+  const [votingSelectedMatch, setVotingSelectedMatch] = useState<Match | null>(null);
+  const [globalUserVotes, setGlobalUserVotes] = useState<Record<string, MatchVoteOption>>(() => {
+    return loadUserVotes(currentUser?.id || 'guest_voter');
+  });
+
+  const handleOpenVoteModal = (match?: Match | null) => {
+    if (match) {
+      setVotingSelectedMatch(match);
+    } else {
+      const upcoming = matches.find(m => m.isScheduled && m.status !== 'finished' && getMatchVotingState(m).isOpen) || matches[0] || null;
+      setVotingSelectedMatch(upcoming);
+    }
+    setGlobalUserVotes(loadUserVotes(currentUser?.id || 'guest_voter'));
+    setIsMatchVoteModalOpen(true);
+  };
   const [adminNewSeasonForm, setAdminNewSeasonForm] = useState({
     name: `دوري جامعة النيل ${new Date().getFullYear() + 1} - النسخة السادسة`,
     year: `${new Date().getFullYear()} / ${new Date().getFullYear() + 1}`,
@@ -905,52 +928,87 @@ export default function App() {
     }, 20000);
   }, [currentUser?.id]);
 
-  // One-time automatic cleanup of localStorage to eliminate duplicate English teams like "Atlético Madrid"
-  // and wipe out newly added AI dummy players to guarantee a clean 48-team tournament
+  // One-time automatic cleanup to wipe out all numbers and old dummy data, keeping only clean 48 teams
   useEffect(() => {
     try {
-      const storedTeamsRaw = localStorage.getItem('dawry_teams_custom_v2');
-      if (storedTeamsRaw) {
-        const parsed = JSON.parse(storedTeamsRaw);
-        if (Array.isArray(parsed)) {
-          const hasRogue = parsed.some((t: any) => t.name === 'Atlético Madrid' || (isSameTeam(t.name, 'اتلتيكو مدريد') && t.name !== 'اتلتيكو مدريد'));
-          if (hasRogue || parsed.length > 48) {
-            const cleaned = sanitizeTeamsList(parsed, INITIAL_TEAMS);
-            setTeams(cleaned);
-            localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(cleaned));
-          }
-        }
-      }
-      const defaultTeamNames = INITIAL_TEAMS.map(t => t.name);
-      const storedSquadsRaw = localStorage.getItem('dawry_squads_data_v3');
-      if (storedSquadsRaw) {
-        const parsedSquads = JSON.parse(storedSquadsRaw);
-        if (parsedSquads && typeof parsedSquads === 'object') {
-          if (parsedSquads['Atlético Madrid'] || Object.keys(parsedSquads).some(k => k === 'Atlético Madrid' || k.toLowerCase().includes('atletico'))) {
-            const cleanedSquads = sanitizeSquads(parsedSquads, defaultTeamNames, true);
-            setSquads(cleanedSquads);
-            saveStoredSquads(cleanedSquads);
-          }
-        }
+      const wipedFlag = localStorage.getItem('dawry_data_wiped_teams_only_v5');
+      if (!wipedFlag) {
+        // 1. Clean zero teams
+        const cleanTeams = INITIAL_TEAMS.map(t => ({
+          ...t,
+          played: 0,
+          won: 0,
+          drawn: 0,
+          lost: 0,
+          gf: 0,
+          ga: 0,
+          gd: 0,
+          points: 0,
+          logoUrl: t.logoUrl || getTeamLogoUrl(t.name) || undefined,
+        }));
+        setTeams(cleanTeams);
+        localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(cleanTeams));
+        localStorage.removeItem('dawry_teams_custom_v1');
+
+        // 2. Clean upcoming matches
+        const cleanMatches = INITIAL_MATCHES.map(m => ({
+          ...m,
+          scoreA: null,
+          scoreB: null,
+          status: 'upcoming' as const,
+          minute: undefined,
+          scorersSummary: undefined,
+          recordedBy: undefined,
+          isScheduled: false,
+          lineups: undefined,
+          substitutions: [],
+          cards: [],
+        }));
+        setMatches(cleanMatches);
+        localStorage.removeItem('dawry_matches_storage_v1');
+
+        // 3. Clean empty squads for all teams so newly added players reflect cleanly
+        const cleanSquads = generateInitialSquads(INITIAL_TEAMS.map(t => t.name));
+        setSquads(cleanSquads);
+        saveStoredSquads(cleanSquads);
+
+        // 4. Wipe fantasy teams, prediction votes, and community votes
+        try {
+          Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('nu_tournament_fantasy_team') || key.startsWith('nu_tournament_match_votes') || key.startsWith('nu_tournament_community_votes')) {
+              localStorage.removeItem(key);
+            }
+          });
+        } catch {}
+
+        // 5. Clean requests and alerts
+        setPlayerRequests([]);
+        saveStoredPlayerRequests([]);
+        setMatchAlerts([]);
+        saveStoredMatchAlerts([]);
+
+        localStorage.setItem('dawry_data_wiped_teams_only_v5', 'true');
       }
     } catch (e) {
       console.warn('Auto cleanup migration error:', e);
     }
   }, []);
 
-  // Data States - All 48 teams start with clean 0 points (Sanitized against rogue/duplicate teams like "Atlético Madrid")
+  // Data States - All 48 teams start with clean 0 points (Sanitized against rogue/duplicate teams)
   const [teams, setTeams] = useState<Team[]>(() => {
     try {
-      const raw = localStorage.getItem('dawry_teams_custom_v2');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Strictly sanitize and drop any newly added extra/duplicate teams (e.g. "Atlético Madrid")
-          const cleaned = sanitizeTeamsList(parsed, INITIAL_TEAMS);
-          return cleaned.map((t: Team) => ({
-            ...t,
-            logoUrl: t.logoUrl || getTeamLogoUrl(t.name) || undefined,
-          }));
+      const wipedFlag = localStorage.getItem('dawry_data_wiped_teams_only_v5');
+      if (wipedFlag) {
+        const raw = localStorage.getItem('dawry_teams_custom_v2');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const cleaned = sanitizeTeamsList(parsed, INITIAL_TEAMS);
+            return cleaned.map((t: Team) => ({
+              ...t,
+              logoUrl: t.logoUrl || getTeamLogoUrl(t.name) || undefined,
+            }));
+          }
         }
       }
       localStorage.removeItem('dawry_teams_custom_v1');
@@ -966,6 +1024,7 @@ export default function App() {
       ga: 0,
       gd: 0,
       points: 0,
+      logoUrl: t.logoUrl || getTeamLogoUrl(t.name) || undefined,
     }));
     try {
       localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(zeroTeams));
@@ -980,9 +1039,15 @@ export default function App() {
   });
   const [scorekeepers, setScorekeepers] = useState<Scorekeeper[]>(INITIAL_SCOREKEEPERS);
 
-  // Squads State (all 48 teams players) - Purged of newly added dummy players and non-official keys
+  // Squads State (all 48 teams players) - Starts clean with empty squads for real player registration
   const [squads, setSquads] = useState<Record<string, Player[]>>(() => {
     const defaultTeamNames = INITIAL_TEAMS.map(t => t.name);
+    const wipedFlag = localStorage.getItem('dawry_data_wiped_teams_only_v5');
+    if (!wipedFlag) {
+      const clean = generateInitialSquads(defaultTeamNames);
+      saveStoredSquads(clean);
+      return clean;
+    }
     const loaded = loadStoredSquads(defaultTeamNames);
     const sanitized = sanitizeSquads(loaded, defaultTeamNames, true);
     saveStoredSquads(sanitized);
@@ -1162,6 +1227,70 @@ export default function App() {
       confetti({ particleCount: 50, spread: 60 });
       alert('تم تصفير جميع الماتشات والنتائج بنجاح! جميع الفرق تبدأ الآن بـ 0 نقاط و0 أهداف.');
     }
+  };
+
+  // --- مسح وتصفير كافة الأرقام والبيانات مع الإبقاء على الفرق فقط ---
+  const handleCleanWipeKeepTeamsOnly = () => {
+    if (!window.confirm('هل أنت متأكد من مسح وتصفير كافة الأرقام والإحصائيات والنتائج السابقة مع الإبقاء على الفرق الـ 48 نظيفة وجاهزة لقيد اللاعبين؟\n\n- سيتم تصفير أهداف ونقاط وترتيب جميع الفرق (0).\n- سيتم إعادة كل المباريات إلى قادمة بدون نتائج.\n- سيتم تفريغ تشكيلات الفرق لتسجيل اللاعبين الفعليين.\n- أي لاعب جديد تضيفه في أي فريق سيظهر فوراً في الفانتازي!')) {
+      return;
+    }
+
+    const cleanZeroTeams = INITIAL_TEAMS.map(t => ({
+      ...t,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      gf: 0,
+      ga: 0,
+      gd: 0,
+      points: 0,
+      logoUrl: t.logoUrl || getTeamLogoUrl(t.name) || undefined,
+    }));
+    setTeams(cleanZeroTeams);
+    try {
+      localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(cleanZeroTeams));
+      localStorage.removeItem('dawry_teams_custom_v1');
+    } catch {}
+
+    const freshMatches = INITIAL_MATCHES.map(m => ({
+      ...m,
+      scoreA: null,
+      scoreB: null,
+      status: 'upcoming' as const,
+      minute: undefined,
+      scorersSummary: undefined,
+      recordedBy: undefined,
+      isScheduled: false,
+      lineups: undefined,
+      substitutions: [],
+      cards: [],
+    }));
+    setMatches(freshMatches);
+    try {
+      localStorage.removeItem('dawry_matches_storage_v1');
+    } catch {}
+
+    const cleanSquads = generateInitialSquads(INITIAL_TEAMS.map(t => t.name));
+    setSquads(cleanSquads);
+    saveStoredSquads(cleanSquads);
+
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('nu_tournament_fantasy_team') || key.startsWith('nu_tournament_match_votes') || key.startsWith('nu_tournament_community_votes')) {
+          localStorage.removeItem(key);
+        }
+      });
+      localStorage.setItem('dawry_data_wiped_teams_only_v5', 'true');
+    } catch {}
+
+    setPlayerRequests([]);
+    saveStoredPlayerRequests([]);
+    setMatchAlerts([]);
+    saveStoredMatchAlerts([]);
+
+    confetti({ particleCount: 80, spread: 90 });
+    alert('تم مسح وتصفير كافة الأرقام والبيانات بنجاح! تم الإبقاء على الفرق فقط. أي لاعب سيتم إضافته سيظهر تلقائياً وفورياً في الفانتازي! 🧹✨⚽');
   };
 
   // --- RESTORE BACKUP & RESET TO ZERO HANDLERS ---
@@ -3311,6 +3440,32 @@ export default function App() {
               الهداف والصانع ({tournamentStatsData.scorers.length + tournamentStatsData.playmakers.length})
             </button>
 
+            {/* Tab: Fantasy League (فانتزي باللاعيبة الموجودة) */}
+            <button
+              onClick={() => setCurrentTab('fantasy_league')}
+              className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                currentTab === 'fantasy_league'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black shadow-lg shadow-emerald-500/30 ring-1 ring-emerald-400'
+                  : 'bg-slate-900/80 text-emerald-300 hover:bg-slate-800 border border-emerald-500/30'
+              }`}
+            >
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>فانتزي الدوري 🌟</span>
+            </button>
+
+            {/* Tab: Match Predictions & Voting (توقعات الماتشات كـ فوت فقط) */}
+            <button
+              onClick={() => setCurrentTab('match_predictions')}
+              className={`px-3 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                currentTab === 'match_predictions'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30 font-black ring-1 ring-blue-400'
+                  : 'bg-slate-900/80 text-blue-300 hover:bg-slate-800 border border-blue-500/30'
+              }`}
+            >
+              <Vote className="w-4 h-4 text-blue-400" />
+              <span>توقعات وتصويت المباريات 🗳️</span>
+            </button>
+
             {/* Tab: AI Copilot Assistant (Admin Only) */}
             {isAdmin && (
               <button
@@ -3415,6 +3570,9 @@ export default function App() {
             onSelectTeamForMatches={(teamName) => {
               setSelectedTeamNameForMatches(teamName);
             }}
+            onNavigateToFantasy={() => setCurrentTab('fantasy_league')}
+            onNavigateToPredictions={() => setCurrentTab('match_predictions')}
+            onOpenVoteModal={(match) => handleOpenVoteModal(match)}
           />
         )}
 
@@ -3581,6 +3739,17 @@ export default function App() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3 shrink-0">
+                {/* Vote for match button in header banner (#root > div > main > div:nth-child(1) > div:nth-child(1)) */}
+                <button
+                  type="button"
+                  onClick={() => handleOpenVoteModal()}
+                  className="px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs md:text-sm shadow-xl shadow-blue-600/30 flex items-center gap-2 transition-all cursor-pointer border border-blue-400/40 hover:scale-105 active:scale-95 ring-2 ring-blue-500/20"
+                  title="صوّت وتوقع نتائج مباريات البطولة قبل موعد انطلاقها"
+                >
+                  <Vote className="w-4 h-4 text-amber-300 animate-pulse" />
+                  <span>صوّت لمباراة 🗳️ (Vote for match)</span>
+                </button>
+
                 {isAdmin ? (
                   <>
                     <button
@@ -3598,6 +3767,15 @@ export default function App() {
                     >
                       <RotateCcw className="w-4 h-4 text-rose-400" />
                       صفر كل الماتشات
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCleanWipeKeepTeamsOnly}
+                      className="px-4 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-rose-950/40"
+                      title="مسح وتصفير كافة الأرقام والبيانات وتفريغ التشكيلات مع الإبقاء على الفرق فقط جاهزة لقيد اللاعبين"
+                    >
+                      <Trash2 className="w-4 h-4 text-white" />
+                      <span>تصفير الأرقام (الفرق فقط) 🧹</span>
                     </button>
                     <button
                       onClick={() => setIsAddingMatch(true)}
@@ -3984,6 +4162,16 @@ export default function App() {
 
                         <div className="flex items-center gap-1">
                           <button
+                            type="button"
+                            onClick={() => handleOpenVoteModal(match)}
+                            className="px-2.5 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                            title="التصويت وتوقع نتيجة المباراة (Vote for match)"
+                          >
+                            <Vote className="w-3.5 h-3.5 text-blue-400" />
+                            <span>{globalUserVotes[match.id] ? 'تعديل التصويت 🗳️' : 'صوّت 🗳️'}</span>
+                          </button>
+
+                          <button
                             onClick={() => handleOpenResultModal(match)}
                             className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
                             title="تسجيل أو تعديل نتيجة المباراة"
@@ -4001,6 +4189,16 @@ export default function App() {
                         </span>
                         
                         <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenVoteModal(match)}
+                            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-blue-600/20"
+                            title="التصويت وتوقع نتيجة المباراة (Vote for match)"
+                          >
+                            <Vote className="w-3.5 h-3.5 text-amber-300" />
+                            <span>{globalUserVotes[match.id] ? 'تعديل التصويت 🗳️' : 'صوّت للمباراة 🗳️ (Vote)'}</span>
+                          </button>
+
                           <button
                             onClick={() => setEditingLineupMatch(match)}
                             className="px-2 py-1 rounded-lg bg-purple-950/40 hover:bg-purple-900/50 text-purple-300 border border-purple-500/30 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
@@ -4689,6 +4887,31 @@ export default function App() {
         )}
 
         {/* ========================================================================= */}
+        {/* TAB: FANTASY LEAGUE (فانتزي دوري جامعة النيل باللاعبين الفعليين) */}
+        {/* ========================================================================= */}
+        {currentTab === 'fantasy_league' && (
+          <FantasyLeaguePage
+            currentUser={currentUser}
+            teams={teams}
+            matches={matches}
+            squads={squads}
+            onNavigateToRoster={() => setCurrentTab('teams_roster')}
+          />
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB: MATCH PREDICTIONS & VOTING (توقعات وتصويت المباريات كـ فوت فقط) */}
+        {/* ========================================================================= */}
+        {currentTab === 'match_predictions' && (
+          <MatchPredictionsPage
+            currentUser={currentUser}
+            matches={matches}
+            teams={teams}
+            onNavigateToMatchesSchedule={() => setCurrentTab('matches_control')}
+          />
+        )}
+
+        {/* ========================================================================= */}
         {/* TAB: UNIFIED STREAMLINED ADMIN CONTROL CENTER (لوحة التحكم المبسطة) */}
         {/* ========================================================================= */}
         {currentTab === 'manage' && (
@@ -4743,6 +4966,7 @@ export default function App() {
               onPurgeNewTeamsAndUnifyBilingual={handlePurgeNewTeamsAndUnifyBilingual}
               onDeleteTeam={handleDeleteTeam}
               onClearAllSquads={handleClearAllSquads}
+              onCleanWipeKeepTeamsOnly={handleCleanWipeKeepTeamsOnly}
             />
           ) : (
             <div className="bg-slate-900 border border-amber-500/30 rounded-3xl p-8 text-center max-w-lg mx-auto my-12 shadow-2xl space-y-4">
@@ -7248,6 +7472,21 @@ export default function App() {
           setIsCsvUploadModalOpen(false);
           confetti({ particleCount: 50, spread: 70 });
         }}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL: MATCH VOTE & PREDICTIONS MODAL (صوّت لمباراة) */}
+      {/* ========================================================================= */}
+      <MatchVoteModal
+        isOpen={isMatchVoteModalOpen}
+        onClose={() => {
+          setIsMatchVoteModalOpen(false);
+          setGlobalUserVotes(loadUserVotes(currentUser?.id || 'guest_voter'));
+        }}
+        initialMatch={votingSelectedMatch}
+        matches={matches}
+        currentUser={currentUser}
+        onNavigateToPredictions={() => setCurrentTab('match_predictions')}
       />
 
       {/* ========================================================================= */}

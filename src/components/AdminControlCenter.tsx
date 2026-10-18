@@ -97,6 +97,7 @@ interface AdminControlCenterProps {
   onPurgeNewTeamsAndUnifyBilingual?: () => void;
   onDeleteTeam?: (teamNameOrId: string) => void;
   onClearAllSquads?: () => void;
+  onCleanWipeKeepTeamsOnly?: () => void;
 }
 
 export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
@@ -145,6 +146,7 @@ export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
   onPurgeNewTeamsAndUnifyBilingual,
   onDeleteTeam,
   onClearAllSquads,
+  onCleanWipeKeepTeamsOnly,
 }) => {
   // In-App Confirmation & Audit Modals
   const [deleteTeamModalTarget, setDeleteTeamModalTarget] = useState<Team | null>(null);
@@ -1770,6 +1772,19 @@ export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
                   يمكنك تفريغ الكشوفات لتسجيل اللاعبين الجدد أو حذف أي فرق غير شغالة بضغطة واحدة.
                 </div>
                 <div className="flex items-center gap-2">
+                  {onCleanWipeKeepTeamsOnly && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsTeamsAuditModalOpen(false);
+                        onCleanWipeKeepTeamsOnly();
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-rose-950/40"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>تصفير الأرقام والبيانات (الإبقاء على الفرق فقط) 🧹</span>
+                    </button>
+                  )}
                   {onClearAllSquads && (
                     <button
                       type="button"

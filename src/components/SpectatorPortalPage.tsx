@@ -21,7 +21,8 @@ import {
   Lock,
   X,
   Eye,
-  Info
+  Info,
+  Vote
 } from 'lucide-react';
 import { Match, Team } from '../App';
 import { Player } from '../utils/roster';
@@ -41,6 +42,9 @@ interface SpectatorPortalPageProps {
   onEditSchedule?: (match: Match) => void;
   onEditLineup?: (match: Match) => void;
   onSendAlert?: (match: Match) => void;
+  onNavigateToFantasy?: () => void;
+  onNavigateToPredictions?: () => void;
+  onOpenVoteModal?: (match: Match) => void;
 }
 
 export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
@@ -56,6 +60,9 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
   onEditSchedule,
   onEditLineup,
   onSendAlert,
+  onNavigateToFantasy,
+  onNavigateToPredictions,
+  onOpenVoteModal,
 }) => {
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'live' | 'upcoming' | 'finished'>('all');
@@ -237,6 +244,53 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
           )}
         </div>
       )}
+
+      {/* Interactive Spectator Features: Fantasy & Predictions / Voting */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Fantasy Card */}
+        <div 
+          onClick={onNavigateToFantasy}
+          className="relative overflow-hidden bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-950 border border-emerald-500/40 rounded-3xl p-5 shadow-xl hover:border-emerald-400 transition-all cursor-pointer group flex items-center justify-between gap-4"
+        >
+          <div className="space-y-1 z-10">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold">
+              <Sparkles className="w-3 h-3 text-amber-400" />
+              <span>ميزة جديدة وحصرية 🌟</span>
+            </div>
+            <h3 className="text-base font-black text-white group-hover:text-emerald-300 transition-colors">
+              فانتزي لاعبي دوري جامعة النيل
+            </h3>
+            <p className="text-xs text-slate-300 max-w-sm">
+              اختر تشكيلتك بميزانية 50.0M مع لاعبي باريس الأبطال الأعلى سعراً وتصدر جدول المراكز!
+            </p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-slate-950 flex items-center justify-center font-black shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+            <Trophy className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Predictions Card */}
+        <div 
+          onClick={onNavigateToPredictions}
+          className="relative overflow-hidden bg-gradient-to-r from-blue-950/80 via-slate-900 to-slate-950 border border-blue-500/40 rounded-3xl p-5 shadow-xl hover:border-blue-400 transition-all cursor-pointer group flex items-center justify-between gap-4"
+        >
+          <div className="space-y-1 z-10">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-bold">
+              <Vote className="w-3 h-3 text-blue-400" />
+              <span>تصويت حر ومباشر 🗳️</span>
+            </div>
+            <h3 className="text-base font-black text-white group-hover:text-blue-300 transition-colors">
+              توقعات المباريات (تصويت فقط)
+            </h3>
+            <p className="text-xs text-slate-300 max-w-sm">
+              التصويت متاح حتى موعد انطلاق كل ماتش! صوّت وتابع جدول مراكز المتوقعين وترتيب الفرق.
+            </p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-black shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+            <Vote className="w-6 h-6" />
+          </div>
+        </div>
+      </div>
 
       {/* Live Matches Special Carousel / Alert Banner */}
       {liveMatches.length > 0 && (
@@ -736,6 +790,17 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
                           <span>{match.status === 'finished' ? 'الدخول وتعديل النتيجة ✎ (أدمن 👑)' : 'الدخول وتسجيل النتيجة ⚽ (أدمن 👑)'}</span>
                         </button>
                       )}
+                      {onOpenVoteModal && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenVoteModal(match)}
+                          className="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                          title="التصويت وتوقع نتيجة المباراة (Vote for match)"
+                        >
+                          <Vote className="w-3.5 h-3.5 text-blue-400" />
+                          <span>صوّت 🗳️</span>
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div className="p-3 bg-slate-950/70 border-t border-slate-800/80 flex items-center justify-between text-xs">
@@ -743,14 +808,27 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
                         <Lock className="w-3 h-3 text-slate-500" />
                         <span>متابعة المشجعين • معتمدة</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMatchForDetails(match)}
-                        className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-sky-400 hover:text-sky-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-800"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>عرض تفاصيل الماتش</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {onOpenVoteModal && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenVoteModal(match)}
+                            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-blue-600/20"
+                            title="التصويت وتوقع نتيجة المباراة (Vote for match)"
+                          >
+                            <Vote className="w-3.5 h-3.5 text-amber-300" />
+                            <span>صوّت للمباراة 🗳️</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMatchForDetails(match)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-sky-400 hover:text-sky-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-800"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>عرض تفاصيل الماتش</span>
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -1051,10 +1129,24 @@ export const SpectatorPortalPage: React.FC<SpectatorPortalPageProps> = ({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-end">
+            <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between">
+              {onOpenVoteModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const m = selectedMatchForDetails;
+                    setSelectedMatchForDetails(null);
+                    onOpenVoteModal(m);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-blue-600/30"
+                >
+                  <Vote className="w-3.5 h-3.5 text-amber-300" />
+                  <span>صوّت لهذه المباراة 🗳️ (Vote for match)</span>
+                </button>
+              )}
               <button
                 onClick={() => setSelectedMatchForDetails(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer mr-auto"
               >
                 إغلاق النافذة
               </button>

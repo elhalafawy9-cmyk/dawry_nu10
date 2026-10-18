@@ -20,6 +20,7 @@ export interface FantasyPlayer {
   matchesPlayed: number;
   photoUrl?: string;
   isCustom?: boolean;
+  isChampion?: boolean; // أبطال السنة اللي فاتت (باريس)
 }
 
 export interface SelectedFantasySlot {
@@ -62,7 +63,7 @@ export interface FantasyLeaderboardEntry {
   updatedAt: string;
 }
 
-export const FANTASY_BUDGET = 100.0;
+export const FANTASY_BUDGET = 50.0;
 export const MAX_PLAYERS_PER_TEAM = 2;
 export const TOTAL_SQUAD_SIZE = 9; // 7 starters + 2 bench
 
@@ -220,21 +221,81 @@ export function calculatePlayerFantasyPoints(
 }
 
 /**
- * Computes base price based on position, goals, and team strength
+ * Check if the team is Paris (PSG) - reigning champions of last year
  */
-function calculatePlayerPrice(position: 'GK' | 'DEF' | 'MID' | 'FWD', goals: number, assists: number): number {
-  let base = 5.0;
-  if (position === 'GK') base = 4.5;
-  if (position === 'DEF') base = 5.0;
-  if (position === 'MID') base = 6.0;
-  if (position === 'FWD') base = 7.0;
+export function isParisChampionTeam(teamName: string): boolean {
+  if (!teamName) return false;
+  const n = teamName.trim().toLowerCase();
+  return (
+    n.includes('باريس') ||
+    n.includes('paris') ||
+    n.includes('psg') ||
+    n.includes('بي اس جي')
+  );
+}
 
-  const bonus = (goals * 0.5) + (assists * 0.3);
-  return Math.min(12.5, Math.round((base + bonus) * 10) / 10);
+/**
+ * Computes base price based on position, goals, and team champion status
+ * Budget is 50.0M: Paris squad (champions) are the most expensive tier (7.5M - 12.0M),
+ * while standard university players range from 3.5M - 6.5M.
+ */
+export function calculatePlayerPrice(
+  position: 'GK' | 'DEF' | 'MID' | 'FWD', 
+  goals: number, 
+  assists: number,
+  teamName: string = ''
+): number {
+  const isChampion = isParisChampionTeam(teamName);
+
+  if (isChampion) {
+    // Paris squad are the champions of last year - strictly the most expensive players in the league
+    let championBase = 8.0;
+    if (position === 'GK') championBase = 7.5;
+    if (position === 'DEF') championBase = 8.0;
+    if (position === 'MID') championBase = 9.0;
+    if (position === 'FWD') championBase = 10.0;
+
+    const bonus = (goals * 0.4) + (assists * 0.3);
+    return Math.min(12.5, Math.round((championBase + bonus) * 10) / 10);
+  }
+
+  // Regular players calibrated for 50.0M budget (average ~5.5M per player)
+  let base = 4.2;
+  if (position === 'GK') base = 3.6;
+  if (position === 'DEF') base = 4.0;
+  if (position === 'MID') base = 4.8;
+  if (position === 'FWD') base = 5.5;
+
+  const bonus = (goals * 0.3) + (assists * 0.2);
+  return Math.min(6.8, Math.round((base + bonus) * 10) / 10);
 }
 
 /**
  * Generates all available Fantasy Players from the 48 tournament teams and squads
+ */
+export function createEmptySlotPlayer(pos: 'GK' | 'DEF' | 'MID' | 'FWD', slotIdx: number): FantasyPlayer {
+  return {
+    id: `empty_${slotIdx}`,
+    name: 'خانة فارغة',
+    team: 'اختر لاعب',
+    position: pos,
+    price: 3.5,
+    number: 0,
+    studentId: '',
+    totalPoints: 0,
+    gameweekPoints: 0,
+    goals: 0,
+    assists: 0,
+    cleanSheets: 0,
+    yellowCards: 0,
+    redCards: 0,
+    matchesPlayed: 0,
+  };
+}
+
+/**
+ * Generates all available Fantasy Players strictly from actual team squads.
+ * Any player added to a team immediately reflects here!
  */
 export function getAllFantasyPlayers(
   squads: Record<string, Player[]>,
@@ -245,67 +306,26 @@ export function getAllFantasyPlayers(
   const result: FantasyPlayer[] = [];
   const registeredIds = new Set<string>();
 
-  // 1. Process actual players currently in team squads
+  // Process ONLY actual players currently registered in team squads
   Object.entries(squads).forEach(([teamName, playerList]) => {
     if (Array.isArray(playerList) && playerList.length > 0) {
+      const isChampion = isParisChampionTeam(teamName);
       playerList.forEach((p, idx) => {
+        if (!p || !p.name || !p.name.trim()) return;
         const stats = calculatePlayerFantasyPoints(p.name, teamName, p.position, matches, statsLeaders);
-        const price = calculatePlayerPrice(p.position, stats.goals, stats.assists);
+        const price = calculatePlayerPrice(p.position, stats.goals, stats.assists, teamName);
         const id = p.id || `fp_${teamName}_${idx}`;
-        registeredIds.add(id);
-
-        result.push({
-          id,
-          name: p.name,
-          team: teamName,
-          position: p.position,
-          price,
-          number: p.number || (idx + 1),
-          studentId: p.studentId || `2026${1000 + idx}`,
-          photoUrl: p.photoUrl,
-          totalPoints: stats.totalPoints,
-          gameweekPoints: stats.gameweekPoints,
-          goals: stats.goals,
-          assists: stats.assists,
-          cleanSheets: stats.cleanSheets,
-          yellowCards: stats.yellowCards,
-          redCards: stats.redCards,
-          matchesPlayed: stats.matchesPlayed,
-          isCustom: true,
-        });
-      });
-    }
-  });
-
-  // 2. For teams that have less than 7 players, seed standard university tournament players
-  teams.forEach(t => {
-    const existing = result.filter(p => p.team === t.name);
-    const needed = 7 - existing.length;
-    if (needed > 0) {
-      const positions: ('GK' | 'DEF' | 'DEF' | 'MID' | 'MID' | 'FWD' | 'FWD')[] = [
-        'GK', 'DEF', 'DEF', 'MID', 'MID', 'FWD', 'FWD'
-      ];
-      
-      const missingPositions = positions.slice(existing.length);
-      missingPositions.forEach((pos, idx) => {
-        const nameIndex = (t.name.charCodeAt(0) + idx * 3) % SAMPLE_STUDENT_NAMES.length;
-        const name = `${SAMPLE_STUDENT_NAMES[nameIndex]} (${t.name})`;
-        const num = existing.length + idx + 1;
-        const studentId = `2410${Math.floor(1000 + Math.random() * 9000)}`;
-        const stats = calculatePlayerFantasyPoints(name, t.name, pos, matches, statsLeaders);
-        const price = calculatePlayerPrice(pos, stats.goals, stats.assists);
-        const id = `seeded_${t.id}_${pos}_${idx}`;
-
         if (!registeredIds.has(id)) {
           registeredIds.add(id);
           result.push({
             id,
-            name,
-            team: t.name,
-            position: pos,
+            name: p.name.trim(),
+            team: teamName,
+            position: p.position,
             price,
-            number: num,
-            studentId,
+            number: p.number || (idx + 1),
+            studentId: p.studentId || '',
+            photoUrl: p.photoUrl,
             totalPoints: stats.totalPoints,
             gameweekPoints: stats.gameweekPoints,
             goals: stats.goals,
@@ -314,14 +334,15 @@ export function getAllFantasyPlayers(
             yellowCards: stats.yellowCards,
             redCards: stats.redCards,
             matchesPlayed: stats.matchesPlayed,
-            isCustom: false,
+            isCustom: true,
+            isChampion,
           });
         }
       });
     }
   });
 
-  // Sort by totalPoints descending
+  // Sort by totalPoints descending, then price descending
   return result.sort((a, b) => b.totalPoints - a.totalPoints || b.price - a.price);
 }
 
@@ -335,21 +356,22 @@ export function calculateFantasyTeamPoints(team: FantasyTeam): { totalPoints: nu
   team.slots.forEach(slot => {
     if (!slot.isStarter) return; // Only starters get points
     const multiplier = slot.isCaptain ? 2 : 1;
-    total += (slot.player.totalPoints || 0) * multiplier;
-    gw += (slot.player.gameweekPoints || 0) * multiplier;
+    total += (slot.player?.totalPoints || 0) * multiplier;
+    gw += (slot.player?.gameweekPoints || 0) * multiplier;
   });
 
   return { totalPoints: total, gameweekPoints: gw };
 }
 
 /**
- * Generates a balanced smart auto-pick squad within 100M budget
+ * Generates a balanced smart auto-pick squad strictly within the 50.0M budget.
+ * If there are not enough registered players, missing slots remain cleanly empty.
  */
 export function generateAutoPickSquad(players: FantasyPlayer[]): SelectedFantasySlot[] {
-  const gks = players.filter(p => p.position === 'GK');
-  const defs = players.filter(p => p.position === 'DEF');
-  const mids = players.filter(p => p.position === 'MID');
-  const fwds = players.filter(p => p.position === 'FWD');
+  const gks = [...players.filter(p => p.position === 'GK')].sort((a, b) => a.price - b.price);
+  const defs = [...players.filter(p => p.position === 'DEF')].sort((a, b) => a.price - b.price);
+  const mids = [...players.filter(p => p.position === 'MID')].sort((a, b) => a.price - b.price);
+  const fwds = [...players.filter(p => p.position === 'FWD')].sort((a, b) => a.price - b.price);
 
   const selected: FantasyPlayer[] = [];
   const teamCounts: Record<string, number> = {};
@@ -360,7 +382,7 @@ export function generateAutoPickSquad(players: FantasyPlayer[]): SelectedFantasy
     return true;
   };
 
-  const pickOne = (list: FantasyPlayer[]): FantasyPlayer | null => {
+  const pickOne = (list: FantasyPlayer[], pos: 'GK' | 'DEF' | 'MID' | 'FWD', slotIdx: number): FantasyPlayer => {
     for (const p of list) {
       if (canAdd(p)) {
         selected.push(p);
@@ -368,30 +390,44 @@ export function generateAutoPickSquad(players: FantasyPlayer[]): SelectedFantasy
         return p;
       }
     }
-    return null;
+    return createEmptySlotPlayer(pos, slotIdx);
   };
 
-  const gk1 = pickOne(gks) || gks[0];
-  const def1 = pickOne(defs) || defs[0];
-  const def2 = pickOne(defs) || defs[1];
-  const mid1 = pickOne(mids) || mids[0];
-  const mid2 = pickOne(mids) || mids[1];
-  const fwd1 = pickOne(fwds) || fwds[0];
-  const fwd2 = pickOne(fwds) || fwds[1];
-  const bench1 = pickOne(defs) || pickOne(mids) || defs[2] || mids[2];
-  const bench2 = pickOne(fwds) || pickOne(mids) || fwds[2] || mids[3];
+  // Pick balanced starters & budget-friendly bench to ensure <= 50.0M
+  const gk1 = pickOne(gks, 'GK', 0);
+  const def1 = pickOne(defs, 'DEF', 1);
+  const def2 = pickOne(defs, 'DEF', 2);
+  const mid1 = pickOne(mids, 'MID', 3);
+  const mid2 = pickOne(mids, 'MID', 4);
 
-  const starters = [
-    { slotIndex: 0, position: 'GK' as const, isStarter: true, isCaptain: false, isViceCaptain: false, player: gk1 },
-    { slotIndex: 1, position: 'DEF' as const, isStarter: true, isCaptain: false, isViceCaptain: false, player: def1 },
-    { slotIndex: 2, position: 'DEF' as const, isStarter: true, isCaptain: false, isViceCaptain: false, player: def2 },
-    { slotIndex: 3, position: 'MID' as const, isStarter: true, isCaptain: false, isViceCaptain: false, player: mid1 },
-    { slotIndex: 4, position: 'MID' as const, isStarter: true, isCaptain: false, isViceCaptain: false, player: mid2 },
-    { slotIndex: 5, position: 'FWD' as const, isStarter: true, isCaptain: true, isViceCaptain: false, player: fwd1 }, // Captain
-    { slotIndex: 6, position: 'FWD' as const, isStarter: true, isCaptain: false, isViceCaptain: true, player: fwd2 },  // Vice
-    { slotIndex: 7, position: 'DEF' as const, isStarter: false, isCaptain: false, isViceCaptain: false, player: bench1 },
-    { slotIndex: 8, position: 'FWD' as const, isStarter: false, isCaptain: false, isViceCaptain: false, player: bench2 },
+  // For forwards
+  const fwdsByPoints = [...players.filter(p => p.position === 'FWD')].sort((a, b) => b.totalPoints - a.totalPoints);
+  const fwd1 = pickOne(fwdsByPoints, 'FWD', 5);
+  const fwd2 = pickOne(fwds, 'FWD', 6);
+
+  // Bench (strictly budget players)
+  const bench1 = pickOne(defs.length > 2 ? defs : mids, 'DEF', 7);
+  const bench2 = pickOne(fwds.length > 2 ? fwds : mids, 'FWD', 8);
+
+  const starters: SelectedFantasySlot[] = [
+    { slotIndex: 0, position: 'GK', isStarter: true, isCaptain: false, isViceCaptain: false, player: gk1 },
+    { slotIndex: 1, position: 'DEF', isStarter: true, isCaptain: false, isViceCaptain: false, player: def1 },
+    { slotIndex: 2, position: 'DEF', isStarter: true, isCaptain: false, isViceCaptain: false, player: def2 },
+    { slotIndex: 3, position: 'MID', isStarter: true, isCaptain: false, isViceCaptain: false, player: mid1 },
+    { slotIndex: 4, position: 'MID', isStarter: true, isCaptain: false, isViceCaptain: false, player: mid2 },
+    { slotIndex: 5, position: 'FWD', isStarter: true, isCaptain: true, isViceCaptain: false, player: fwd1 },
+    { slotIndex: 6, position: 'FWD', isStarter: true, isCaptain: false, isViceCaptain: true, player: fwd2 },
+    { slotIndex: 7, position: 'DEF', isStarter: false, isCaptain: false, isViceCaptain: false, player: bench1 },
+    { slotIndex: 8, position: 'FWD', isStarter: false, isCaptain: false, isViceCaptain: false, player: bench2 },
   ];
+
+  // Guarantee total sum does not exceed FANTASY_BUDGET (50.0M)
+  let sum = starters.reduce((acc, s) => acc + (s.player?.price || 0), 0);
+  if (sum > FANTASY_BUDGET) {
+    if (gks[0]) starters[0].player = gks[0];
+    if (defs[0]) starters[7].player = defs[0];
+    if (mids[0]) starters[8].player = mids[0];
+  }
 
   return starters;
 }
@@ -419,72 +455,6 @@ export function saveLocalFantasyTeam(team: FantasyTeam): void {
 }
 
 /**
- * Seed sample rival fantasy teams for the leaderboard
+ * Fantasy leaderboard starting clean with no fake mock rivals
  */
-export const SAMPLE_RIVAL_FANTASY_TEAMS: FantasyLeaderboardEntry[] = [
-  {
-    rank: 1,
-    userId: 'rival_1',
-    managerName: 'م. أحمد الشريف',
-    managerEmail: 'a.sherif@nu.edu.eg',
-    teamName: 'نسور النيل 🦅',
-    department: 'كلية الهندسة والعلوم التطبيقية',
-    captainName: 'مهاجم باريس',
-    gameweekPoints: 48,
-    totalPoints: 114,
-    slotsCount: 9,
-    updatedAt: '2026-10-16',
-  },
-  {
-    rank: 2,
-    userId: 'rival_2',
-    managerName: 'يوسف حسام الدين',
-    managerEmail: 'y.hossam@nu.edu.eg',
-    teamName: 'أبطال زايد ⚡',
-    department: 'كلية تكنولوجيا المعلومات وعلوم الحاسب',
-    captainName: 'صانع ألعاب الزمالك',
-    gameweekPoints: 42,
-    totalPoints: 102,
-    slotsCount: 9,
-    updatedAt: '2026-10-16',
-  },
-  {
-    rank: 3,
-    userId: 'rival_3',
-    managerName: 'عمر النجار',
-    managerEmail: 'o.naggar@nu.edu.eg',
-    teamName: 'كتيبة الفراعنة 👑',
-    department: 'كلية إدارة الأعمال',
-    captainName: 'مهاجم فرنسا',
-    gameweekPoints: 39,
-    totalPoints: 95,
-    slotsCount: 9,
-    updatedAt: '2026-10-16',
-  },
-  {
-    rank: 4,
-    userId: 'rival_4',
-    managerName: 'كريم وائل',
-    managerEmail: 'k.wael@nu.edu.eg',
-    teamName: 'دوري النجوم 🌟',
-    department: 'كلية التكنولوجيا الحيوية',
-    captainName: 'حارس برشلونة',
-    gameweekPoints: 35,
-    totalPoints: 88,
-    slotsCount: 9,
-    updatedAt: '2026-10-16',
-  },
-  {
-    rank: 5,
-    userId: 'rival_5',
-    managerName: 'زياد مصطفى',
-    managerEmail: 'z.mostafa@nu.edu.eg',
-    teamName: 'المحاربون ⚔️',
-    department: 'كلية الهندسة والعلوم التطبيقية',
-    captainName: 'مدافع إيطاليا',
-    gameweekPoints: 31,
-    totalPoints: 81,
-    slotsCount: 9,
-    updatedAt: '2026-10-16',
-  },
-];
+export const SAMPLE_RIVAL_FANTASY_TEAMS: FantasyLeaderboardEntry[] = [];

@@ -15,11 +15,13 @@ import {
   Calendar,
   RotateCcw,
   Zap,
-  CheckCircle2
+  CheckCircle2,
+  Lock
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Match, Team } from '../App';
 import { Player } from '../utils/roster';
+import { isMatchStarted } from '../utils/roundLock';
 
 interface MatchLineupModalProps {
   isOpen: boolean;
@@ -99,6 +101,9 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
 
   if (!isOpen || !match) return null;
 
+  const matchStarted = match ? isMatchStarted(match) : false;
+  const effectiveReadOnly = readOnly || matchStarted;
+
   const squadA = squads[match.teamA] || [];
   const squadB = squads[match.teamB] || [];
   const teamAObj = teams.find(t => t.name === match.teamA);
@@ -106,7 +111,7 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
 
   // Toggle single player between starter and bench
   const handleTogglePlayer = (team: 'A' | 'B', playerName: string) => {
-    if (readOnly) return;
+    if (effectiveReadOnly) return;
     if (team === 'A') {
       if (teamAStarters.includes(playerName)) {
         setTeamAStarters(prev => prev.filter(n => n !== playerName));
@@ -128,7 +133,7 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
 
   // Presets
   const applyPreset = (team: 'A' | 'B', type: 'first7' | 'first9' | 'allStarters' | 'allBench' | 'invert') => {
-    if (readOnly) return;
+    if (effectiveReadOnly) return;
     const squad = team === 'A' ? squadA : squadB;
     const allNames = squad.map(p => p.name);
 
@@ -236,7 +241,7 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
           </div>
 
           {/* Quick Presets Bar */}
-          {!readOnly && (
+          {!effectiveReadOnly && (
             <div className="flex flex-wrap items-center gap-1.5 bg-slate-900/80 p-2 rounded-2xl border border-slate-800/80 text-[11px]">
               <span className="text-slate-400 font-bold ml-1 flex items-center gap-1">
                 <Zap className="w-3 h-3 text-amber-400" />
@@ -307,11 +312,11 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
                         key={pName}
                         onClick={() => handleTogglePlayer(teamLetter, pName)}
                         className={`p-2.5 rounded-xl bg-slate-950 border border-emerald-500/30 flex items-center justify-between gap-2.5 transition-all ${
-                          readOnly 
+                          effectiveReadOnly 
                             ? 'cursor-default' 
                             : 'cursor-pointer hover:bg-emerald-950/40 hover:border-emerald-400 hover:shadow-md'
                         }`}
-                        title={readOnly ? pName : `انقر لنقل ${pName} إلى دكة البدلاء`}
+                        title={effectiveReadOnly ? pName : `انقر لنقل ${pName} إلى دكة البدلاء`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-300 font-mono font-black text-xs flex items-center justify-center shrink-0 border border-emerald-500/30">
@@ -328,7 +333,7 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
                           </div>
                         </div>
 
-                        {!readOnly && (
+                        {!effectiveReadOnly && (
                           <span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-300 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/30 text-[10px] font-bold shrink-0 transition-all flex items-center gap-1">
                             <ArrowRightLeft className="w-3 h-3" />
                             <span>للدكة</span>
@@ -367,11 +372,11 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
                         key={pName}
                         onClick={() => handleTogglePlayer(teamLetter, pName)}
                         className={`p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-between gap-2.5 transition-all ${
-                          readOnly 
+                          effectiveReadOnly 
                             ? 'cursor-default' 
                             : 'cursor-pointer hover:bg-slate-800 hover:border-emerald-500/50 hover:shadow-md'
                         }`}
-                        title={readOnly ? pName : `انقر لنقل ${pName} إلى التشكيل الأساسي`}
+                        title={effectiveReadOnly ? pName : `انقر لنقل ${pName} إلى التشكيل الأساسي`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <span className="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 font-mono font-black text-xs flex items-center justify-center shrink-0">
@@ -388,7 +393,7 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
                           </div>
                         </div>
 
-                        {!readOnly && (
+                        {!effectiveReadOnly && (
                           <span className="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/30 text-[10px] font-bold shrink-0 transition-all flex items-center gap-1">
                             <ArrowRightLeft className="w-3 h-3" />
                             <span>للأساسي</span>
@@ -456,13 +461,22 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
             </button>
           </div>
 
-          {/* Quick Notice */}
-          <div className="mt-3 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-300 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>
-              يمكنك هنا قبل انطلاق كل مباراة، أو أثناءها، تحديد من سيلعب أساسياً ومن على دكة البدلاء. التشكيل محفوظ خصيصاً لهذه المباراة فقط ويتغير من مباراة لأخرى!
-            </span>
-          </div>
+          {/* Quick Notice / Lock Banner */}
+          {matchStarted ? (
+            <div className="mt-3 p-3 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-bold flex items-center gap-2.5 animate-fadeIn">
+              <Lock className="w-5 h-5 text-amber-400 shrink-0 animate-pulse" />
+              <span>
+                🔒 انطلقت المباراة أو حان موعدها رسمياً! تم قفل تعديل التشكيل الأساسي والبدلاء ولا يمكن إجراء أي تعديل بعد انطلاق صافرة البداية (وضع العرض فقط).
+              </span>
+            </div>
+          ) : (
+            <div className="mt-3 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-300 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>
+                يمكنك هنا تحديد الأساسيين والبدلاء للمباراة. بمجرد انطلاق المباراة، سيتم قفل التشكيل نهائياً ومنع التعديل.
+              </span>
+            </div>
+          )}
         </div>
 
         {/* TEAM SWITCHER TABS (FOR MOBILE / RESPONSIVE) */}
@@ -537,7 +551,7 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
               إلغاء
             </button>
 
-            {!readOnly && (
+            {!effectiveReadOnly ? (
               <button
                 type="button"
                 onClick={handleSave}
@@ -546,6 +560,11 @@ export const MatchLineupModal: React.FC<MatchLineupModalProps> = ({
                 <Save className="w-4 h-4" />
                 <span>حفظ واعتماد تشكيل المباراة 💾</span>
               </button>
+            ) : (
+              <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-xs text-amber-300 font-bold">
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                <span>التشكيل مقفل (انطلقت المباراة)</span>
+              </div>
             )}
           </div>
         </div>
