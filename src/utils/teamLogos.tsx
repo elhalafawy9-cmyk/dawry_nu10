@@ -105,6 +105,13 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
   },
 
   // --- Group C ---
+  'بلباو': {
+    name: 'بلباو',
+    shortName: 'ATH',
+    primaryColor: '#ee2524',
+    secondaryColor: '#ffffff',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/9/98/Club_Athletic_Bilbao_logo.svg',
+  },
   'سانتوس': {
     name: 'سانتوس',
     shortName: 'SAN',
@@ -166,6 +173,14 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     isNationalTeam: true,
     logoUrl: 'https://flagcdn.com/w160/es.png',
   },
+  'هولندا': {
+    name: 'هولندا',
+    shortName: 'NED',
+    primaryColor: '#f36c21',
+    secondaryColor: '#ffffff',
+    isNationalTeam: true,
+    logoUrl: 'https://flagcdn.com/w160/nl.png',
+  },
   'نابولي': {
     name: 'نابولي',
     shortName: 'NAP',
@@ -218,6 +233,14 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     primaryColor: '#ef0107',
     secondaryColor: '#ffffff',
     logoUrl: 'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg',
+  },
+  'جنوب افريقيا': {
+    name: 'جنوب افريقيا',
+    shortName: 'RSA',
+    primaryColor: '#007a4d',
+    secondaryColor: '#ffb612',
+    isNationalTeam: true,
+    logoUrl: 'https://flagcdn.com/w160/za.png',
   },
   'كولومبيا': {
     name: 'كولومبيا',
@@ -272,6 +295,14 @@ export const TEAM_LOGOS_MAP: Record<string, TeamLogoData> = {
     secondaryColor: '#ffffff',
     isNationalTeam: true,
     logoUrl: 'https://flagcdn.com/w160/it.png',
+  },
+  'السعودية': {
+    name: 'السعودية',
+    shortName: 'KSA',
+    primaryColor: '#006c35',
+    secondaryColor: '#ffffff',
+    isNationalTeam: true,
+    logoUrl: 'https://flagcdn.com/w160/sa.png',
   },
   'اياكس': {
     name: 'اياكس',
@@ -412,12 +443,27 @@ const ALIASES: Record<string, string> = {
   'الأرجنتين': 'الارجنتين',
   'إيطاليا': 'ايطاليا',
   'إسبانيا': 'اسبانيا',
+  'السعوديه': 'السعودية',
+  'منتخب السعودية': 'السعودية',
+  'المملكة العربية السعودية': 'السعودية',
+  'منتخب هولندا': 'هولندا',
+  'هولاندا': 'هولندا',
+  'الطواحين': 'هولندا',
   'أكتوبر': 'اكتوبر',
   'مدينة 6 اكتوبر': 'اكتوبر',
   'جامعة النيل': 'اكتوبر',
   'باير ليفركوزن': 'ليفركوزن',
   'إنتر ميامي': 'ميامي',
   'اتلتيكو مينيرو': 'مينيرو',
+  'أتلتيكو بلباو': 'بلباو',
+  'اتلتيكو بلباو': 'بلباو',
+  'جنوب إفريقيا': 'جنوب افريقيا',
+  'منتخب جنوب افريقيا': 'جنوب افريقيا',
+  'كلومبيا': 'جنوب افريقيا',
+  'كولومبيا': 'جنوب افريقيا',
+  'الارسنال': 'ارسنال',
+  'أرسنال': 'ارسنال',
+  'استون فيلا F.C': 'استون فيلا',
   'طرابزون سبور': 'طرابزون',
 };
 

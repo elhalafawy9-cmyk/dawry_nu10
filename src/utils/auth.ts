@@ -11,6 +11,7 @@ export interface AppUser {
   studentId?: string;       // Nile University Student ID
   avatarUrl?: string;
   isPermanentAdmin?: boolean; // Locked permanent super admin
+  mustChangePassword?: boolean; // Force change password on first login
   registeredAt: string;
   department?: string;
   notes?: string;
@@ -25,6 +26,9 @@ export interface AppUser {
 export const PERMANENT_ADMIN_EMAIL = 's.mohamed2442@nu.edu.eg';
 export const PERMANENT_ADMIN_PASSWORD = 'Hv102030';
 
+export const FIXED_ADMIN_EMAIL_AHSABER = 'ahsaber@nu.edu.eg';
+export const FIXED_ADMIN_PASSWORD_AHSABER_DEFAULT = '123456';
+
 /**
  * Validates that the email is a Nile University address or the system administrator
  */
@@ -32,11 +36,12 @@ export function isValidNileUniversityEmail(email: string): boolean {
   if (!email) return false;
   const trimmed = email.trim().toLowerCase();
   if (trimmed === PERMANENT_ADMIN_EMAIL.toLowerCase()) return true;
+  if (trimmed === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase()) return true;
   return trimmed.endsWith('@nu.edu.eg') || (trimmed.includes('@') && trimmed.includes('.'));
 }
 
 /**
- * Seed users list - ONLY the Super Admin account (s.mohamed2442@nu.edu.eg)
+ * Seed users list - Super Admin and Ahmed Saber admin account
  */
 export const INITIAL_USERS: AppUser[] = [
   {
@@ -49,11 +54,25 @@ export const INITIAL_USERS: AppUser[] = [
     studentId: '241000442',
     department: 'إدارة بطولة دوري النيل',
     registeredAt: '2026-01-01',
-    notes: 'المدير الدائم المعتمد والوحيد للنظام - كامل صلاحيات الإدارة',
+    notes: 'المدير الدائم المعتمد للنظام - كامل صلاحيات الإدارة',
     lastLoginAt: new Date().toISOString(),
     lastActiveAt: new Date().toISOString(),
     isOnline: true,
     loginCount: 1,
+  },
+  {
+    id: 'user_ahsaber_admin',
+    name: 'أحمد صابر (إدارة البطولة)',
+    email: FIXED_ADMIN_EMAIL_AHSABER,
+    password: FIXED_ADMIN_PASSWORD_AHSABER_DEFAULT,
+    role: 'admin',
+    isPermanentAdmin: true,
+    mustChangePassword: true,
+    studentId: '241000999',
+    department: 'إدارة بطولة دوري النيل',
+    registeredAt: '2026-01-01',
+    notes: 'حساب إداري معتمد - يجب تغيير كلمة المرور عند أول تسجيل دخول',
+    loginCount: 0,
   },
 ];
 
@@ -98,14 +117,7 @@ export function loadStoredUsers(): AppUser[] {
       return cleaned;
     }
 
-    const hasPermAdmin = parsed.some(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
-    if (!hasPermAdmin) {
-      const fixed = [INITIAL_USERS[0], ...parsed.filter(u => u.email.toLowerCase() !== 'elhalafawy9@gmail.com')];
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(fixed));
-      return fixed;
-    }
-
-    const sanitized = parsed.map(u => {
+    let resultList = parsed.map(u => {
       if (u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase() || u.email.toLowerCase() === 'elhalafawy9@gmail.com') {
         return {
           ...u,
@@ -120,7 +132,20 @@ export function loadStoredUsers(): AppUser[] {
       return u;
     });
 
-    return sanitized;
+    // Ensure ahsaber is also present
+    const hasAhsaber = resultList.some(u => u.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase());
+    if (!hasAhsaber) {
+      resultList.push(INITIAL_USERS[1]);
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(resultList));
+    }
+
+    const hasPerm = resultList.some(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
+    if (!hasPerm) {
+      resultList.unshift(INITIAL_USERS[0]);
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(resultList));
+    }
+
+    return resultList;
   } catch (e) {
     console.error('Error loading stored users:', e);
     return INITIAL_USERS;
@@ -146,6 +171,11 @@ export function saveStoredUsers(users: AppUser[]): void {
     const hasPerm = sanitized.some(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
     if (!hasPerm) {
       sanitized.unshift(INITIAL_USERS[0]);
+    }
+
+    const hasAhsaber = sanitized.some(u => u.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase());
+    if (!hasAhsaber) {
+      sanitized.push(INITIAL_USERS[1]);
     }
 
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(sanitized));

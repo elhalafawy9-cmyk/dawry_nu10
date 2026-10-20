@@ -90,10 +90,10 @@ export const TOURNAMENT_TEAMS_BILINGUAL: TeamBilingualInfo[] = [
 
   // ================= Group C =================
   {
-    canonicalName: 'سانتوس',
-    englishName: 'Santos',
+    canonicalName: 'بلباو',
+    englishName: 'Athletic Bilbao',
     group: 'C',
-    aliases: ['سانتوس', 'نادي سانتوس', 'santos', 'santos fc', 'peixe'],
+    aliases: ['بلباو', 'أتلتيكو بلباو', 'اتلتيكو بلباو', 'اتلتيك بلباو', 'athletic bilbao', 'bilbao', 'athletic club', 'سانتوس', 'santos'],
   },
   {
     canonicalName: 'انتر ميلان',
@@ -140,10 +140,10 @@ export const TOURNAMENT_TEAMS_BILINGUAL: TeamBilingualInfo[] = [
     aliases: ['اسبانيا', 'إسبانيا', 'منتخب اسبانيا', 'الماتادور', 'spain', 'españa', 'esp', 'la roja'],
   },
   {
-    canonicalName: 'نابولي',
-    englishName: 'Napoli',
+    canonicalName: 'هولندا',
+    englishName: 'Netherlands',
     group: 'D',
-    aliases: ['نابولي', 'نادي نابولي', 'napoli', 'ssc napoli', 'nap'],
+    aliases: ['هولندا', 'منتخب هولندا', 'الطواحين', 'netherlands', 'holland', 'ned', 'oranje', 'نابولي', 'napoli'],
   },
   {
     canonicalName: 'غزل المحلة',
@@ -203,10 +203,10 @@ export const TOURNAMENT_TEAMS_BILINGUAL: TeamBilingualInfo[] = [
     aliases: ['ارسنال', 'أرسنال', 'المدفعجية', 'الجانرز', 'arsenal', 'afc', 'gunners', 'arsenal fc'],
   },
   {
-    canonicalName: 'كولومبيا',
-    englishName: 'Colombia',
+    canonicalName: 'جنوب افريقيا',
+    englishName: 'South Africa',
     group: 'E',
-    aliases: ['كولومبيا', 'منتخب كولومبيا', 'colombia', 'col', 'los cafeteros'],
+    aliases: ['جنوب افريقيا', 'جنوب إفريقيا', 'منتخب جنوب افريقيا', 'بافانا بافانا', 'south africa', 'bafana bafana', 'rsa', 'كولومبيا', 'colombia'],
   },
   {
     canonicalName: 'المغرب',
@@ -247,10 +247,10 @@ export const TOURNAMENT_TEAMS_BILINGUAL: TeamBilingualInfo[] = [
     aliases: ['ايطاليا', 'إيطاليا', 'منتخب ايطاليا', 'الازوري', 'الآزوري', 'italy', 'italia', 'ita', 'azzurri'],
   },
   {
-    canonicalName: 'اياكس',
-    englishName: 'Ajax',
+    canonicalName: 'السعودية',
+    englishName: 'Saudi Arabia',
     group: 'F',
-    aliases: ['اياكس', 'أياكس', 'أياكس أمستردام', 'اياكس امستردام', 'ajax', 'afc ajax', 'amsterdam'],
+    aliases: ['السعودية', 'السعوديه', 'منتخب السعودية', 'الاخضر', 'الأخضر', 'الصقور الخضر', 'saudi arabia', 'saudi', 'ksa', 'اياكس', 'أياكس', 'ajax'],
   },
   {
     canonicalName: 'تشيلسي',

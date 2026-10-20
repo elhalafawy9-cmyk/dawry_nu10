@@ -7,6 +7,8 @@ export interface Player {
   studentId: string; // الرقم الجامعي للطالب في جامعة النيل
   isIdentityLocked?: boolean; // مقفل ومحمي - لا يمكن تعديل الاسم أو الـ ID بعد إدخاله
   photoUrl?: string; // رابط أو صورة اللاعب الرسمية
+  faculty?: string; // كلية الطالب في جامعة النيل
+  academicYear?: string | number; // السنة الدراسية للطالب
 }
 
 export const MAX_SUBS_PER_TEAM = 5;
@@ -134,11 +136,562 @@ export const PARIS_OFFICIAL_ROSTER: Player[] = [
   },
 ];
 
-// Generate empty squads for all teams so admin can add real players cleanly
+// Official approved roster for Group A teams based on official university registration sheets
+export const GROUP_A_OFFICIAL_ROSTERS: Record<string, Player[]> = {
+  'برشلونة': [
+    { id: 'p_barca_1', name: 'طاهر وائل', number: 1, position: 'GK', studentId: '261002196', faculty: 'MENG', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_barca_2', name: 'ياسين وائل', number: 2, position: 'DEF', studentId: '261002204', faculty: 'MENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_barca_3', name: 'مهند أسامه', number: 3, position: 'DEF', studentId: '261000076', faculty: 'DEE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_barca_4', name: 'عبد العزيز احمد', number: 4, position: 'MID', studentId: '261000415', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_barca_5', name: 'احمد سعيد', number: 5, position: 'MID', studentId: '261003334', faculty: 'Cyber security', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_barca_6', name: 'أحمد محمد', number: 6, position: 'MID', studentId: '241000992', faculty: 'EAS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_barca_7', name: 'فيصل يامين', number: 7, position: 'FWD', studentId: '261000067', faculty: 'IE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_barca_8', name: 'فضل ياسر', number: 8, position: 'FWD', studentId: '261000831', faculty: 'Mechatronics', isCaptain: false, isIdentityLocked: true },
+  ],
+  'انجلترا': [
+    { id: 'p_eng_1', name: 'عبد العزيز طارق', number: 1, position: 'GK', studentId: '241001104', faculty: 'CS', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_eng_2', name: 'مؤمن ايمن', number: 2, position: 'DEF', studentId: '241002066', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_eng_3', name: 'عمر ايهاب', number: 3, position: 'DEF', studentId: '241000935', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_eng_4', name: 'سيف احمد', number: 4, position: 'MID', studentId: '251002741', faculty: 'ENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_eng_5', name: 'محمد الجوهري', number: 5, position: 'MID', studentId: '251001246', faculty: 'ENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_eng_6', name: 'أحمد الخطيب', number: 6, position: 'MID', studentId: '241002602', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_eng_7', name: 'محمد ابراهيم', number: 7, position: 'FWD', studentId: '241000409', faculty: 'ENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_eng_8', name: 'زياد حاتم', number: 8, position: 'FWD', studentId: '241000405', faculty: 'ENG', isCaptain: false, isIdentityLocked: true },
+  ],
+  'ميلان': [
+    { id: 'p_milan_1', name: 'سيف محمد شفيق', number: 1, position: 'GK', studentId: '251000650', faculty: 'هندسة', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_milan_2', name: 'فارس كمال', number: 2, position: 'DEF', studentId: '251000638', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_milan_3', name: 'عمر ضياء', number: 3, position: 'DEF', studentId: '251001292', faculty: 'EAS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_milan_4', name: 'أنس أحمد', number: 4, position: 'MID', studentId: '251001322', faculty: 'Biotechnology', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_milan_5', name: 'نور الدين اشرف', number: 5, position: 'MID', studentId: '241001833', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_milan_6', name: 'عمر مهدي', number: 6, position: 'MID', studentId: '231000799', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_milan_7', name: 'احمد صالح', number: 7, position: 'FWD', studentId: '231001566', faculty: 'Biotechnology', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_milan_8', name: 'عبد الرحمن رشدي', number: 8, position: 'FWD', studentId: '251002865', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_milan_9', name: 'عمر سمير', number: 9, position: 'FWD', studentId: '251002860', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+  ],
+  'الزمالك': [
+    { id: 'p_zamalek_1', name: 'علي أشرف صديق', number: 1, position: 'GK', studentId: '231001823', faculty: 'هندسة', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_zamalek_2', name: 'بدر الدين محمد', number: 2, position: 'DEF', studentId: '231001735', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_zamalek_3', name: 'ياسين حسام', number: 3, position: 'DEF', studentId: '261000870', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_zamalek_4', name: 'مارتن نشأت', number: 4, position: 'DEF', studentId: '261000225', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_zamalek_5', name: 'محمد سامح', number: 5, position: 'MID', studentId: '231001628', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_zamalek_6', name: 'علي الزغبي', number: 6, position: 'MID', studentId: '261000696', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_zamalek_7', name: 'مروان نصر', number: 7, position: 'MID', studentId: '261000887', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_zamalek_8', name: 'حسين احمد', number: 8, position: 'FWD', studentId: '261000135', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_zamalek_9', name: 'ادم طارق', number: 9, position: 'FWD', studentId: '261000141', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+  ],
+  'روما': [
+    { id: 'p_roma_1', name: 'محمد عاشور', number: 1, position: 'GK', studentId: '231001817', faculty: 'Biotech', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_roma_2', name: 'مصطفى عباس', number: 2, position: 'DEF', studentId: '231001509', faculty: 'ENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_roma_3', name: 'محمد البدري', number: 3, position: 'DEF', studentId: '231000758', faculty: 'ENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_roma_4', name: 'أحمد زيدان', number: 4, position: 'DEF', studentId: '231001097', faculty: 'ENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_roma_5', name: 'أحمد مراد', number: 5, position: 'MID', studentId: '231001513', faculty: 'ENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_roma_6', name: 'مصطفى مختار', number: 6, position: 'MID', studentId: '231001696', faculty: 'ENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_roma_7', name: 'يوحنا أمجد', number: 7, position: 'FWD', studentId: '231001589', faculty: 'ENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_roma_8', name: 'أحمد فهمي', number: 8, position: 'FWD', studentId: '231001377', faculty: 'ENG', isCaptain: false, isIdentityLocked: true },
+  ],
+  'فرنسا': [
+    { id: 'p_france_1', name: 'يوسف اشرف', number: 1, position: 'GK', studentId: '251001182', faculty: 'Eng', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_france_2', name: 'احمد اسامه', number: 2, position: 'DEF', studentId: '251002739', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_france_3', name: 'ادم عمار', number: 3, position: 'DEF', studentId: '251002439', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_france_4', name: 'احمد كمال', number: 4, position: 'MID', studentId: '252000030', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_france_5', name: 'عبد الرحمن شريف', number: 5, position: 'MID', studentId: '251000700', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_france_6', name: 'احمد هشام', number: 6, position: 'FWD', studentId: '261000780', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+  ],
+};
+
+// Official approved roster for Group B teams based on official university registration sheets
+export const GROUP_B_OFFICIAL_ROSTERS: Record<string, Player[]> = {
+  'الجزائر': [
+    { id: 'p_alg_1', name: 'Belal sayed', number: 1, position: 'GK', studentId: '241002286', faculty: 'CS', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_alg_2', name: 'Malek bakir', number: 2, position: 'DEF', studentId: '251001428', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_alg_3', name: 'Selim mohamed', number: 3, position: 'DEF', studentId: '251002173', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_alg_4', name: 'Mamdouh reda', number: 4, position: 'MID', studentId: '261003204', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_alg_5', name: 'Malek mohamed', number: 5, position: 'MID', studentId: '261001983', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_alg_6', name: 'عبد الله', number: 6, position: 'MID', studentId: '241002424', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_alg_7', name: 'Mohand hadi', number: 7, position: 'FWD', studentId: '251002758', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_alg_8', name: 'Mohamed Mohamed', number: 8, position: 'FWD', studentId: '241002167', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_alg_9', name: 'Mohamed Hisham', number: 9, position: 'FWD', studentId: '261002094', isCaptain: false, isIdentityLocked: true },
+  ],
+  'مينيرو': [
+    { id: 'p_cam_1', name: 'عمر وليد', number: 1, position: 'GK', studentId: '231000554', faculty: 'CS', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_cam_2', name: 'محمود خالد', number: 2, position: 'DEF', studentId: '231000587', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_cam_3', name: 'أحمد فهمي', number: 3, position: 'DEF', studentId: '231000616', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_cam_4', name: 'كامل', number: 4, position: 'DEF', studentId: '231000572', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_cam_5', name: 'محمد اشرف', number: 5, position: 'MID', studentId: '231002427', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_cam_6', name: 'احمد وسام', number: 6, position: 'MID', studentId: '231000644', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_cam_7', name: 'عمر خالد', number: 7, position: 'FWD', studentId: '231000554-2', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_cam_8', name: 'إياد احمد', number: 8, position: 'FWD', studentId: '231000144', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+  ],
+  'فرانكفورت': [
+    { id: 'p_sge_1', name: 'Mohamed ashraf', number: 1, position: 'GK', studentId: '251000615', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_sge_2', name: 'Anas hegaz', number: 2, position: 'DEF', studentId: '251000073', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sge_3', name: 'Yahia abaas', number: 3, position: 'DEF', studentId: '251000595', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sge_4', name: 'Hassan ramah', number: 4, position: 'MID', studentId: '251000813', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sge_5', name: 'Ahmed bakry', number: 5, position: 'MID', studentId: '251001930', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sge_6', name: 'Ibrahim ismail', number: 6, position: 'FWD', studentId: '251002582', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sge_7', name: 'Seif mohamed', number: 7, position: 'FWD', studentId: '251000999', isCaptain: false, isIdentityLocked: true },
+  ],
+  'اليابان': [
+    { id: 'p_jpn_1', name: 'احمد إبراهيم', number: 1, position: 'GK', studentId: '261002086', faculty: 'CS', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_jpn_2', name: 'عمر سالم', number: 2, position: 'DEF', studentId: '261000031', faculty: 'Meng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_jpn_3', name: 'حسن محمد', number: 3, position: 'DEF', studentId: '261001550', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_jpn_4', name: 'عمرو محمد', number: 4, position: 'DEF', studentId: '261001040', faculty: 'DEE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_jpn_5', name: 'زياد خليفه', number: 5, position: 'MID', studentId: '261002757', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_jpn_6', name: 'عمر محمد', number: 6, position: 'MID', studentId: '261002647', faculty: 'ECE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_jpn_7', name: 'صموئيل صفوت', number: 7, position: 'MID', studentId: '261002314', faculty: 'Civil', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_jpn_8', name: 'عمر احمد', number: 8, position: 'FWD', studentId: '261002513', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_jpn_9', name: 'محمود صبري', number: 9, position: 'FWD', studentId: '261002578', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_jpn_10', name: 'ادهم منصور', number: 10, position: 'FWD', studentId: '261000681', faculty: 'Meng', isCaptain: false, isIdentityLocked: true },
+  ],
+  'النرويج': [
+    { id: 'p_nor_1', name: 'Abdo Sameh', number: 1, position: 'GK', studentId: '261001053', faculty: 'CS', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_nor_2', name: 'youssef mohamed', number: 2, position: 'DEF', studentId: '261000370', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_nor_3', name: 'yassin ali', number: 3, position: 'DEF', studentId: '261001071', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_nor_4', name: 'mohamed amr', number: 4, position: 'MID', studentId: '261000189', faculty: 'MPE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_nor_5', name: 'Adel Mohamed', number: 5, position: 'MID', studentId: '261000904', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_nor_6', name: 'Anas Emad', number: 6, position: 'MID', studentId: '261000959', faculty: 'CE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_nor_7', name: 'Omar Zayed', number: 7, position: 'FWD', studentId: '261000522', faculty: 'MPE', isCaptain: false, isIdentityLocked: true },
+  ],
+  'ميامي': [
+    { id: 'p_mia_1', name: 'Abdelrahman Ashraf', number: 1, position: 'GK', studentId: '261003306', faculty: 'Business', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_mia_2', name: 'Amr Saroy', number: 2, position: 'DEF', studentId: '261002759', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mia_3', name: 'Abdelhamid Elamir', number: 3, position: 'DEF', studentId: '261000101', faculty: 'MENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mia_4', name: 'Omar Yasser', number: 4, position: 'MID', studentId: '251002593', faculty: 'ECE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mia_5', name: 'Youssef Elhamaky', number: 5, position: 'MID', studentId: '241000676', faculty: 'CE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mia_6', name: 'Omar Mahmoud', number: 6, position: 'MID', studentId: '251002870', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mia_7', name: 'Mohamed Omar', number: 7, position: 'MID', studentId: '241000514', faculty: 'CE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mia_8', name: 'Ahmed Abdelnaim', number: 8, position: 'FWD', studentId: '261002905', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mia_9', name: 'Abdelrahman Tarek', number: 9, position: 'FWD', studentId: '261000996', faculty: 'AI', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mia_10', name: 'Omar Amin', number: 10, position: 'FWD', studentId: '251002846', faculty: 'AI', isCaptain: false, isIdentityLocked: true },
+  ],
+};
+
+// Official approved roster for Group C teams based on official university registration sheets
+export const GROUP_C_OFFICIAL_ROSTERS: Record<string, Player[]> = {
+  'بلباو': [
+    { id: 'p_ath_1', name: 'اسر بركات', number: 1, position: 'GK', studentId: '261000538', faculty: 'AI', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_ath_2', name: 'فاروق احمد', number: 2, position: 'DEF', studentId: '261000120', faculty: 'AI', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ath_3', name: 'يوسف البطراوي', number: 3, position: 'DEF', studentId: '261000700', faculty: 'AI', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ath_4', name: 'سيف احمد', number: 4, position: 'MID', studentId: '261002463', faculty: 'AI', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ath_5', name: 'احمد جلال', number: 5, position: 'MID', studentId: '261001416', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ath_6', name: 'عمر خالد', number: 6, position: 'FWD', studentId: '261000745', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ath_7', name: 'ياسين العاشري', number: 7, position: 'FWD', studentId: '261000082', faculty: 'AI', isCaptain: false, isIdentityLocked: true },
+  ],
+  'انتر ميلان': [
+    { id: 'p_int_1', name: 'ياسين احمد', number: 1, position: 'GK', studentId: '261000252', faculty: 'MENG', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_int_2', name: 'يوسف حماده', number: 2, position: 'DEF', studentId: '261000338', faculty: 'MENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_int_3', name: 'عمر هادي', number: 3, position: 'DEF', studentId: '261002506', faculty: 'BBA', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_int_4', name: 'مازن علاء', number: 4, position: 'MID', studentId: '261000236', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_int_5', name: 'سيف علي', number: 5, position: 'MID', studentId: '261002225', faculty: 'MENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_int_6', name: 'ياسين بدر', number: 6, position: 'MID', studentId: '251000438', faculty: 'BA', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_int_7', name: 'زياد هاني', number: 7, position: 'FWD', studentId: '261000784', faculty: 'DEE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_int_8', name: 'يوسف وائل', number: 8, position: 'FWD', studentId: '261002884', faculty: 'ECE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_int_9', name: 'عمر محمد', number: 9, position: 'FWD', studentId: '261003072', faculty: 'MENG', isCaptain: false, isIdentityLocked: true },
+  ],
+  'البرازيل': [
+    { id: 'p_bra_1', name: 'عمرو خالد', number: 1, position: 'GK', studentId: '251001297', faculty: 'هندسة', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_bra_2', name: 'محمود عمرو', number: 2, position: 'DEF', studentId: '251002303', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_bra_3', name: 'مصطفى لطفي', number: 3, position: 'DEF', studentId: '251001251', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_bra_4', name: 'كريم بيومي', number: 4, position: 'MID', studentId: '251001744', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_bra_5', name: 'عز الدين', number: 5, position: 'MID', studentId: '251002014', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_bra_6', name: 'ياسين احمد', number: 6, position: 'FWD', studentId: '251002017', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_bra_7', name: 'حمزه عبد الله', number: 7, position: 'FWD', studentId: '251000298', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+  ],
+  'نيوكاسل': [
+    { id: 'p_new_1', name: 'Hassan Abdalgawad', number: 1, position: 'GK', studentId: '241002182', faculty: 'CS', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_new_2', name: 'Omar Mohamed', number: 2, position: 'DEF', studentId: '241000066', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_new_3', name: 'Ahmed Mohamed', number: 3, position: 'DEF', studentId: '241001977', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_new_4', name: 'Mohanad Saber', number: 4, position: 'MID', studentId: '261002863', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_new_5', name: 'Bilal Ali', number: 5, position: 'MID', studentId: '251002827', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_new_6', name: 'Farouk Mohamed', number: 6, position: 'MID', studentId: '241002089', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_new_7', name: 'Ziad Mahmoud', number: 7, position: 'FWD', studentId: '251000293', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_new_8', name: 'Yousef Maher', number: 8, position: 'FWD', studentId: '241002035', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+  ],
+  'النصر': [
+    { id: 'p_nas_1', name: 'ادهم منصور', number: 1, position: 'GK', studentId: '261000681', faculty: 'MENG', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_nas_2', name: 'عمر سالم', number: 2, position: 'DEF', studentId: '261000031', faculty: 'MENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_nas_3', name: 'محمد سامح', number: 3, position: 'DEF', studentId: '261001656', faculty: 'ECE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_nas_4', name: 'سيف سامي', number: 4, position: 'MID', studentId: '261000022', faculty: 'ECE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_nas_5', name: 'سيف عمر', number: 5, position: 'MID', studentId: '261002023', faculty: 'MENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_nas_6', name: 'فهد محمد', number: 6, position: 'MID', studentId: '261002049', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_nas_7', name: 'احمد هشام', number: 7, position: 'FWD', studentId: '261003232', faculty: 'Biotec', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_nas_8', name: 'ياسين احمد', number: 8, position: 'FWD', studentId: '261001594', faculty: 'ECE', isCaptain: false, isIdentityLocked: true },
+  ],
+  'مصر': [
+    { id: 'p_egy_1', name: 'عمر علي', number: 1, position: 'GK', studentId: '241001185', faculty: 'CS', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_egy_2', name: 'عبد الرحمن مصطفي', number: 2, position: 'DEF', studentId: '241001129', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_egy_3', name: 'وسام انور', number: 3, position: 'DEF', studentId: '241002590', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_egy_4', name: 'عمر اشرف', number: 4, position: 'DEF', studentId: '241002107', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_egy_5', name: 'فارس عمرو', number: 5, position: 'MID', studentId: '241002158', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_egy_6', name: 'محمد عبد الواحد', number: 6, position: 'MID', studentId: '241001362', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_egy_7', name: 'عمر ناجد', number: 7, position: 'MID', studentId: '241001162', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_egy_8', name: 'ابراهيم علي', number: 8, position: 'FWD', studentId: '241002423', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_egy_9', name: 'Hamed Amer', number: 9, position: 'FWD', studentId: '241001279', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_egy_10', name: 'Zyad elkholy', number: 10, position: 'FWD', studentId: '241001186', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+  ],
+};
+
+// Official approved roster for Group D teams based on official university registration sheets
+export const GROUP_D_OFFICIAL_ROSTERS: Record<string, Player[]> = {
+  'باريس': [
+    { id: 'p_paris_1', name: 'samir alhalafawy', number: 1, position: 'GK', studentId: '241000442', faculty: 'ce', academicYear: 3, isCaptain: true, isIdentityLocked: true },
+    { id: 'p_paris_2', name: 'andrew ashraf', number: 2, position: 'DEF', studentId: '241002028', faculty: 'ece', academicYear: 3, isCaptain: false, isIdentityLocked: true },
+    { id: 'p_paris_3', name: 'ahmed samir', number: 3, position: 'DEF', studentId: '241001376', faculty: 'ece', academicYear: 3, isCaptain: false, isIdentityLocked: true },
+    { id: 'p_paris_4', name: 'mohamed amer', number: 4, position: 'DEF', studentId: '241002229', faculty: 'arud', academicYear: 3, isCaptain: false, isIdentityLocked: true },
+    { id: 'p_paris_5', name: 'mohamed galal', number: 5, position: 'MID', studentId: '231001145', faculty: 'mech', academicYear: 4, isCaptain: false, isIdentityLocked: true },
+    { id: 'p_paris_6', name: 'youssef zaghloul', number: 6, position: 'MID', studentId: '221001650', faculty: 'BBA', academicYear: 4, isCaptain: false, isIdentityLocked: true },
+    { id: 'p_paris_7', name: 'saifelden mahmoud', number: 7, position: 'MID', studentId: '241001341', faculty: 'ce', academicYear: 3, isCaptain: false, isIdentityLocked: true },
+    { id: 'p_paris_8', name: 'abdelrahman emad', number: 8, position: 'FWD', studentId: '241001687', faculty: 'mech', academicYear: 3, isCaptain: false, isIdentityLocked: true },
+    { id: 'p_paris_9', name: 'ziad Eissa', number: 9, position: 'FWD', studentId: '241001897', faculty: 'cs', academicYear: 3, isCaptain: false, isIdentityLocked: true },
+    { id: 'p_paris_10', name: 'moataz hany', number: 10, position: 'FWD', studentId: '221001683', faculty: 'engineering', academicYear: 4, isCaptain: false, isIdentityLocked: true },
+  ],
+  'اسبانيا': [
+    { id: 'p_esp_1', name: 'معاذ ناصر حسن', number: 1, position: 'GK', studentId: '251002217', faculty: 'هندسة', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_esp_2', name: 'محمد القرش', number: 2, position: 'DEF', studentId: '251001951', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_esp_3', name: 'أحمد خالد سماك', number: 3, position: 'DEF', studentId: '251001763', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_esp_4', name: 'ايمن الصبيان', number: 4, position: 'MID', studentId: '251001826', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_esp_5', name: 'حمزة سويلم', number: 5, position: 'MID', studentId: '251001869', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_esp_6', name: 'مازن السعدني', number: 6, position: 'MID', studentId: '251002344', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_esp_7', name: 'محمد رامي رياض', number: 7, position: 'FWD', studentId: '251000329', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_esp_8', name: 'مازن فرحات صلاح', number: 8, position: 'FWD', studentId: '261002406', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+  ],
+  'هولندا': [
+    { id: 'p_ned_1', name: 'احمد اسماعيل', number: 1, position: 'GK', studentId: '211001701', faculty: 'هندسة', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_ned_2', name: 'ميشيل هاني', number: 2, position: 'DEF', studentId: '181019940', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ned_3', name: 'احمد لطفي', number: 3, position: 'DEF', studentId: '221001750', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ned_4', name: 'لؤي عادل', number: 4, position: 'MID', studentId: '1710909', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ned_5', name: 'انس عبد الكريم', number: 5, position: 'MID', studentId: '221001951', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ned_6', name: 'ليث عبد الغفار', number: 6, position: 'FWD', studentId: '212002435', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ned_7', name: 'مازن عمرو', number: 7, position: 'FWD', studentId: '202001083', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+  ],
+  'غزل المحلة': [
+    { id: 'p_mah_1', name: 'مدحت عامر', number: 1, position: 'GK', studentId: '261002567', faculty: 'Business', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_mah_2', name: 'عبد الرحمن محمد', number: 2, position: 'DEF', studentId: '261000549', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mah_3', name: 'ياسين عدنان', number: 3, position: 'DEF', studentId: '261000169', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mah_4', name: 'احمد أسامه', number: 4, position: 'MID', studentId: '261000237', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mah_5', name: 'محمد ناصر', number: 5, position: 'MID', studentId: '261000756', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mah_6', name: 'محمود احمد', number: 6, position: 'MID', studentId: '261002751', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mah_7', name: 'ياسين محمد', number: 7, position: 'FWD', studentId: '261001258', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mah_8', name: 'يوسف ايهاب', number: 8, position: 'FWD', studentId: '261000728', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+  ],
+  'اتلتيكو مدريد': [
+    { id: 'p_atm_1', name: 'Ahmed tamer', number: 1, position: 'GK', studentId: '241000403', faculty: 'Cs', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_atm_2', name: 'Adam hassan', number: 2, position: 'DEF', studentId: '241001178', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_atm_3', name: 'Omar nashaat', number: 3, position: 'DEF', studentId: '241001036', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_atm_4', name: 'Nour mahalawy', number: 4, position: 'MID', studentId: '241000271', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_atm_5', name: 'Ali el hosseny', number: 5, position: 'MID', studentId: '241001208', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_atm_6', name: 'Omar wessam', number: 6, position: 'MID', studentId: '2410002342', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_atm_7', name: 'Omar galal', number: 7, position: 'MID', studentId: '241001635', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_atm_8', name: 'Ibrahim hany', number: 8, position: 'FWD', studentId: '241000702', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_atm_9', name: 'Ziad osama', number: 9, position: 'FWD', studentId: '251001927', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+  ],
+  'المانيا': [
+    { id: 'p_ger_1', name: 'حسام محمد', number: 1, position: 'GK', studentId: '251002386', faculty: 'Cs', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_ger_2', name: 'محمود محمد', number: 2, position: 'DEF', studentId: '261001793', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ger_3', name: 'مصطفى محمود', number: 3, position: 'DEF', studentId: '221000191', faculty: 'ECE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ger_4', name: 'مؤمن خيري', number: 4, position: 'MID', studentId: '251002747', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ger_5', name: 'محمد عزت', number: 5, position: 'MID', studentId: '261001758', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ger_6', name: 'عبد الله هشام', number: 6, position: 'MID', studentId: '261003119', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ger_7', name: 'ياسين جلال', number: 7, position: 'MID', studentId: '25100237', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ger_8', name: 'عمر أسامة', number: 8, position: 'FWD', studentId: '251002123', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ger_9', name: 'محمد عرفه', number: 9, position: 'FWD', studentId: '261001562', faculty: 'BBA', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ger_10', name: 'شادي محمد', number: 10, position: 'FWD', studentId: '261002212', faculty: 'Mng', isCaptain: false, isIdentityLocked: true },
+  ],
+};
+
+// Official approved roster for Group E teams based on official university registration sheets
+export const GROUP_E_OFFICIAL_ROSTERS: Record<string, Player[]> = {
+  'استون فيلا': [
+    { id: 'p_avl_1', name: 'عمار احمد', number: 1, position: 'GK', studentId: '261003332', faculty: 'CS', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_avl_2', name: 'محمد شيندي', number: 2, position: 'DEF', studentId: '231000415', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_avl_3', name: 'محمد مجدي', number: 3, position: 'DEF', studentId: '261002029', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_avl_4', name: 'احمد خالد', number: 4, position: 'MID', studentId: '261002222', faculty: 'business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_avl_5', name: 'يوسف كمال', number: 5, position: 'MID', studentId: '231002749', faculty: 'business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_avl_6', name: 'يوسف عمرو', number: 6, position: 'MID', studentId: '261000834', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_avl_7', name: 'عمرو ايمن', number: 7, position: 'FWD', studentId: '261002043', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_avl_8', name: 'Mohab Abdelfattah', number: 8, position: 'FWD', studentId: '261001760', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+  ],
+  'امريكا': [
+    { id: 'p_usa_1', name: 'مهند جسام', number: 1, position: 'GK', studentId: '231000474', faculty: 'هندسة', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_usa_2', name: 'نورالدين حسين', number: 2, position: 'DEF', studentId: '231001233', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_usa_3', name: 'يوسف حازم', number: 3, position: 'DEF', studentId: '231000600', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_usa_4', name: 'عمرو غيث', number: 4, position: 'MID', studentId: '231002271', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_usa_5', name: 'محمد علاء', number: 5, position: 'MID', studentId: '231001663', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_usa_6', name: 'عمر البلتاجي', number: 6, position: 'MID', studentId: '231000164', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_usa_7', name: 'احمد شطا', number: 7, position: 'FWD', studentId: '231000267', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_usa_8', name: 'عبد الرحمن الاطروش', number: 8, position: 'FWD', studentId: '231001741', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+  ],
+  'ارسنال': [
+    { id: 'p_ars_1', name: 'حمزه مصطفي', number: 1, position: 'GK', studentId: '261001578', faculty: 'CS', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_ars_2', name: 'عمر رشاد', number: 2, position: 'DEF', studentId: '261002959', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ars_3', name: 'لؤي احمد', number: 3, position: 'DEF', studentId: '261000703', faculty: 'هندسه', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ars_4', name: 'كريم هيثم', number: 4, position: 'MID', studentId: '221001621', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ars_5', name: 'عمر حماده', number: 5, position: 'MID', studentId: '261000353', faculty: 'هندسه', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ars_6', name: 'عمر', number: 6, position: 'MID', studentId: '261001978', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ars_7', name: 'فاروق خالد', number: 7, position: 'FWD', studentId: '261002624', faculty: 'هندسه', isCaptain: false, isIdentityLocked: true },
+  ],
+  'جنوب افريقيا': [
+    { id: 'p_rsa_1', name: 'مازن احمد', number: 1, position: 'GK', studentId: '251000307', faculty: 'هندسة', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_rsa_2', name: 'عمر محمد فوزي', number: 2, position: 'DEF', studentId: '251002020', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_rsa_3', name: 'يوسف حمدي', number: 3, position: 'DEF', studentId: '261001447', faculty: 'هندسه', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_rsa_4', name: 'عمر محمد كمال', number: 4, position: 'MID', studentId: '251001035', faculty: 'هندسه', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_rsa_5', name: 'مارك فادي', number: 5, position: 'MID', studentId: '251000768', faculty: 'هندسه', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_rsa_6', name: 'مصطفي عليوة', number: 6, position: 'MID', studentId: '231000405', faculty: 'كمبيوتر ساينس', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_rsa_7', name: 'علي محمد فوزي', number: 7, position: 'FWD', studentId: '251002214', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+  ],
+  'المغرب': [
+    { id: 'p_mar_1', name: 'احمد وليد عباس', number: 1, position: 'GK', studentId: '251002682', faculty: 'Mec.engineer', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_mar_2', name: 'احمد محمود مصطفي', number: 2, position: 'DEF', studentId: '261003060', faculty: 'Mec.engineer', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mar_3', name: 'علي احمد علي', number: 3, position: 'DEF', studentId: '261001776', faculty: 'Mec.engineer', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mar_4', name: 'احمد كريم إبراهيم', number: 4, position: 'MID', studentId: '251000229', faculty: 'Civil engineer', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mar_5', name: 'انس كريم إبراهيم', number: 5, position: 'MID', studentId: '261000876', faculty: 'Mec.engineer', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mar_6', name: 'ادهم إدريس', number: 6, position: 'MID', studentId: '261000267', faculty: 'ECE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mar_7', name: 'عمرو احمد صقر', number: 7, position: 'MID', studentId: '251000790', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mar_8', name: 'عمر ايمن', number: 8, position: 'FWD', studentId: '251001590', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mar_9', name: 'عمر حلافاوي', number: 9, position: 'FWD', studentId: '251000843', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mar_10', name: 'محمود زيادة', number: 10, position: 'FWD', studentId: '251002255', faculty: 'Civil engineering', isCaptain: false, isIdentityLocked: true },
+  ],
+  'طرابزون': [
+    { id: 'p_tra_1', name: 'يوسف وليد', number: 1, position: 'GK', studentId: '251002772', faculty: 'هندسة', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_tra_2', name: 'احمد سايدو', number: 2, position: 'DEF', studentId: '251002302', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_tra_3', name: 'محمد هاني', number: 3, position: 'DEF', studentId: '251001960', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_tra_4', name: 'احمد مدحت', number: 4, position: 'MID', studentId: '251000290', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_tra_5', name: 'عبد الرحمن اشرف', number: 5, position: 'MID', studentId: '251002531', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_tra_6', name: 'ايهاب عجمي', number: 6, position: 'MID', studentId: '261009473', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_tra_7', name: 'يوسف ايمن', number: 7, position: 'FWD', studentId: '251001537', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_tra_8', name: 'ادم هاني', number: 8, position: 'FWD', studentId: '261000981', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+  ],
+};
+
+// Official approved roster for Group F teams based on official university registration sheets
+export const GROUP_F_OFFICIAL_ROSTERS: Record<string, Player[]> = {
+  'بروسيا': [
+    { id: 'p_bvb_1', name: 'عمر عصام', number: 1, position: 'GK', studentId: '241001118', faculty: 'Engineering', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_bvb_2', name: 'Omar mostafa', number: 2, position: 'DEF', studentId: '251002105', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_bvb_3', name: 'Youssef magdy', number: 3, position: 'DEF', studentId: '241000247', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_bvb_4', name: 'Mohamed taher', number: 4, position: 'MID', studentId: '241002254', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_bvb_5', name: 'Mohamed mohsen', number: 5, position: 'MID', studentId: '241002124', faculty: 'Buissness', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_bvb_6', name: 'Youssef batour', number: 6, position: 'FWD', studentId: '241001575', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_bvb_7', name: 'Adhm tamer', number: 7, position: 'FWD', studentId: '241002439', faculty: 'Buissness', isCaptain: false, isIdentityLocked: true },
+  ],
+  'بايرن': [
+    { id: 'p_fcb_1', name: 'محمد عمرو', number: 1, position: 'GK', studentId: '231001096', faculty: 'حاسبات ومعلومات', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_fcb_2', name: 'يحيي اشرف علي', number: 2, position: 'DEF', studentId: '261000311', faculty: 'حاسبات ومعلومات', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_fcb_3', name: 'ايمن نعمان', number: 3, position: 'DEF', studentId: '231001297', faculty: 'علوم حاسوب', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_fcb_4', name: 'يوسف قنديل', number: 4, position: 'MID', studentId: '231001025', faculty: 'حاسبات ومعلومات', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_fcb_5', name: 'محمد اسامه', number: 5, position: 'MID', studentId: '231000562', faculty: 'حاسبات ومعلومات', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_fcb_6', name: 'عمر محمد عبد الحميد', number: 6, position: 'MID', studentId: '261003097', faculty: 'حاسبات ومعلومات', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_fcb_7', name: 'محمد طلبه', number: 7, position: 'FWD', studentId: '261001054', faculty: 'حاسبات ومعلومات', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_fcb_8', name: 'علي سامح', number: 8, position: 'FWD', studentId: '231001181', faculty: 'حاسبات ومعلومات', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_fcb_9', name: 'يحيي رضوان', number: 9, position: 'FWD', studentId: '251001343', faculty: 'حاسبات ومعلومات', isCaptain: false, isIdentityLocked: true },
+  ],
+  'ريال مدريد': [
+    { id: 'p_rma_1', name: 'ياسين حسام', number: 1, position: 'GK', studentId: '251002501', faculty: 'هندسة', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_rma_2', name: 'محمد مجدي', number: 2, position: 'DEF', studentId: '251001500', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_rma_3', name: 'كريم البلوك', number: 3, position: 'DEF', studentId: '251001580', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_rma_4', name: 'جاسر محمد', number: 4, position: 'MID', studentId: '251001559', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_rma_5', name: 'علي اشرف', number: 5, position: 'MID', studentId: '251001499', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_rma_6', name: 'اياد محمد', number: 6, position: 'FWD', studentId: '251001577', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_rma_7', name: 'احمد تامر', number: 7, position: 'FWD', studentId: '251001774', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+  ],
+  'ايطاليا': [
+    { id: 'p_ita_1', name: 'كريم محمود', number: 1, position: 'GK', studentId: '231001840', faculty: 'CS', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_ita_2', name: 'محمد احمد', number: 2, position: 'DEF', studentId: '231001866', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ita_3', name: 'يوسف وليد', number: 3, position: 'DEF', studentId: '231001932', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ita_4', name: 'عمر سيد', number: 4, position: 'MID', studentId: '231001712', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ita_5', name: 'عمرو عبد التواب', number: 5, position: 'MID', studentId: '221001987', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ita_6', name: 'احمد ايمن', number: 6, position: 'MID', studentId: '231002205', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ita_7', name: 'زياد نبيل', number: 7, position: 'FWD', studentId: '231001884', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ita_8', name: 'نور يحيى', number: 8, position: 'FWD', studentId: '231002206', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+  ],
+  'السعودية': [
+    { id: 'p_sau_1', name: 'بلال ممدوح', number: 1, position: 'GK', studentId: '231000427', faculty: 'CS', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_sau_2', name: 'احمد السيد', number: 2, position: 'DEF', studentId: '231000517', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_3', name: 'محمد زياد', number: 3, position: 'DEF', studentId: '231002617', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_4', name: 'عمرو علاء', number: 4, position: 'MID', studentId: '261000517', faculty: 'AI', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_5', name: 'رياض الشيمي', number: 5, position: 'MID', studentId: '221001488', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_6', name: 'سيف عبد المؤمن', number: 6, position: 'MID', studentId: '231001990', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_7', name: 'محمد وليد', number: 7, position: 'FWD', studentId: '231000157', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_8', name: 'عبد الرحمن نادر', number: 8, position: 'FWD', studentId: '231000424', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_9', name: 'احمد فهمي', number: 9, position: 'FWD', studentId: '261000488', faculty: 'AI', isCaptain: false, isIdentityLocked: true },
+  ],
+  'اياكس': [
+    { id: 'p_sau_1', name: 'بلال ممدوح', number: 1, position: 'GK', studentId: '231000427', faculty: 'CS', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_sau_2', name: 'احمد السيد', number: 2, position: 'DEF', studentId: '231000517', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_3', name: 'محمد زياد', number: 3, position: 'DEF', studentId: '231002617', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_4', name: 'عمرو علاء', number: 4, position: 'MID', studentId: '261000517', faculty: 'AI', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_5', name: 'رياض الشيمي', number: 5, position: 'MID', studentId: '221001488', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_6', name: 'سيف عبد المؤمن', number: 6, position: 'MID', studentId: '231001990', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_7', name: 'محمد وليد', number: 7, position: 'FWD', studentId: '231000157', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_8', name: 'عبد الرحمن نادر', number: 8, position: 'FWD', studentId: '231000424', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_sau_9', name: 'احمد فهمي', number: 9, position: 'FWD', studentId: '261000488', faculty: 'AI', isCaptain: false, isIdentityLocked: true },
+  ],
+  'تشيلسي': [
+    { id: 'p_cfc_1', name: 'يوسف محمد طاهر', number: 1, position: 'GK', studentId: '231000075', faculty: 'ECE', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_cfc_2', name: 'علي وليد الحسيني', number: 2, position: 'DEF', studentId: '231001801', faculty: 'MENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_cfc_3', name: 'عبد الرحمن محمد طاهر', number: 3, position: 'DEF', studentId: '251000120', faculty: 'MENG', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_cfc_4', name: 'عمر ايمن', number: 4, position: 'MID', studentId: '251000096', faculty: 'ECE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_cfc_5', name: 'طالحه حسام', number: 5, position: 'MID', studentId: '251000327', faculty: 'ECE', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_cfc_6', name: 'لؤي عمرو', number: 6, position: 'MID', studentId: '251001385', faculty: 'CIVIL', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_cfc_7', name: 'يوسف هاني', number: 7, position: 'FWD', studentId: '251001386', faculty: 'MENG', isCaptain: false, isIdentityLocked: true },
+  ],
+};
+
+// Official approved roster for Group G teams based on official university registration sheets
+export const GROUP_G_OFFICIAL_ROSTERS: Record<string, Player[]> = {
+  'مان سيتي': [
+    { id: 'p_mci_1', name: 'ادم دياب', number: 1, position: 'GK', studentId: '261000845', faculty: 'tss', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_mci_2', name: 'يوسف مايكل', number: 2, position: 'DEF', studentId: '251000893', faculty: 'mechanical.eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mci_3', name: 'محمد عاطف', number: 3, position: 'DEF', studentId: '251002784', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mci_4', name: 'معاذ حسين', number: 4, position: 'MID', studentId: '261002854', faculty: 'itcs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mci_5', name: 'احمد وليد', number: 5, position: 'MID', studentId: '261002860', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mci_6', name: 'محمد جمال', number: 6, position: 'MID', studentId: '261001182', faculty: 'itcs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mci_7', name: 'سيف الدين', number: 7, position: 'FWD', studentId: '261000938', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mci_8', name: 'ايمن محمد', number: 8, position: 'FWD', studentId: '261002025', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mci_9', name: 'حمزه احمد', number: 9, position: 'FWD', studentId: '261003039', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mci_10', name: 'محمد الجويلي', number: 10, position: 'FWD', studentId: '261002264', isCaptain: false, isIdentityLocked: true },
+  ],
+  'اكتوبر': [
+    { id: 'p_oct_1', name: 'محمود محمد حامد', number: 1, position: 'GK', studentId: '261001708', faculty: 'Industrial Engineering', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_oct_2', name: 'عبد الرحمن احمد كمال', number: 2, position: 'DEF', studentId: '261003020', faculty: 'Computer science', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_oct_3', name: 'إبراهيم اشرف عبد المعز', number: 3, position: 'DEF', studentId: '261002658', faculty: 'Business Administration', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_oct_4', name: 'كريم خالد مراد', number: 4, position: 'MID', studentId: '261002652', faculty: 'Computer Science', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_oct_5', name: 'ادم احمد عبد الله', number: 5, position: 'MID', studentId: '261000044', faculty: 'Computer Science', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_oct_6', name: 'عمر احمد محمد فاروق', number: 6, position: 'FWD', studentId: '261002143', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_oct_7', name: 'محمد حازم طه', number: 7, position: 'FWD', studentId: '261002553', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+  ],
+  'يونايتد': [
+    { id: 'p_mun_1', name: 'Yassin Altahawy', number: 1, position: 'GK', studentId: '251001547', faculty: 'CS', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_mun_2', name: 'Yassin Khaled', number: 2, position: 'DEF', studentId: '251001151', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mun_3', name: 'Youssef mohamed', number: 3, position: 'DEF', studentId: '251000588', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mun_4', name: 'Opy Alaa', number: 4, position: 'MID', studentId: '25100125', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mun_5', name: 'Hazem amir', number: 5, position: 'MID', studentId: '251001992', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mun_6', name: 'Yassin Gouda', number: 6, position: 'MID', studentId: '251000078', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mun_7', name: 'Ziad sobhy', number: 7, position: 'MID', studentId: '251000031', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mun_8', name: 'Karim Hadi', number: 8, position: 'FWD', studentId: '261000999', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mun_9', name: 'Mazen mabrouk', number: 9, position: 'FWD', studentId: '251002185', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mun_10', name: 'Omar Khaled', number: 10, position: 'FWD', studentId: '251001215', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+  ],
+  'الارجنتين': [
+    { id: 'p_arg_1', name: 'صالح شريف', number: 1, position: 'GK', studentId: '251002573', faculty: 'Business', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_arg_2', name: 'Adam alsheikh', number: 2, position: 'DEF', studentId: '251000230', faculty: 'Handasa', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_arg_3', name: 'Anas hazem', number: 3, position: 'DEF', studentId: '251000665', faculty: 'Mechatronics', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_arg_4', name: 'Hady ahmed', number: 4, position: 'MID', studentId: '251000256', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_arg_5', name: 'Akram wael', number: 5, position: 'MID', studentId: '251002553', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_arg_6', name: 'Abdelrhman ragaby', number: 6, position: 'FWD', studentId: '251002050', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+  ],
+  'ليفربول': [
+    { id: 'p_liv_1', name: 'يحيى منذر', number: 1, position: 'GK', studentId: '251000810', faculty: 'Eng', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_liv_2', name: 'محمد خالد', number: 2, position: 'DEF', studentId: '251001149', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_liv_3', name: 'يوسف منذر', number: 3, position: 'DEF', studentId: '251000661', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_liv_4', name: 'ادم عويس', number: 4, position: 'MID', studentId: '251000822', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_liv_5', name: 'حمزه طارق', number: 5, position: 'MID', studentId: '251000631', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_liv_6', name: 'عمرو سعيد', number: 6, position: 'MID', studentId: '241002638', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_liv_7', name: 'يوسف محمد', number: 7, position: 'FWD', studentId: '251000463', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_liv_8', name: 'علي يسري', number: 8, position: 'FWD', studentId: '251001963', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_liv_9', name: 'بلال طارق', number: 9, position: 'FWD', studentId: '261000647', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+  ],
+  'ليفركوزن': [
+    { id: 'p_b04_1', name: 'محمد محمود', number: 1, position: 'GK', studentId: '251001065', faculty: 'Engineering', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_b04_2', name: 'اسامه محروس', number: 2, position: 'DEF', studentId: '251002554', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_b04_3', name: 'كريم عبد الرحيم', number: 3, position: 'DEF', studentId: '261000402', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_b04_4', name: 'عبد الحليم امين', number: 4, position: 'MID', studentId: '251001272', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_b04_5', name: 'مهند هادي', number: 5, position: 'MID', studentId: '261000402-2', faculty: 'CS', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_b04_6', name: 'عبد الله محمد', number: 6, position: 'MID', studentId: '261003069', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_b04_7', name: 'عادل شريف', number: 7, position: 'FWD', studentId: '251001374', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_b04_8', name: 'محمد خالد', number: 8, position: 'FWD', studentId: '261000362', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_b04_9', name: 'يوسف محمد', number: 9, position: 'FWD', studentId: '241002584', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+  ],
+};
+
+// Official approved roster for Group H teams based on official university registration sheets
+export const GROUP_H_OFFICIAL_ROSTERS: Record<string, Player[]> = {
+  'يوفنتوس': [
+    { id: 'p_juv_1', name: 'معاذ جلال', number: 1, position: 'GK', studentId: '261001508', faculty: 'Cs', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_juv_2', name: 'عمر خالد', number: 2, position: 'DEF', studentId: '261000748', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_juv_3', name: 'فادي سامح', number: 3, position: 'DEF', studentId: '261001634', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_juv_4', name: 'احمد ايهاب على', number: 4, position: 'MID', studentId: '261001639', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_juv_5', name: 'علي اسعد', number: 5, position: 'MID', studentId: '261000701', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_juv_6', name: 'عمر درويش', number: 6, position: 'MID', studentId: '261002541', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_juv_7', name: 'احمد شعبان', number: 7, position: 'MID', studentId: '261003037', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_juv_8', name: 'يوسف ادهم', number: 8, position: 'FWD', studentId: '261001316', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_juv_9', name: 'براء احمد', number: 9, position: 'FWD', studentId: '261003186', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_juv_10', name: 'مروان احمد', number: 10, position: 'FWD', studentId: '261001087', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+  ],
+  'الاهلي': [
+    { id: 'p_ahl_1', name: 'Eprahim abdelnapy', number: 1, position: 'GK', studentId: '231000352', faculty: 'هندسة', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_ahl_2', name: 'Emad Mohamed', number: 2, position: 'DEF', studentId: '231000360', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ahl_3', name: 'Yehia nady', number: 3, position: 'DEF', studentId: '231000814', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ahl_4', name: 'Abdelrahman Khalil', number: 4, position: 'MID', studentId: '231001816', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ahl_5', name: 'Ziad Ahmed', number: 5, position: 'MID', studentId: '231000730', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ahl_6', name: 'Aly Hosny', number: 6, position: 'MID', studentId: '231001865', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ahl_7', name: 'Mohamed Farag', number: 7, position: 'FWD', studentId: '231000508', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_ahl_8', name: 'Ahmed Nasr', number: 8, position: 'FWD', studentId: '231001867', faculty: 'هندسة', isCaptain: false, isIdentityLocked: true },
+  ],
+  'توتنهام': [
+    { id: 'p_tot_1', name: 'زياد محمد غنيم', number: 1, position: 'GK', studentId: '261000954', faculty: 'Computer science', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_tot_2', name: 'احمد ياسين صبري', number: 2, position: 'DEF', studentId: '261002515', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_tot_3', name: 'عبد الرحمن احمد صلاح', number: 3, position: 'DEF', studentId: '261001678', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_tot_4', name: 'عبد الله احمد السيد', number: 4, position: 'MID', studentId: '261002520', faculty: 'Mechanical engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_tot_5', name: 'جاسر احمد رشدي', number: 5, position: 'MID', studentId: '261002808', faculty: 'Data.engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_tot_6', name: 'ياسين فريد محمد', number: 6, position: 'MID', studentId: '261002124', faculty: 'Computer science', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_tot_7', name: 'تيم احمد كمال', number: 7, position: 'MID', studentId: '261002172', faculty: 'Mechanical engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_tot_8', name: 'مروان احمد صابر', number: 8, position: 'FWD', studentId: '261002684', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_tot_9', name: 'احمد حسين سيد', number: 9, position: 'FWD', studentId: '261002566', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+  ],
+  'فلسطين': [
+    { id: 'p_pal_1', name: 'فاروق أسامه', number: 1, position: 'GK', studentId: '251000393', faculty: 'industrial eng', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_pal_2', name: 'يوسف المسيدي', number: 2, position: 'DEF', studentId: '22104020', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_pal_3', name: 'سيف شريف', number: 3, position: 'DEF', studentId: '251000338', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_pal_4', name: 'احمد ابراهيم', number: 4, position: 'MID', studentId: '241000106', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_pal_5', name: 'احمد ساري', number: 5, position: 'MID', studentId: '241000456', faculty: 'ece', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_pal_6', name: 'يوسف رحيم', number: 6, position: 'FWD', studentId: '251001862', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_pal_7', name: 'زين وجيه', number: 7, position: 'FWD', studentId: '251001861', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+  ],
+  'المكسيك': [
+    { id: 'p_mex_1', name: 'yassin mohamed', number: 1, position: 'GK', studentId: '251000473', faculty: 'Cs', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_mex_2', name: 'al gaser waleed', number: 2, position: 'DEF', studentId: '251000600', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mex_3', name: 'omar yousri', number: 3, position: 'DEF', studentId: '251001551', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mex_4', name: 'omar barakat', number: 4, position: 'MID', studentId: '251001320', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mex_5', name: 'abdelrahman mahmoud', number: 5, position: 'MID', studentId: '251000486', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mex_6', name: 'omar ayman', number: 6, position: 'MID', studentId: '251000524', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mex_7', name: 'yahya essam', number: 7, position: 'FWD', studentId: '251001357', faculty: 'Cs', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_mex_8', name: 'mohamed marwan', number: 8, position: 'FWD', studentId: '251001059', faculty: 'Eng', isCaptain: false, isIdentityLocked: true },
+  ],
+  'البرتغال': [
+    { id: 'p_por_1', name: 'زياد علي', number: 1, position: 'GK', studentId: '241002140', faculty: 'Engineering', isCaptain: true, isIdentityLocked: true },
+    { id: 'p_por_2', name: 'إبراهيم احمد', number: 2, position: 'DEF', studentId: '241001288', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_por_3', name: 'محمد عادل', number: 3, position: 'DEF', studentId: '241001025', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_por_4', name: 'ياسين محمد', number: 4, position: 'MID', studentId: '261000162', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_por_5', name: 'محمد صبري', number: 5, position: 'MID', studentId: '241001439', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_por_6', name: 'عمر سامح', number: 6, position: 'MID', studentId: '261000772', faculty: 'Business', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_por_7', name: 'مازن وليد', number: 7, position: 'FWD', studentId: '241001404', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+    { id: 'p_por_8', name: 'محمد دراز', number: 8, position: 'FWD', studentId: '241001324', faculty: 'Engineering', isCaptain: false, isIdentityLocked: true },
+  ],
+};
+
+// All official approved rosters across groups
+export const OFFICIAL_APPROVED_ROSTERS: Record<string, Player[]> = {
+  ...GROUP_A_OFFICIAL_ROSTERS,
+  ...GROUP_B_OFFICIAL_ROSTERS,
+  ...GROUP_C_OFFICIAL_ROSTERS,
+  ...GROUP_D_OFFICIAL_ROSTERS,
+  ...GROUP_E_OFFICIAL_ROSTERS,
+  ...GROUP_F_OFFICIAL_ROSTERS,
+  ...GROUP_G_OFFICIAL_ROSTERS,
+  ...GROUP_H_OFFICIAL_ROSTERS,
+};
+
+// Generate squads with official approved rosters
 export function generateInitialSquads(teamNames: string[]): Record<string, Player[]> {
   const squads: Record<string, Player[]> = {};
   teamNames.forEach((teamName) => {
-    squads[teamName] = [];
+    if (OFFICIAL_APPROVED_ROSTERS[teamName]) {
+      squads[teamName] = [...OFFICIAL_APPROVED_ROSTERS[teamName]];
+    } else {
+      squads[teamName] = [];
+    }
   });
   return squads;
 }
@@ -227,6 +780,14 @@ export function loadStoredSquads(defaultTeamNames: string[]): Record<string, Pla
         defaultTeamNames.forEach((name) => {
           if (!parsed[name]) parsed[name] = [];
         });
+
+        // Automatically populate Group A & B official rosters if empty
+        Object.entries(OFFICIAL_APPROVED_ROSTERS).forEach(([tName, roster]) => {
+          if (!parsed[tName] || parsed[tName].length === 0) {
+            parsed[tName] = [...roster];
+          }
+        });
+
         return parsed;
       }
     }

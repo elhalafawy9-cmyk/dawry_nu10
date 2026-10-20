@@ -101,7 +101,8 @@ import {
   loadStoredPlayerRequests,
   saveStoredPlayerRequests,
   loadStoredSquads,
-  saveStoredSquads
+  saveStoredSquads,
+  OFFICIAL_APPROVED_ROSTERS
 } from './utils/roster';
 import { 
   Trophy, 
@@ -226,7 +227,7 @@ const RAW_INITIAL_TEAMS: Team[] = [
   { id: 't12', name: 'ميامي', group: 'B', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-pink-500 to-black' },
 
   // Group C (المجموعة C)
-  { id: 't13', name: 'سانتوس', group: 'C', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-slate-700 to-white' },
+  { id: 't13', name: 'بلباو', group: 'C', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-red-600 to-white' },
   { id: 't14', name: 'انتر ميلان', group: 'C', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-blue-800 to-black' },
   { id: 't15', name: 'البرازيل', group: 'C', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-yellow-400 to-emerald-600' },
   { id: 't16', name: 'نيوكاسل', group: 'C', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-black to-slate-400' },
@@ -236,7 +237,7 @@ const RAW_INITIAL_TEAMS: Team[] = [
   // Group D (المجموعة D)
   { id: 't19', name: 'باريس', group: 'D', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-blue-900 to-red-600' },
   { id: 't20', name: 'اسبانيا', group: 'D', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-red-600 to-yellow-500' },
-  { id: 't21', name: 'نابولي', group: 'D', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-sky-500 to-blue-700' },
+  { id: 't21', name: 'هولندا', group: 'D', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-orange-500 to-amber-600' },
   { id: 't22', name: 'غزل المحلة', group: 'D', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-cyan-400 to-black' },
   { id: 't23', name: 'اتلتيكو مدريد', group: 'D', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-red-600 to-blue-800' },
   { id: 't24', name: 'المانيا', group: 'D', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-black to-red-600' },
@@ -245,7 +246,7 @@ const RAW_INITIAL_TEAMS: Team[] = [
   { id: 't25', name: 'استون فيلا', group: 'E', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-purple-900 to-sky-400' },
   { id: 't26', name: 'امريكا', group: 'E', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-blue-700 to-red-600' },
   { id: 't27', name: 'ارسنال', group: 'E', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-red-600 to-white' },
-  { id: 't28', name: 'كولومبيا', group: 'E', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-yellow-400 to-blue-700' },
+  { id: 't28', name: 'جنوب افريقيا', group: 'E', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-emerald-600 to-yellow-500' },
   { id: 't29', name: 'المغرب', group: 'E', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-red-600 to-emerald-600' },
   { id: 't30', name: 'طرابزون', group: 'E', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-red-800 to-sky-600' },
 
@@ -254,7 +255,7 @@ const RAW_INITIAL_TEAMS: Team[] = [
   { id: 't32', name: 'بايرن', group: 'F', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-red-700 to-red-500' },
   { id: 't33', name: 'ريال مدريد', group: 'F', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-slate-100 to-purple-600' },
   { id: 't34', name: 'ايطاليا', group: 'F', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-blue-600 to-blue-800' },
-  { id: 't35', name: 'اياكس', group: 'F', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-red-600 to-white' },
+  { id: 't35', name: 'السعودية', group: 'F', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-emerald-700 to-green-600' },
   { id: 't36', name: 'تشيلسي', group: 'F', played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0, logoColor: 'from-blue-700 to-blue-500' },
 
   // Group G (المجموعة G)
@@ -997,18 +998,33 @@ export default function App() {
   // Data States - All 48 teams start with clean 0 points (Sanitized against rogue/duplicate teams)
   const [teams, setTeams] = useState<Team[]>(() => {
     try {
-      const wipedFlag = localStorage.getItem('dawry_data_wiped_teams_only_v5');
-      if (wipedFlag) {
-        const raw = localStorage.getItem('dawry_teams_custom_v2');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const cleaned = sanitizeTeamsList(parsed, INITIAL_TEAMS);
-            return cleaned.map((t: Team) => ({
-              ...t,
-              logoUrl: t.logoUrl || getTeamLogoUrl(t.name) || undefined,
-            }));
-          }
+      const raw = localStorage.getItem('dawry_teams_custom_v2');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Rename legacy 'نابولي' -> 'هولندا' and 'اياكس' -> 'السعودية' and 'سانتوس' -> 'بلباو' and 'كولومبيا' -> 'جنوب افريقيا'
+          const renamed = parsed.map((t: Team) => {
+            if (t.name === 'نابولي' || t.name === 'Napoli') {
+              return { ...t, name: 'هولندا', logoColor: 'from-orange-500 to-amber-600', logoUrl: getTeamLogoUrl('هولندا') || undefined };
+            }
+            if (t.name === 'اياكس' || t.name === 'أياكس' || t.name === 'Ajax') {
+              return { ...t, name: 'السعودية', logoColor: 'from-emerald-700 to-green-600', logoUrl: getTeamLogoUrl('السعودية') || undefined };
+            }
+            if (t.name === 'سانتوس' || t.name === 'Santos') {
+              return { ...t, name: 'بلباو', logoColor: 'from-red-600 to-white', logoUrl: getTeamLogoUrl('بلباو') || undefined };
+            }
+            if (t.name === 'كولومبيا' || t.name === 'Colombia') {
+              return { ...t, name: 'جنوب افريقيا', logoColor: 'from-emerald-600 to-yellow-500', logoUrl: getTeamLogoUrl('جنوب افريقيا') || undefined };
+            }
+            return t;
+          });
+          const cleaned = sanitizeTeamsList(renamed, INITIAL_TEAMS);
+          const finalTeams = cleaned.map((t: Team) => ({
+            ...t,
+            logoUrl: t.logoUrl || getTeamLogoUrl(t.name) || undefined,
+          }));
+          localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(finalTeams));
+          return finalTeams;
         }
       }
       localStorage.removeItem('dawry_teams_custom_v1');
@@ -1035,7 +1051,19 @@ export default function App() {
     try {
       localStorage.removeItem('dawry_matches_storage_v1');
     } catch {}
-    return INITIAL_MATCHES;
+    return INITIAL_MATCHES.map(m => {
+      let tA = m.teamA;
+      let tB = m.teamB;
+      if (tA === 'نابولي' || tA === 'Napoli') tA = 'هولندا';
+      if (tA === 'اياكس' || tA === 'أياكس' || tA === 'Ajax') tA = 'السعودية';
+      if (tA === 'سانتوس' || tA === 'Santos') tA = 'بلباو';
+      if (tA === 'كولومبيا' || tA === 'Colombia') tA = 'جنوب افريقيا';
+      if (tB === 'نابولي' || tB === 'Napoli') tB = 'هولندا';
+      if (tB === 'اياكس' || tB === 'أياكس' || tB === 'Ajax') tB = 'السعودية';
+      if (tB === 'سانتوس' || tB === 'Santos') tB = 'بلباو';
+      if (tB === 'كولومبيا' || tB === 'Colombia') tB = 'جنوب افريقيا';
+      return { ...m, teamA: tA, teamB: tB };
+    });
   });
   const [scorekeepers, setScorekeepers] = useState<Scorekeeper[]>(INITIAL_SCOREKEEPERS);
 
@@ -1049,6 +1077,28 @@ export default function App() {
       return clean;
     }
     const loaded = loadStoredSquads(defaultTeamNames);
+    if (loaded['نابولي'] && !loaded['هولندا']) {
+      loaded['هولندا'] = loaded['نابولي'];
+      delete loaded['نابولي'];
+    }
+    if (loaded['اياكس'] && !loaded['السعودية']) {
+      loaded['السعودية'] = loaded['اياكس'];
+      delete loaded['اياكس'];
+    }
+    if (loaded['سانتوس'] && !loaded['بلباو']) {
+      loaded['بلباو'] = loaded['سانتوس'];
+      delete loaded['سانتوس'];
+    }
+    if (loaded['كولومبيا'] && !loaded['جنوب افريقيا']) {
+      loaded['جنوب افريقيا'] = loaded['كولومبيا'];
+      delete loaded['كولومبيا'];
+    }
+    // Always inject Group A, B, C, D, E official rosters if empty or update Paris with latest page 80 revision
+    Object.entries(OFFICIAL_APPROVED_ROSTERS).forEach(([tName, roster]) => {
+      if (!loaded[tName] || loaded[tName].length === 0 || tName === 'باريس') {
+        loaded[tName] = [...roster];
+      }
+    });
     const sanitized = sanitizeSquads(loaded, defaultTeamNames, true);
     saveStoredSquads(sanitized);
     return sanitized;
@@ -1123,6 +1173,12 @@ export default function App() {
   const [isAlertsListOpen, setIsAlertsListOpen] = useState<boolean>(false);
   const [isRosterAuditModalOpen, setIsRosterAuditModalOpen] = useState<boolean>(false);
   const [isCsvUploadModalOpen, setIsCsvUploadModalOpen] = useState<boolean>(false);
+
+  // Forced Initial Password Change (for accounts like ahsaber@nu.edu.eg on first login)
+  const [showFirstLoginPasswordModal, setShowFirstLoginPasswordModal] = useState<boolean>(false);
+  const [newPasswordInput, setNewPasswordInput] = useState<string>('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState<string>('');
+  const [passwordChangeError, setPasswordChangeError] = useState<string>('');
 
   const duplicatePlayersCount = useMemo(() => {
     return findDuplicatePlayers(squads).length;
@@ -2628,16 +2684,37 @@ export default function App() {
     setTeams(prev => prev.map(t => t.id === editingTeam.id ? editingTeam : t));
 
     if (oldName !== newName) {
+      // 1. Update matches
       setMatches(prev => prev.map(m => ({
         ...m,
         teamA: m.teamA === oldName ? newName : m.teamA,
         teamB: m.teamB === oldName ? newName : m.teamB,
       })));
+
+      // 2. Update squads so players stay with the renamed team
+      setSquads(prev => {
+        const next = { ...prev };
+        if (next[oldName]) {
+          next[newName] = next[oldName];
+          delete next[oldName];
+        } else if (!next[newName]) {
+          next[newName] = [];
+        }
+        saveStoredSquads(next);
+        return next;
+      });
+
+      // 3. Update team managers
+      setUsers(prev => {
+        const next = prev.map(u => u.managedTeamName === oldName ? { ...u, managedTeamName: newName } : u);
+        saveStoredUsers(next);
+        return next;
+      });
     }
 
     setEditingTeam(null);
     confetti({ particleCount: 50, spread: 60 });
-    alert('تم حفظ وتحديث بيانات الفريق بنجاح! ✨');
+    alert(`تم حفظ وتحديث بيانات الفريق بنجاح! تم نقل القائمة واللاعبين للاسم الجديد (${newName}) تلقائياً ✨`);
   };
 
   // Standings helper: dynamically computes stats from finished matches
@@ -3052,6 +3129,55 @@ export default function App() {
     } else {
       setCurrentTab('spectator_portal');
     }
+
+    // Check if user is required to change password on first login
+    if (user.mustChangePassword) {
+      setShowFirstLoginPasswordModal(true);
+      setNewPasswordInput('');
+      setConfirmPasswordInput('');
+      setPasswordChangeError('');
+    }
+  };
+
+  const handleSaveNewPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordChangeError('');
+
+    if (!newPasswordInput || newPasswordInput.length < 6) {
+      setPasswordChangeError('كلمة المرور الجديدة يجب أن تتكون من 6 أحرف أو أرقام على الأقل');
+      return;
+    }
+
+    if (newPasswordInput !== confirmPasswordInput) {
+      setPasswordChangeError('كلمة المرور غير متطابقة، يرجى كتابتها بدقة مرتين');
+      return;
+    }
+
+    if (newPasswordInput === '123456') {
+      setPasswordChangeError('يرجى اختيار كلمة مرور شخصية قوية ومختلفة عن كلمة المرور المؤقتة (123456)');
+      return;
+    }
+
+    if (!currentUser) return;
+
+    const updatedUser: AppUser = {
+      ...currentUser,
+      password: newPasswordInput,
+      mustChangePassword: false,
+    };
+
+    setCurrentUser(updatedUser);
+    saveActiveUser(updatedUser);
+
+    setUsers(prev => {
+      const next = prev.map(u => (u.id === currentUser.id || u.email.toLowerCase() === currentUser.email.toLowerCase()) ? updatedUser : u);
+      saveStoredUsers(next);
+      return next;
+    });
+
+    setShowFirstLoginPasswordModal(false);
+    confetti({ particleCount: 70, spread: 80 });
+    alert('تم تغيير وتعيين كلمة المرور الجديدة بنجاح! تم حفظ حسابك بأمان ولن يُطلب منك تغييرها مرة أخرى. 🔒🎉');
   };
 
   const handleLogout = () => {
@@ -3722,75 +3848,92 @@ export default function App() {
           <div className="space-y-6">
             
             {/* Header Banner */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-950 via-[#062411] to-slate-900 border border-emerald-500/30 p-6 md:p-8 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold mb-2">
-                  <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                  {isAdmin ? 'التحكم في مواعيد وتنزيل المباريات وتسجيل النتائج (Admin 👑)' : 'جدول ومواعيد مباريات البطولة المعتمدة 📅'}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-[#062013] to-slate-900 border border-emerald-500/25 p-6 md:p-8 shadow-2xl space-y-6">
+              {/* Subtle ambient lighting decorations */}
+              <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
+
+              {/* Top zone: Title, Badge, Description, and Quick Counter */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+                <div className="flex-1 min-w-0 space-y-2.5">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-xs font-bold">
+                    <Clock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>{isAdmin ? 'التحكم في مواعيد وتنزيل المباريات وتسجيل النتائج' : 'جدول ومواعيد مباريات البطولة المعتمدة'}</span>
+                    {isAdmin && (
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-400/20 text-emerald-200 text-[10px] font-black border border-emerald-400/30">
+                        Admin 👑
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-xl md:text-2xl lg:text-3xl font-black text-white tracking-tight leading-snug">
+                    {isAdmin ? 'جدول المباريات: لا ينزل أي ماتش إلا بعد تحديد موعده وملعبه' : 'مواعيد وملاعب ونتائج مباريات دوري جامعة النيل'}
+                  </h2>
+                  <p className="text-xs md:text-sm text-slate-300 leading-relaxed max-w-3xl">
+                    {isAdmin 
+                      ? 'يمكنك مراجعة المباريات غير المجدولة، وتحديد تاريخ وساعة وملعب كل مباراة لتنزل رسمياً في الجدول، وتسجيل النتائج المباشرة والنهائية وتحديث الترتيب فوراً.'
+                      : 'يمكنك استعراض تواريخ ومواعيد وملاعب المباريات المعتمدة من اللجنة المنظمة، ومتابعة النتائج الحية والنهائية والأهداف المسجلة.'}
+                  </p>
                 </div>
-                <h2 className="text-xl md:text-3xl font-black text-white mb-2">
-                  {isAdmin ? 'جدول المباريات: لا ينزل أي ماتش إلا بعد تحديد موعده وملعبه' : 'مواعيد وملاعب ونتائج مباريات دوري جامعة النيل'}
-                </h2>
-                <p className="text-xs md:text-sm text-slate-300 max-w-2xl leading-relaxed">
-                  {isAdmin 
-                    ? 'يمكنك مراجعة المباريات غير المجدولة، وتحديد تاريخ وساعة وملعب كل مباراة لتنزل رسمياً في الجدول، وتسجيل النتائج المباشرة والنهائية وتحديث الترتيب فوراً.'
-                    : 'يمكنك استعراض تواريخ ومواعيد وملاعب المباريات المعتمدة من اللجنة المنظمة، ومتابعة النتائج الحية والنهائية والأهداف المسجلة.'}
-                </p>
+
+                {/* Tournament Match Count KPI Strip */}
+                <div className="flex items-center gap-3 shrink-0 self-start lg:self-center bg-slate-950/80 border border-slate-800 p-2.5 rounded-2xl">
+                  <div className="px-3.5 py-1.5 rounded-xl bg-emerald-950/40 border border-emerald-500/20 text-center min-w-[84px]">
+                    <div className="text-[11px] text-slate-400 font-medium">مجدولة ورسمية</div>
+                    <div className="text-lg font-black text-emerald-400 tabular-nums">{scheduledMatchesCount}</div>
+                  </div>
+                  <div className="w-px h-8 bg-slate-800" />
+                  <div className="px-3.5 py-1.5 rounded-xl bg-amber-950/30 border border-amber-500/20 text-center min-w-[84px]">
+                    <div className="text-[11px] text-slate-400 font-medium">بانتظار الموعد</div>
+                    <div className="text-lg font-black text-amber-400 tabular-nums">{unscheduledMatchesCount}</div>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 shrink-0">
-                {/* Vote for match button in header banner (#root > div > main > div:nth-child(1) > div:nth-child(1)) */}
-                <button
-                  type="button"
-                  onClick={() => handleOpenVoteModal()}
-                  className="px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs md:text-sm shadow-xl shadow-blue-600/30 flex items-center gap-2 transition-all cursor-pointer border border-blue-400/40 hover:scale-105 active:scale-95 ring-2 ring-blue-500/20"
-                  title="صوّت وتوقع نتائج مباريات البطولة قبل موعد انطلاقها"
-                >
-                  <Vote className="w-4 h-4 text-amber-300 animate-pulse" />
-                  <span>صوّت لمباراة 🗳️ (Vote for match)</span>
-                </button>
-
-                {isAdmin ? (
-                  <>
-                    <button
-                      onClick={() => handleOpenRoundOrganizer(groupStageLetterFilter === 'all' ? 'A' : groupStageLetterFilter, typeof groupStageRoundFilter === 'number' ? groupStageRoundFilter : 1, matchStageFilter === 'r32' ? 'r32' : 'group')}
-                      className="px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs md:text-sm shadow-xl shadow-amber-500/20 flex items-center gap-2 transition-all cursor-pointer"
-                      title="تحديد مواجهات كل جولة ودور واختيار مين هيلاعب مين"
-                    >
-                      <Swords className="w-4 h-4" />
-                      <span>تحديد مواجهات الجولات (مين هيلاعب مين)</span>
-                    </button>
-                    <button
-                      onClick={handleResetAllMatches}
-                      className="px-4 py-3 rounded-2xl bg-rose-500/10 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 hover:border-rose-600 font-bold text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-lg"
-                      title="تصفير كل الماتشات والنتائج وإعادة النقاط لصفر"
-                    >
-                      <RotateCcw className="w-4 h-4 text-rose-400" />
-                      صفر كل الماتشات
-                    </button>
+              {/* Action Toolbar Row - Responsive, wraps gracefully, clear priority */}
+              <div className="pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 relative z-10">
+                {/* Primary & Interactive Actions */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {isAdmin && (
                     <button
                       type="button"
-                      onClick={handleCleanWipeKeepTeamsOnly}
-                      className="px-4 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-rose-950/40"
-                      title="مسح وتصفير كافة الأرقام والبيانات وتفريغ التشكيلات مع الإبقاء على الفرق فقط جاهزة لقيد اللاعبين"
-                    >
-                      <Trash2 className="w-4 h-4 text-white" />
-                      <span>تصفير الأرقام (الفرق فقط) 🧹</span>
-                    </button>
-                    <button
                       onClick={() => setIsAddingMatch(true)}
-                      className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs md:text-sm shadow-xl shadow-emerald-500/20 flex items-center gap-2 transition-all cursor-pointer"
+                      className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs md:text-sm shadow-md shadow-emerald-950/60 flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                      title="إضافة مباراة جديدة يدوياً وتحديد طرفيها وموعدها"
                     >
-                      <Plus className="w-4 h-4" />
-                      إضافة مباراة مخصصة
+                      <Plus className="w-4 h-4 text-slate-950 stroke-[3]" />
+                      <span>إضافة مباراة مخصصة</span>
                     </button>
-                  </>
-                ) : (
-                  <div className="px-4 py-3 rounded-2xl bg-slate-900/90 border border-emerald-500/40 text-emerald-300 font-bold text-xs md:text-sm flex items-center gap-2 shadow-lg">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>جدول المباريات والنتائج الرسمية المعتمدة 📅</span>
-                  </div>
-                )}
+                  )}
+
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenRoundOrganizer(groupStageLetterFilter === 'all' ? 'A' : groupStageLetterFilter, typeof groupStageRoundFilter === 'number' ? groupStageRoundFilter : 1, matchStageFilter === 'r32' ? 'r32' : 'group')}
+                      className="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-amber-300 border border-amber-500/30 hover:border-amber-400/50 font-bold text-xs md:text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                      title="تحديد مواجهات كل جولة ودور واختيار مين هيلاعب مين"
+                    >
+                      <Swords className="w-4 h-4 text-amber-400" />
+                      <span>تحديد مواجهات الجولات (مين هيلاعب مين)</span>
+                    </button>
+                  )}
+
+                  {/* Vote for match button in header banner */}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenVoteModal()}
+                    className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs md:text-sm shadow-md shadow-indigo-950/50 flex items-center gap-2 transition-all cursor-pointer border border-indigo-400/30 hover:scale-[1.02] active:scale-[0.98]"
+                    title="صوّت وتوقع نتائج مباريات البطولة قبل موعد انطلاقها"
+                  >
+                    <Vote className="w-4 h-4 text-amber-300" />
+                    <span>صوّت لمباراة 🗳️ (Vote for match)</span>
+                  </button>
+                </div>
+
+                {/* Status Indicator */}
+                <div className="px-3.5 py-2 rounded-xl bg-slate-900/80 border border-emerald-500/30 text-emerald-300 font-semibold text-xs flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>جدول المباريات والنتائج الرسمية المعتمدة 📅</span>
+                </div>
               </div>
             </div>
 
@@ -4870,6 +5013,7 @@ export default function App() {
             onOpenAiCopilot={() => setIsGeminiChatbotOpen(true)}
             onOpenAuditModal={() => setIsRosterAuditModalOpen(true)}
             onDeleteTeam={handleDeleteTeam}
+            onEditTeam={(team) => setEditingTeam(team)}
           />
         )}
 
@@ -7368,6 +7512,80 @@ export default function App() {
           setAuthView('signup');
         }}
       />
+
+      {/* ========================================================================= */}
+      {/* MODAL: FORCE PASSWORD CHANGE ON FIRST LOGIN (ahsaber@nu.edu.eg) */}
+      {/* ========================================================================= */}
+      {showFirstLoginPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md" dir="rtl">
+          <div className="bg-slate-900 border border-emerald-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl shadow-emerald-500/10 space-y-5 relative overflow-hidden">
+            {/* Header Glow */}
+            <div className="absolute top-0 right-0 left-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600" />
+            
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0 shadow-inner">
+                <Lock className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">
+                  تعيين كلمة مرور شخصية جديدة 🔒
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  مرحباً بك يا <strong className="text-emerald-300 font-bold">{currentUser?.name || 'كابتن'}</strong>! نظراً لأن هذا أول تسجيل دخول لك بالحساب ({currentUser?.email})، يرجى تعيين كلمة مرور شخصية خاصة بك (لمرة واحدة فقط).
+                </p>
+              </div>
+            </div>
+
+            {passwordChangeError && (
+              <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>{passwordChangeError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveNewPassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  كلمة المرور الجديدة *
+                </label>
+                <input
+                  type="password"
+                  required
+                  autoFocus
+                  placeholder="أدخل كلمة مرور جديدة (6 خانات على الأقل)..."
+                  value={newPasswordInput}
+                  onChange={(e) => setNewPasswordInput(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  تأكيد كلمة المرور الجديدة *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="أعد كتابة كلمة المرور للتأكيد..."
+                  value={confirmPasswordInput}
+                  onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs md:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 transition-all cursor-pointer"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                  <span>حفظ كلمة المرور وتفعيل الحساب الآن ⚡</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* MODAL: FULL BACKUP & RESTORE / SYSTEM ZERO RESET */}

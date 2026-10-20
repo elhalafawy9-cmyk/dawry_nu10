@@ -18,6 +18,11 @@ const HOST = '0.0.0.0';
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Health check endpoints for Cloud Run and Publish probes
+app.get(['/api/health', '/healthz', '/health'], (req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok', time: new Date().toISOString() });
+});
+
 // Server-side Gemini AI client initialization
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || '',

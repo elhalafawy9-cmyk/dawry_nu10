@@ -78,7 +78,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
   onRestoreComplete,
   onResetToZero,
 }) => {
-  const [activeTab, setActiveTab] = useState<'export' | 'import' | 'reset'>('export');
+  const [activeTab, setActiveTab] = useState<'export' | 'import'>('export');
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -331,19 +331,6 @@ export const BackupModal: React.FC<BackupModalProps> = ({
             <Upload className="w-4 h-4" />
             <span>استيراد واستعادة نسخة (Import)</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => { setActiveTab('reset'); setErrorMsg(null); setSuccessMsg(null); }}
-            className={`pb-3 px-4 text-xs font-bold flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'reset'
-                ? 'border-rose-500 text-rose-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>تصفير كلي للنظام (0 نقاط)</span>
-          </button>
         </div>
 
         {/* Content Body */}
@@ -500,44 +487,6 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                   </button>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* TAB 3: RESET TO ZERO */}
-          {activeTab === 'reset' && (
-            <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 space-y-3">
-                <div className="flex items-center gap-2 text-rose-400 font-black">
-                  <ShieldAlert className="w-5 h-5 shrink-0" />
-                  <span>تصفير كلي وشامل لنظام البطولة (Reset to Zero):</span>
-                </div>
-
-                <ul className="text-xs text-rose-300/90 space-y-1.5 list-disc list-inside leading-relaxed">
-                  <li>سيتم إعادة كافة الفرق الـ 48 إلى <strong>0 نقاط، 0 أهداف، و0 مباريات ملعوبة</strong>.</li>
-                  <li>سيتم إعادة جميع المباريات إلى حالة (قادمة - Upcoming) وتصفير النتائج.</li>
-                  <li>سيتم حذف جميع استمارات التقديم وطلبات القيد.</li>
-                  <li>سيتم <strong>حذف كافة حسابات المستخدمين الوهميين والمسجلين والإبقاء حصرياً على حسابك أنت كمدير عام للنظام</strong> ({PERMANENT_ADMIN_EMAIL}).</li>
-                </ul>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleExecuteReset}
-                disabled={isResetting}
-                className="w-full py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black flex items-center justify-center gap-2 shadow-lg shadow-rose-600/20 cursor-pointer transition-all disabled:opacity-50"
-              >
-                {isResetting ? (
-                  <span className="flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>جاري التصفير الشامل...</span>
-                  </span>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4" />
-                    <span>تصفير كل شيء وحذف كافة الأشخاص عدا حسابي ⚡</span>
-                  </>
-                )}
-              </button>
             </div>
           )}
 

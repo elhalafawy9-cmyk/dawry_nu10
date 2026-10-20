@@ -367,17 +367,7 @@ export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
                 </button>
               )}
 
-              {onClearAllSquads && (
-                <button
-                  type="button"
-                  onClick={() => setClearAllSquadsModalOpen(true)}
-                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-800 to-rose-950 hover:from-rose-700 hover:to-rose-900 text-rose-200 hover:text-white font-black text-xs flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-rose-950/40 border border-rose-500/40 hover:scale-[1.02] active:scale-[0.98]"
-                  title="تفريغ ومسح جميع قوائم اللاعبين من كافة الفرق الـ 48"
-                >
-                  <Trash2 className="w-4 h-4 text-rose-400" />
-                  <span>تفريغ كافة الفرق 🧹</span>
-                </button>
-              )}
+
 
               <button
                 type="button"
@@ -903,29 +893,7 @@ export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
               </button>
             </div>
 
-            {/* Card 6: Reset Matches Emergency */}
-            <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 hover:border-rose-500/40 transition-all shadow-xl space-y-4 flex flex-col justify-between">
-              <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center shrink-0">
-                  <RotateCcw className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-white">تصفير نتائج المباريات</h3>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                    إعادة جميع المباريات إلى الحالة القادمة وإلغاء أي نتائج مسجلة لتجربة النظام من جديد.
-                  </p>
-                </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={onResetAllMatches}
-                className="w-full py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-600 text-rose-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer border border-rose-500/30"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>تصفير كل الماتشات ⚠️</span>
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -1619,53 +1587,7 @@ export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
           </div>
         </div>
       )}
-      {/* MODAL: CONFIRM CLEAR ALL SQUADS (تفريغ جميع الفرق) */}
-      {clearAllSquadsModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 text-rose-400">
-              <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center shrink-0">
-                <Trash2 className="w-5 h-5 text-rose-400" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-white">تأكيد تفريغ كافة قوائم الفرق</h3>
-                <span className="text-xs text-rose-400 font-bold">
-                  تفريغ جميع اللاعبين من كافة الفرق الـ {teams.length}
-                </span>
-              </div>
-            </div>
 
-            <p className="text-xs md:text-sm text-slate-300 leading-relaxed bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800">
-              هل أنت متأكد من تفريغ ومسح كافة كشوفات اللاعبين من جميع الفرق؟
-              <br /><br />
-              ✨ ستصبح جميع الفرق خالية تماماً (0 لاعبين) لتتمكن من إضافة الكشوفات الرسمية الجديدة من الصفر دون تعارض.
-            </p>
-
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setClearAllSquadsModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-colors cursor-pointer"
-              >
-                إلغاء التراجع
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (onClearAllSquads) {
-                    onClearAllSquads();
-                  }
-                  setClearAllSquadsModalOpen(false);
-                }}
-                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black transition-all cursor-pointer shadow-lg shadow-rose-600/30 flex items-center gap-1.5"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>نعم، تفريغ كافة الفرق الآن 🗑️</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MODAL: CONFIRM DELETE TEAM (حذف ومسح الفريق نهائياً) */}
       {deleteTeamModalTarget && (
@@ -1772,32 +1694,7 @@ export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
                   يمكنك تفريغ الكشوفات لتسجيل اللاعبين الجدد أو حذف أي فرق غير شغالة بضغطة واحدة.
                 </div>
                 <div className="flex items-center gap-2">
-                  {onCleanWipeKeepTeamsOnly && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsTeamsAuditModalOpen(false);
-                        onCleanWipeKeepTeamsOnly();
-                      }}
-                      className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-rose-950/40"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>تصفير الأرقام والبيانات (الإبقاء على الفرق فقط) 🧹</span>
-                    </button>
-                  )}
-                  {onClearAllSquads && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsTeamsAuditModalOpen(false);
-                        setClearAllSquadsModalOpen(true);
-                      }}
-                      className="px-3 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900 border border-rose-500/30 text-rose-300 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>تفريغ كافة الفرق 🧹</span>
-                    </button>
-                  )}
+
                   {onPurgeNewTeamsAndUnifyBilingual && (
                     <button
                       type="button"
