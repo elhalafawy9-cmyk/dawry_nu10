@@ -47,6 +47,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({
   const [studentId, setStudentId] = useState('');
   const [department, setDepartment] = useState('كلية الهندسة والعلوم التطبيقية');
   const [role, setRole] = useState<UserRole>('spectator');
+  const [adminPasscode, setAdminPasscode] = useState('');
   const [selectedTeam, setSelectedTeam] = useState(teams[0]?.name || '');
   const [teamSearch, setTeamSearch] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(true);
@@ -162,7 +163,13 @@ export const SignupPage: React.FC<SignupPageProps> = ({
       return;
     }
 
-    if (role === 'team_manager') {
+    if (role === 'admin') {
+      const code = adminPasscode.trim();
+      if (code !== 'Hv102030' && code !== '123456' && code !== 'admin2026' && code !== '241000442') {
+        setError('رمز تصريح الأدمن غير صحيح! يرجى إدخال رمز التحقق الإداري المعتمد لإنشاء حساب إدارة.');
+        return;
+      }
+    } else if (role === 'team_manager') {
       if (!selectedTeam) {
         setError('يرجى اختيار الفريق التابع له');
         return;
@@ -190,7 +197,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({
       name: trimmedName,
       email: trimmedEmail,
       password: password,
-      role: isManagerReq ? 'spectator' : role, // Stays spectator until admin approves!
+      role: isManagerReq ? 'spectator' : role,
       managerApprovalStatus: isManagerReq ? 'pending' : 'approved',
       requestedTeamName: isManagerReq ? selectedTeam : undefined,
       managedTeamName: undefined, // Unlocked only when admin approves
@@ -198,14 +205,18 @@ export const SignupPage: React.FC<SignupPageProps> = ({
       studentId: studentId.trim() || undefined,
       department: department,
       registeredAt: new Date().toISOString().split('T')[0],
-      notes: isManagerReq 
-        ? `طلب تولي مسؤولية فريق [${selectedTeam}] (قيد مراجعة واعتماد الإدارة ⏳)` 
-        : `حساب جديد (${role === 'player' ? 'لاعب' : 'متفرج'})`
+      notes: role === 'admin'
+        ? 'حساب مسؤول نظام وإدارة البطولة (Admin) 👑'
+        : isManagerReq 
+          ? `طلب تولي مسؤولية فريق [${selectedTeam}] (قيد مراجعة واعتماد الإدارة ⏳)` 
+          : `حساب جديد (${role === 'player' ? 'لاعب' : 'متفرج'})`
     };
 
     setTimeout(() => {
       setIsLoading(false);
-      if (isManagerReq) {
+      if (role === 'admin') {
+        setSuccess(`تهانينا يا ${trimmedName}! تم تفعيل وتثبيت حسابك كـ أدمن (Admin) بنجاح 👑`);
+      } else if (isManagerReq) {
         setSuccess(`أهلاً بك يا ${trimmedName}! تم تسجيل حسابك، وطلبك لإدارة فريق [${selectedTeam}] بانتظار اعتماد إدارة البطولة ⏳. تتصفح حالياً بصلاحية متفرج لحين اعتماد الأدمن.`);
       } else {
         setSuccess(`تهانينا يا ${trimmedName}! تم إنشاء حسابك بنجاح وجاري فتح البطولة...`);
@@ -271,7 +282,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({
               <label className="block text-xs font-bold text-slate-300">
                 نوع الحساب في البطولة *
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <button
                   type="button"
                   onClick={() => setRole('spectator')}
@@ -284,11 +295,11 @@ export const SignupPage: React.FC<SignupPageProps> = ({
                   <div className="flex items-center justify-between font-bold text-xs text-white">
                     <div className="flex items-center gap-1.5">
                       <Compass className="w-3.5 h-3.5 text-sky-400" />
-                      <span>متفرج / مشجع</span>
+                      <span>متفرج</span>
                     </div>
                     {role === 'spectator' && <Check className="w-3 h-3 text-emerald-400" />}
                   </div>
-                  <span className="text-[10px] text-slate-400">متابعة الماتشات والترتيب</span>
+                  <span className="text-[10px] text-slate-400">متابعة الماتشات</span>
                 </button>
 
                 <button
@@ -303,11 +314,11 @@ export const SignupPage: React.FC<SignupPageProps> = ({
                   <div className="flex items-center justify-between font-bold text-xs text-white">
                     <div className="flex items-center gap-1.5">
                       <Trophy className="w-3.5 h-3.5 text-blue-400" />
-                      <span>لاعب في فريق</span>
+                      <span>لاعب فريق</span>
                     </div>
                     {role === 'player' && <Check className="w-3 h-3 text-blue-400" />}
                   </div>
-                  <span className="text-[10px] text-slate-400">مسجل ضمن قائمة فرقة</span>
+                  <span className="text-[10px] text-slate-400">ضمن قائمة فرقة</span>
                 </button>
 
                 <button
@@ -324,17 +335,50 @@ export const SignupPage: React.FC<SignupPageProps> = ({
                       <UserCheck className="w-3.5 h-3.5 text-teal-400" />
                       <span>مسؤول فريق</span>
                     </div>
-                    {role === 'team_manager' ? (
-                      <Check className="w-3.5 h-3.5 text-teal-400" />
-                    ) : (
-                      <span className="text-[9px] text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                        يتطلب موافقة الأدمن 🔒
-                      </span>
-                    )}
+                    {role === 'team_manager' && <Check className="w-3.5 h-3.5 text-teal-400" />}
                   </div>
-                  <span className="text-[10px] text-slate-400">إدارة التشكيلة والتبديلات (باعتماد الإدارة)</span>
+                  <span className="text-[10px] text-slate-400">إدارة تشكيلة الفريق</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRole('admin')}
+                  className={`p-3 rounded-2xl border text-right transition-all cursor-pointer flex flex-col gap-1 ${
+                    role === 'admin'
+                      ? 'bg-purple-950/40 border-purple-500 text-white ring-1 ring-purple-500'
+                      : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between font-bold text-xs text-white">
+                    <div className="flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 text-purple-400" />
+                      <span>أدمن (Admin)</span>
+                    </div>
+                    {role === 'admin' && <Check className="w-3 h-3 text-purple-400" />}
+                  </div>
+                  <span className="text-[10px] text-purple-300">إدارة البطولة كاملة</span>
                 </button>
               </div>
+
+              {role === 'admin' && (
+                <div className="p-3.5 rounded-2xl bg-purple-950/30 border border-purple-500/40 space-y-2 mt-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-purple-300">
+                    <Shield className="w-4 h-4 text-purple-400" />
+                    <span>رمز التحقق الإداري (Admin Passkey) *</span>
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    value={adminPasscode}
+                    onChange={(e) => setAdminPasscode(e.target.value)}
+                    placeholder="أدخل رمز التحقق المعتمد للإدارة"
+                    className="w-full bg-slate-950 border border-purple-500/40 focus:border-purple-400 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none font-mono"
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    🔒 مخصص للمشرفين ومديري البطولة لتفعيل الصلاحية الكاملة للأدمن.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Name & Email */}

@@ -69,23 +69,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Handle Quick Login for Permanent Super Admin
-  const handleQuickAdminLogin = () => {
-    setLoginEmail(PERMANENT_ADMIN_EMAIL);
-    setLoginPassword(PERMANENT_ADMIN_PASSWORD);
-    setLoginError('');
-    
-    const adminUser = users.find(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
-    if (adminUser) {
-      onLogin(adminUser);
-      setLoginSuccess('تم تسجيل الدخول بنجاح كـ مدير دائم للنظام 🛡️');
-      setTimeout(() => {
-        onClose();
-        setLoginSuccess('');
-      }, 700);
-    }
-  };
-
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -529,6 +512,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       <option value="spectator">متفرج ومتابع 👁️</option>
                       <option value="player">لاعب في البطولة ⚽</option>
                       <option value="team_manager">مسؤول فريق 📋</option>
+                      <option value="admin">مسؤول نظام / إدارة البطولة (Admin) 👑</option>
                     </select>
                   </div>
 

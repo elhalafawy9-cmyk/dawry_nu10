@@ -19,10 +19,7 @@ import {
   CheckCircle2, 
   AlertCircle, 
   GraduationCap, 
-  Trophy,
-  Crown,
-  UserCheck,
-  Shirt
+  Trophy
 } from 'lucide-react';
 
 interface LoginPageProps {
@@ -274,10 +271,27 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </button>
           </form>
 
+          {/* Switch to Signup & Guest Spectator Access */}
+          <div className="pt-3 border-t border-slate-800 text-center space-y-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                const guestUser: AppUser = {
+                  id: `guest_${Date.now()}`,
+                  name: 'زائر / مشاهد البطولة',
+                  email: 'spectator@nu.edu.eg',
+                  role: 'spectator',
+                  registeredAt: new Date().toISOString().substring(0, 10),
+                };
+                onLogin(guestUser);
+              }}
+              className="w-full py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer"
+            >
+              <Eye className="w-4 h-4 text-emerald-400" />
+              <span>متابعة كزائر / متفرج للمشاهدة (Guest Mode)</span>
+            </button>
 
-          {/* Switch to Signup */}
-          <div className="pt-3 border-t border-slate-800 text-center space-y-2">
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-400 pt-1">
               ليس لديك حساب بعد؟
             </p>
             <button

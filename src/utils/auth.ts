@@ -91,8 +91,7 @@ export function loadStoredUsers(): AppUser[] {
     // Purge old demo users if present (keeping new permanent admin intact)
     const isOldDemoData = parsed.some(u => 
       u.email.toLowerCase() === 'a.sherif@nu.edu.eg' ||
-      u.email.toLowerCase() === 'm.reda@nu.edu.eg' ||
-      u.email.toLowerCase() === 'elhalafawy9@gmail.com'
+      u.email.toLowerCase() === 'm.reda@nu.edu.eg'
     );
     if (isOldDemoData) {
       const cleaned = [INITIAL_USERS[0], ...parsed.filter(u => 
@@ -110,15 +109,14 @@ export function loadStoredUsers(): AppUser[] {
         u.email.toLowerCase() !== 'm.adel@nu.edu.eg' &&
         u.email.toLowerCase() !== 'b.tamer@nu.edu.eg' &&
         u.email.toLowerCase() !== 'n.sameh@nu.edu.eg' &&
-        u.email.toLowerCase() !== 's.ibrahim@nu.edu.eg' &&
-        u.email.toLowerCase() !== 'elhalafawy9@gmail.com'
+        u.email.toLowerCase() !== 's.ibrahim@nu.edu.eg'
       )];
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(cleaned));
       return cleaned;
     }
 
     let resultList = parsed.map(u => {
-      if (u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase() || u.email.toLowerCase() === 'elhalafawy9@gmail.com') {
+      if (u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
         return {
           ...u,
           name: 'المدير العام للنظام',
@@ -189,9 +187,6 @@ export function loadActiveUser(allUsers: AppUser[]): AppUser | null {
     const raw = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.email?.toLowerCase() === 'elhalafawy9@gmail.com') {
-        parsed.email = PERMANENT_ADMIN_EMAIL;
-      }
       const match = allUsers.find(u => u.id === parsed.id || u.email.toLowerCase() === parsed.email?.toLowerCase());
       if (match) {
         if (match.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
@@ -208,16 +203,7 @@ export function loadActiveUser(allUsers: AppUser[]): AppUser | null {
   } catch (e) {
     console.error('Error loading active user:', e);
   }
-  const defaultAdmin = allUsers.find(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) || allUsers[0] || INITIAL_USERS[0];
-  if (defaultAdmin && defaultAdmin.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
-    return {
-      ...defaultAdmin,
-      name: 'المدير العام للنظام',
-      role: 'admin',
-      isPermanentAdmin: true,
-    };
-  }
-  return defaultAdmin || null;
+  return null;
 }
 
 export function saveActiveUser(user: AppUser | null): void {

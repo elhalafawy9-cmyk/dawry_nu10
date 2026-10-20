@@ -10,9 +10,23 @@
     "department": "إدارة بطولة دوري النيل",
     "registeredAt": "2026-01-01",
     "notes": "المدير الدائم المعتمد والوحيد للنظام - كامل صلاحيات الإدارة",
-    "lastLoginAt": "2026-10-18T10:39:33.639Z",
-    "lastActiveAt": "2026-10-18T10:40:53.475Z",
+    "lastLoginAt": "2026-10-18T11:00:30.333Z",
+    "lastActiveAt": "2026-10-20T20:46:15.412Z",
     "isOnline": true,
-    "loginCount": 4
+    "loginCount": 7
+  },
+  {
+    "id": "user_ahsaber_admin",
+    "name": "أحمد صابر (إدارة البطولة)",
+    "email": "ahsaber@nu.edu.eg",
+    "password": "123456",
+    "role": "admin",
+    "isPermanentAdmin": true,
+    "mustChangePassword": true,
+    "studentId": "241000999",
+    "department": "إدارة بطولة دوري النيل",
+    "registeredAt": "2026-01-01",
+    "notes": "حساب إداري معتمد - يجب تغيير كلمة المرور عند أول تسجيل دخول",
+    "loginCount": 0
   }
 ]

@@ -63,6 +63,8 @@ import {
   archiveSeasonOnServer,
   createServerSeason,
   updateServerApplicationStatus,
+  fetchServerMatches,
+  saveServerMatches,
 } from './utils/apiSync';
 import { TeamLogo, getTeamLogoUrl } from './utils/teamLogos';
 import { 
@@ -426,9 +428,9 @@ export default function App() {
     'matches_control' | 'spectator_portal' | 'team_manager' | 'my_team' | 'users_directory' | 'assign_managers' | 'groups' | 'bracket' | 'teams_roster' | 'stats_leaders' | 'manage' | 'league_registration' | 'fantasy_league' | 'match_predictions'
   >('matches_control');
   
-  // Auth & Nile University Users State
+  // Auth & Nile University Users State - Starts on Login Page directly
   const [users, setUsers] = useState<AppUser[]>(() => loadStoredUsers());
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => loadActiveUser(loadStoredUsers()));
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
@@ -833,18 +835,30 @@ export default function App() {
         setUsers(serverUsers);
       }
 
-      // 3. If there is an active logged in user, notify server that they entered!
-      const active = loadActiveUser(serverUsers || localUsers);
-      if (active && isMounted) {
-        const updatedUsers = await recordUserEnter(active);
-        if (updatedUsers && isMounted) {
-          setUsers(updatedUsers);
-          const freshActive = updatedUsers.find(u => u.id === active.id || u.email.toLowerCase() === active.email.toLowerCase());
-          if (freshActive) {
-            setCurrentUser(freshActive);
-            saveActiveUser(freshActive);
+      // 3. Only restore session if active in this browser session (so LoginPage opens directly first on new visits)
+      const hasSession = typeof window !== 'undefined' && sessionStorage.getItem('nu_football_session_active') === 'true';
+      if (hasSession) {
+        const active = loadActiveUser(serverUsers || localUsers);
+        if (active && isMounted) {
+          const updatedUsers = await recordUserEnter(active);
+          if (updatedUsers && isMounted) {
+            setUsers(updatedUsers);
+            const freshActive = updatedUsers.find(u => u.id === active.id || u.email.toLowerCase() === active.email.toLowerCase());
+            if (freshActive) {
+              setCurrentUser(freshActive);
+              saveActiveUser(freshActive);
+            }
           }
         }
+      }
+
+      // 3.2. Fetch latest saved matches from server and sync
+      const serverMatches = await fetchServerMatches();
+      if (serverMatches && Array.isArray(serverMatches) && serverMatches.length > 0 && isMounted) {
+        setMatches(serverMatches);
+        try {
+          localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(serverMatches));
+        } catch {}
       }
 
       // 3.5. Fetch tournament settings (isPlayerEditingOpen, isRegistrationVisibleToPublic, isRegistrationOpen)
@@ -1049,7 +1063,11 @@ export default function App() {
   });
   const [matches, setMatches] = useState<Match[]>(() => {
     try {
-      localStorage.removeItem('dawry_matches_storage_v1');
+      const stored = localStorage.getItem('dawry_matches_storage_v2');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch {}
     return INITIAL_MATCHES.map(m => {
       let tA = m.teamA;
@@ -1065,6 +1083,14 @@ export default function App() {
       return { ...m, teamA: tA, teamB: tB };
     });
   });
+
+  const saveMatches = (newMatches: Match[]) => {
+    setMatches(newMatches);
+    try {
+      localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(newMatches));
+    } catch {}
+    saveServerMatches(newMatches);
+  };
   const [scorekeepers, setScorekeepers] = useState<Scorekeeper[]>(INITIAL_SCOREKEEPERS);
 
   // Squads State (all 48 teams players) - Starts clean with empty squads for real player registration
@@ -2058,7 +2084,7 @@ export default function App() {
 
     const isReschedule = schedulingMatch.isScheduled && (schedulingMatch.date !== scheduleForm.date || schedulingMatch.pitch !== scheduleForm.pitch);
 
-    setMatches(prev => prev.map(m => {
+    const updatedScheduledMatches = matches.map(m => {
       if (m.id === schedulingMatch.id) {
         return {
           ...m,
@@ -2070,7 +2096,8 @@ export default function App() {
         };
       }
       return m;
-    }));
+    });
+    saveMatches(updatedScheduledMatches);
 
     // If admin checked notification toggle: automatically send match schedule alert to players of both teams!
     if (scheduleForm.notifyPlayers) {
@@ -2220,7 +2247,7 @@ export default function App() {
 
   const handleUnscheduleMatch = (matchId: string) => {
     if (confirm('هل ترغب في سحب هذه المباراة من الجدول وإلغاء موعدها لتعود لحالة بانتظار تحديد الموعد؟')) {
-      setMatches(prev => prev.map(m => {
+      const updated = matches.map(m => {
         if (m.id === matchId) {
           return {
             ...m,
@@ -2231,7 +2258,8 @@ export default function App() {
           };
         }
         return m;
-      }));
+      });
+      saveMatches(updated);
       setSchedulingMatch(null);
       alert('تم سحب المباراة بنجاح وعادت لقائمة بانتظار تحديد الموعد.');
     }
@@ -2388,7 +2416,7 @@ export default function App() {
       teamBBench: string[];
     }
   ) => {
-    setMatches(prev => prev.map(m => {
+    const updated = matches.map(m => {
       if (m.id === matchId) {
         return {
           ...m,
@@ -2396,7 +2424,8 @@ export default function App() {
         };
       }
       return m;
-    }));
+    });
+    saveMatches(updated);
     alert('تم حفظ واعتماد تشكيل المباراة (الأساسيون والبدلاء) لكلا الفريقين بنجاح! 📋⚽');
   };
 
@@ -2612,9 +2641,9 @@ export default function App() {
     const totalGoalsA = teamAScorers.reduce((sum, s) => sum + (Number(s.goals) || 0), 0);
     const totalGoalsB = teamBScorers.reduce((sum, s) => sum + (Number(s.goals) || 0), 0);
 
-    // عندما تكون المزامنة التلقائية مفعلة أو تم إدخال أهداف للاعبين، يتم اعتماد مجموع أهداف اللاعبين تلقائياً دون الحاجة لتغيير النتيجة يدوياً
-    const sA = autoSyncScore ? totalGoalsA : Number(resultForm.scoreA);
-    const sB = autoSyncScore ? totalGoalsB : Number(resultForm.scoreB);
+    // إذا كانت المزامنة التلقائية مفعلة وتم إدخال أهداف للاعبين نعتمد مجموع الأهداف، وإلا نعتمد النتيجة المكتوبة في الخانة مباشرة
+    const sA = (autoSyncScore && teamAScorers.length > 0) ? totalGoalsA : (resultForm.scoreA !== null && resultForm.scoreA !== undefined ? Number(resultForm.scoreA) : 0);
+    const sB = (autoSyncScore && teamBScorers.length > 0) ? totalGoalsB : (resultForm.scoreB !== null && resultForm.scoreB !== undefined ? Number(resultForm.scoreB) : 0);
 
     // Build the combined summary from structured per-team inputs
     const summary = buildMatchScorersSummary(
@@ -2627,7 +2656,7 @@ export default function App() {
       manualResultNotes
     );
 
-    setMatches(prev => prev.map(m => {
+    let nextMatches = matches.map(m => {
       if (m.id === recordingResultMatch.id) {
         return {
           ...m,
@@ -2648,14 +2677,14 @@ export default function App() {
         };
       }
       return m;
-    }));
+    });
 
     // Dynamic Knockout Progression
     if (recordingResultMatch.stage === 'r32' && resultForm.status === 'finished' && sA !== sB) {
       const pair = R32_SEED_PAIRS[recordingResultMatch.id];
       if (pair) {
         const winnerName = sA > sB ? recordingResultMatch.teamA : recordingResultMatch.teamB;
-        setMatches(prevMatches => prevMatches.map(m => {
+        nextMatches = nextMatches.map(m => {
           if (m.id === pair.nextMatchId) {
             return {
               ...m,
@@ -2663,9 +2692,11 @@ export default function App() {
             };
           }
           return m;
-        }));
+        });
       }
     }
+
+    saveMatches(nextMatches);
 
     setRecordingResultMatch(null);
     confetti({ particleCount: 60, spread: 70 });
@@ -3106,6 +3137,9 @@ export default function App() {
   const handleLogin = (user: AppUser) => {
     setCurrentUser(user);
     saveActiveUser(user);
+    try {
+      sessionStorage.setItem('nu_football_session_active', 'true');
+    } catch {}
     setPreviewRole(null);
 
     // Broadcast user enter to server immediately so they appear online / entered across all devices!
@@ -3183,6 +3217,9 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     saveActiveUser(null);
+    try {
+      sessionStorage.removeItem('nu_football_session_active');
+    } catch {}
     setAuthView('login');
   };
 

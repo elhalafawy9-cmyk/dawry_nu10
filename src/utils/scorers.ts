@@ -394,6 +394,13 @@ export function calculateTournamentStatsLeaders(
   let totalTournamentAssists = 0;
   let matchesWithScorersCount = 0;
 
+  // Count total goals across all recorded matches
+  let totalMatchScoresGoals = 0;
+  matches.forEach(m => {
+    if (m.scoreA !== null && m.scoreA !== undefined) totalMatchScoresGoals += Math.max(0, Number(m.scoreA));
+    if (m.scoreB !== null && m.scoreB !== undefined) totalMatchScoresGoals += Math.max(0, Number(m.scoreB));
+  });
+
   const teamColorMap = new Map<string, string>();
   teams.forEach(t => teamColorMap.set(t.name, t.logoColor));
 
@@ -525,7 +532,7 @@ export function calculateTournamentStatsLeaders(
     scorers: sortedScorers,
     playmakers: sortedPlaymakers,
     contributors,
-    totalTournamentGoals,
+    totalTournamentGoals: Math.max(totalTournamentGoals, totalMatchScoresGoals),
     totalTournamentAssists,
     totalMatchesWithScorers: matchesWithScorersCount,
   };

@@ -39,6 +39,7 @@ const SETTINGS_FILE = path.resolve(DATA_DIR, 'settings.json');
 const APPLICATIONS_FILE = path.resolve(DATA_DIR, 'applications.json');
 const SEASONS_FILE = path.resolve(DATA_DIR, 'seasons.json');
 const ARCHIVED_SEASONS_FILE = path.resolve(DATA_DIR, 'archived_seasons.json');
+const MATCHES_FILE = path.resolve(DATA_DIR, 'matches.json');
 
 interface AppSettings {
   isPlayerEditingOpen: boolean;
@@ -216,6 +217,29 @@ function writeArchivedSnapshots(snapshots: ArchivedSeasonSnapshot[]): void {
   }
 }
 
+function readMatches(): any[] {
+  ensureDataDir();
+  try {
+    if (fs.existsSync(MATCHES_FILE)) {
+      const raw = fs.readFileSync(MATCHES_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.warn('Could not read matches.json', e);
+  }
+  return [];
+}
+
+function writeMatches(matches: any[]): void {
+  ensureDataDir();
+  try {
+    fs.writeFileSync(MATCHES_FILE, JSON.stringify(matches, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to write matches.json', e);
+  }
+}
+
 const PERMANENT_ADMIN_EMAIL = 's.mohamed2442@nu.edu.eg';
 const PERMANENT_ADMIN_PASSWORD = 'Hv102030';
 
@@ -254,21 +278,18 @@ function readUsers(): any[] {
       const raw = fs.readFileSync(USERS_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Purge old demo admin and users completely
-        const cleaned = parsed
-          .filter(u => u.email && u.email.toLowerCase() !== 'elhalafawy9@gmail.com')
-          .map(u => {
-            if (u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
-              return {
-                ...u,
-                name: 'المدير العام للنظام',
-                password: PERMANENT_ADMIN_PASSWORD,
-                role: 'admin',
-                isPermanentAdmin: true,
-              };
-            }
-            return u;
-          });
+        const cleaned = parsed.map(u => {
+          if (u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
+            return {
+              ...u,
+              name: 'المدير العام للنظام',
+              password: PERMANENT_ADMIN_PASSWORD,
+              role: 'admin',
+              isPermanentAdmin: true,
+            };
+          }
+          return u;
+        });
         if (!cleaned.some(u => u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase())) {
           cleaned.unshift(DEFAULT_INITIAL_USERS[0]);
         }
@@ -296,20 +317,17 @@ function readUsers(): any[] {
 function writeUsers(users: any[]) {
   ensureDataDir();
   try {
-    // Permanent admin guard & purge old admin
-    const sanitized = users
-      .filter(u => u.email && u.email.toLowerCase() !== 'elhalafawy9@gmail.com')
-      .map(u => {
-        if (u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
-          return {
-            ...u,
-            password: PERMANENT_ADMIN_PASSWORD,
-            role: 'admin',
-            isPermanentAdmin: true,
-          };
-        }
-        return u;
-      });
+    const sanitized = users.map(u => {
+      if (u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
+        return {
+          ...u,
+          password: PERMANENT_ADMIN_PASSWORD,
+          role: 'admin',
+          isPermanentAdmin: true,
+        };
+      }
+      return u;
+    });
 
     const hasPermAdmin = sanitized.some(u => u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
     if (!hasPermAdmin) {
@@ -353,10 +371,11 @@ app.post('/api/users/enter', (req: Request, res: Response) => {
   if (targetIndex >= 0) {
     // Existing user entering the app
     const current = users[targetIndex];
+    const keepAdmin = current.role === 'admin' || incoming.role === 'admin' || current.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase();
     updatedUser = {
       ...current,
       name: incoming.name || current.name,
-      role: current.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase() ? 'admin' : (incoming.role || current.role),
+      role: keepAdmin ? 'admin' : (incoming.role || current.role || 'spectator'),
       studentId: incoming.studentId || current.studentId,
       department: incoming.department || current.department,
       managedTeamName: incoming.managedTeamName !== undefined ? incoming.managedTeamName : current.managedTeamName,
@@ -816,6 +835,37 @@ app.post('/api/seasons/archive', (req: Request, res: Response) => {
   res.json({ success: true, snapshot: newSnapshot, snapshots });
 });
 
+// 17.1. GET /api/matches - Get all saved tournament matches
+app.get('/api/matches', (_req: Request, res: Response) => {
+  const matches = readMatches();
+  res.json({ success: true, matches });
+});
+
+// 17.2. POST /api/matches - Save / sync entire matches array
+app.post('/api/matches', (req: Request, res: Response) => {
+  const { matches } = req.body;
+  if (!Array.isArray(matches)) {
+    return res.status(400).json({ success: false, error: 'Matches array required' });
+  }
+  writeMatches(matches);
+  res.json({ success: true, matches });
+});
+
+// 17.3. PUT /api/matches/:id - Update specific match score or details
+app.put('/api/matches/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const updates = req.body;
+  const matches = readMatches();
+  const index = matches.findIndex(m => m.id === id);
+  if (index >= 0) {
+    matches[index] = { ...matches[index], ...updates };
+  } else {
+    matches.push({ id, ...updates });
+  }
+  writeMatches(matches);
+  res.json({ success: true, match: matches[index >= 0 ? index : matches.length - 1], matches });
+});
+
 // 18. GET /api/backup - Export complete system backup
 app.get('/api/backup', (_req: Request, res: Response) => {
   const users = readUsers();
@@ -823,6 +873,7 @@ app.get('/api/backup', (_req: Request, res: Response) => {
   const applications = readApplications();
   const seasons = readSeasons();
   const archivedSnapshots = readArchivedSnapshots();
+  const matches = readMatches();
 
   const backupData = {
     version: '1.0',
@@ -833,6 +884,7 @@ app.get('/api/backup', (_req: Request, res: Response) => {
     applications,
     seasons,
     archivedSnapshots,
+    matches,
   };
 
   res.json({ success: true, backup: backupData });
@@ -862,6 +914,9 @@ app.post('/api/backup/import', (req: Request, res: Response) => {
   if (Array.isArray(payload.archivedSnapshots)) {
     writeArchivedSnapshots(payload.archivedSnapshots);
   }
+  if (Array.isArray(payload.matches) && payload.matches.length > 0) {
+    writeMatches(payload.matches);
+  }
 
   console.log(`[BACKUP RESTORE] Successfully imported backup from ${payload.exportedAt || payload.timestamp || 'unknown'}`);
   res.json({
@@ -871,6 +926,7 @@ app.post('/api/backup/import', (req: Request, res: Response) => {
     settings: readSettings(),
     applications: readApplications(),
     seasons: readSeasons(),
+    matches: readMatches(),
     archivedSnapshots: readArchivedSnapshots(),
   });
 });

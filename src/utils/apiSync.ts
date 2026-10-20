@@ -781,4 +781,69 @@ export async function resetSystemOnServer(): Promise<{ success: boolean; error?:
   }
 }
 
+/**
+ * Fetches all saved tournament matches from the server.
+ */
+export async function fetchServerMatches(): Promise<any[] | null> {
+  try {
+    const res = await fetch(`${API_BASE}/matches`, {
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+    if (Array.isArray(data.matches) && data.matches.length > 0) {
+      return data.matches;
+    }
+  } catch (err) {
+    console.warn('Could not fetch matches from server:', err);
+  }
+  return null;
+}
+
+/**
+ * Saves all tournament matches to the server.
+ */
+export async function saveServerMatches(matches: any[]): Promise<any[] | null> {
+  try {
+    const res = await fetch(`${API_BASE}/matches`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ matches }),
+    });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+    if (Array.isArray(data.matches)) {
+      return data.matches;
+    }
+  } catch (err) {
+    console.warn('Failed to save matches to server:', err);
+  }
+  return null;
+}
+
+/**
+ * Updates a single match on the server.
+ */
+export async function updateServerMatch(matchId: string, updates: any): Promise<any | null> {
+  try {
+    const res = await fetch(`${API_BASE}/matches/${encodeURIComponent(matchId)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+    return data.match || null;
+  } catch (err) {
+    console.warn('Failed to update match on server:', err);
+  }
+  return null;
+}
+
 
