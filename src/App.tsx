@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { RoundMatchupOrganizerModal } from './components/RoundMatchupOrganizerModal';
+import { KnockoutDrawModal } from './components/KnockoutDrawModal';
 import { TeamsRosterPage } from './components/TeamsRosterPage';
 import { StatsLeadersPage } from './components/StatsLeadersPage';
 import { SpectatorPortalPage } from './components/SpectatorPortalPage';
@@ -415,6 +416,34 @@ export const R32_SEED_PAIRS: Record<string, {
   r32_14: { nextMatchId: 'r16_7', nextSlot: 'teamB' },
   r32_15: { nextMatchId: 'r16_8', nextSlot: 'teamA' },
   r32_16: { nextMatchId: 'r16_8', nextSlot: 'teamB' },
+};
+
+export const KNOCKOUT_PROGRESSION_MAP: Record<string, {
+  nextMatchId: string;
+  nextSlot: 'teamA' | 'teamB';
+  loserMatchId?: string;
+  loserSlot?: 'teamA' | 'teamB';
+}> = {
+  ...R32_SEED_PAIRS,
+  // R16 -> QF
+  r16_1: { nextMatchId: 'qf1', nextSlot: 'teamA' },
+  r16_2: { nextMatchId: 'qf1', nextSlot: 'teamB' },
+  r16_3: { nextMatchId: 'qf2', nextSlot: 'teamA' },
+  r16_4: { nextMatchId: 'qf2', nextSlot: 'teamB' },
+  r16_5: { nextMatchId: 'qf3', nextSlot: 'teamA' },
+  r16_6: { nextMatchId: 'qf3', nextSlot: 'teamB' },
+  r16_7: { nextMatchId: 'qf4', nextSlot: 'teamA' },
+  r16_8: { nextMatchId: 'qf4', nextSlot: 'teamB' },
+
+  // QF -> SF
+  qf1: { nextMatchId: 'sf1', nextSlot: 'teamA' },
+  qf2: { nextMatchId: 'sf1', nextSlot: 'teamB' },
+  qf3: { nextMatchId: 'sf2', nextSlot: 'teamA' },
+  qf4: { nextMatchId: 'sf2', nextSlot: 'teamB' },
+
+  // SF -> Final & 3rd Place
+  sf1: { nextMatchId: 'fin', nextSlot: 'teamA', loserMatchId: 'third', loserSlot: 'teamA' },
+  sf2: { nextMatchId: 'fin', nextSlot: 'teamB', loserMatchId: 'third', loserSlot: 'teamB' },
 };
 
 const INITIAL_SCOREKEEPERS: Scorekeeper[] = [
@@ -1136,6 +1165,7 @@ export default function App() {
 
   // Round Matchup Organizer Modal State
   const [isRoundOrganizerOpen, setIsRoundOrganizerOpen] = useState<boolean>(false);
+  const [isKnockoutDrawModalOpen, setIsKnockoutDrawModalOpen] = useState<boolean>(false);
   const [roundOrganizerConfig, setRoundOrganizerConfig] = useState<{
     group: string;
     round: number;
@@ -2299,9 +2329,9 @@ export default function App() {
     const totalGoalsA = initialScorersA.reduce((sum, s) => sum + (Number(s.goals) || 0), 0);
     const totalGoalsB = initialScorersB.reduce((sum, s) => sum + (Number(s.goals) || 0), 0);
 
-    // If scorers already exist, use their sum; otherwise use existing match score
-    const finalScoreA = initialScorersA.length > 0 ? totalGoalsA : sA;
-    const finalScoreB = initialScorersB.length > 0 ? totalGoalsB : sB;
+    // Prioritize official match score if available; otherwise scorers sum, or 0
+    const finalScoreA = match.scoreA !== null && match.scoreA !== undefined ? match.scoreA : (initialScorersA.length > 0 ? totalGoalsA : 0);
+    const finalScoreB = match.scoreB !== null && match.scoreB !== undefined ? match.scoreB : (initialScorersB.length > 0 ? totalGoalsB : 0);
 
     setResultForm({
       scoreA: finalScoreA,
@@ -2311,7 +2341,7 @@ export default function App() {
       notes: match.scorersSummary || '',
     });
 
-    setAutoSyncScore(true); // الوضع التلقائي مفعل دائماً ليتم احتساب النتيجة من أهداف اللاعبين
+    setAutoSyncScore(false); // النتيجة مستقلة ومباشرة، لا يشترط تسجيل أصحاب الأهداف
     setManualResultNotes('');
     setShowManualNotesInput(false);
 
@@ -2637,15 +2667,18 @@ export default function App() {
     e.preventDefault();
     if (!recordingResultMatch) return;
 
-    // حساب مجموع أهداف كل فريق بالأسفل
-    const totalGoalsA = teamAScorers.reduce((sum, s) => sum + (Number(s.goals) || 0), 0);
-    const totalGoalsB = teamBScorers.reduce((sum, s) => sum + (Number(s.goals) || 0), 0);
+    // النتيجة الرسمية المعتمدة للمباراة تؤخذ دائماً ومباشرة من خانة النتيجة
+    // تسجيل أسماء مسجلي الأهداف اختياري تماماً ولا يؤثر على النتيجة أو احتسابها في الترتيب إطلاقاً
+    const sA = resultForm.scoreA !== null && resultForm.scoreA !== undefined && !isNaN(Number(resultForm.scoreA))
+      ? Math.max(0, Math.floor(Number(resultForm.scoreA)))
+      : 0;
+    const sB = resultForm.scoreB !== null && resultForm.scoreB !== undefined && !isNaN(Number(resultForm.scoreB))
+      ? Math.max(0, Math.floor(Number(resultForm.scoreB)))
+      : 0;
 
-    // إذا كانت المزامنة التلقائية مفعلة وتم إدخال أهداف للاعبين نعتمد مجموع الأهداف، وإلا نعتمد النتيجة المكتوبة في الخانة مباشرة
-    const sA = (autoSyncScore && teamAScorers.length > 0) ? totalGoalsA : (resultForm.scoreA !== null && resultForm.scoreA !== undefined ? Number(resultForm.scoreA) : 0);
-    const sB = (autoSyncScore && teamBScorers.length > 0) ? totalGoalsB : (resultForm.scoreB !== null && resultForm.scoreB !== undefined ? Number(resultForm.scoreB) : 0);
+    const finalStatus = resultForm.status || 'finished';
 
-    // Build the combined summary from structured per-team inputs
+    // Build the combined summary from structured per-team inputs (إذا تواجد مسجلو أهداف)
     const summary = buildMatchScorersSummary(
       recordingResultMatch.teamA,
       teamAScorers,
@@ -2662,8 +2695,8 @@ export default function App() {
           ...m,
           scoreA: sA,
           scoreB: sB,
-          status: resultForm.status,
-          minute: resultForm.status === 'live' ? Number(resultForm.minute) : undefined,
+          status: finalStatus,
+          minute: finalStatus === 'live' ? Number(resultForm.minute) : undefined,
           scorersSummary: summary.trim() || undefined,
           recordedBy: currentOperator.name,
           lineups: {
@@ -2679,19 +2712,21 @@ export default function App() {
       return m;
     });
 
-    // Dynamic Knockout Progression
-    if (recordingResultMatch.stage === 'r32' && resultForm.status === 'finished' && sA !== sB) {
-      const pair = R32_SEED_PAIRS[recordingResultMatch.id];
-      if (pair) {
+    // Dynamic Knockout Progression across all knockout stages (R32, R16, QF, SF)
+    if (finalStatus === 'finished' && sA !== sB) {
+      const prog = KNOCKOUT_PROGRESSION_MAP[recordingResultMatch.id];
+      if (prog) {
         const winnerName = sA > sB ? recordingResultMatch.teamA : recordingResultMatch.teamB;
+        const loserName = sA > sB ? recordingResultMatch.teamB : recordingResultMatch.teamA;
         nextMatches = nextMatches.map(m => {
-          if (m.id === pair.nextMatchId) {
-            return {
-              ...m,
-              [pair.nextSlot]: winnerName,
-            };
+          let updated = { ...m };
+          if (m.id === prog.nextMatchId) {
+            updated = { ...updated, [prog.nextSlot]: winnerName };
           }
-          return m;
+          if (prog.loserMatchId && m.id === prog.loserMatchId && prog.loserSlot) {
+            updated = { ...updated, [prog.loserSlot]: loserName };
+          }
+          return updated;
         });
       }
     }
@@ -2700,7 +2735,7 @@ export default function App() {
 
     setRecordingResultMatch(null);
     confetti({ particleCount: 60, spread: 70 });
-    alert('تم اعتماد نتيجة المباراة وتحديث أهداف وأسيستات الفريقين بنجاح! ⚽🎯');
+    alert(`تم اعتماد نتيجة المباراة (${recordingResultMatch.teamA} ${sA} - ${sB} ${recordingResultMatch.teamB}) وتحديث الترتيب والنقاط بنجاح! 🏆⚽`);
   };
 
   // Save Team Edit (Single team name & group)
@@ -2748,28 +2783,44 @@ export default function App() {
     alert(`تم حفظ وتحديث بيانات الفريق بنجاح! تم نقل القائمة واللاعبين للاسم الجديد (${newName}) تلقائياً ✨`);
   };
 
-  // Standings helper: dynamically computes stats from finished matches
+  // Standings helper: dynamically computes stats from matches with recorded scores
   const getGroupStandings = (groupLetter: string) => {
+    const normalize = (name: string) => (name || '').trim().toLowerCase();
+
     return teams
       .filter(t => t.group === groupLetter)
       .map(team => {
-        const finishedTeamMatches = matches.filter(
-          m => m.stage === 'group' && m.group === groupLetter && m.status === 'finished' &&
-          (m.teamA === team.name || m.teamB === team.name) &&
-          m.scoreA !== null && m.scoreB !== null
-        );
+        const teamMatches = matches.filter(m => {
+          if (m.scoreA === null || m.scoreA === undefined || m.scoreB === null || m.scoreB === undefined) {
+            return false;
+          }
+          // Accept any match that has been recorded (finished or live)
+          const isRecorded = m.status === 'finished' || m.status === 'live';
+          if (!isRecorded) return false;
 
-        const played = finishedTeamMatches.length;
+          const isGroupStage = m.stage === 'group' || !m.stage;
+          if (!isGroupStage) return false;
+
+          const isA = normalize(m.teamA) === normalize(team.name);
+          const isB = normalize(m.teamB) === normalize(team.name);
+          if (!isA && !isB) return false;
+
+          if (m.group && m.group !== groupLetter) return false;
+
+          return true;
+        });
+
+        const played = teamMatches.length;
         let won = 0;
         let drawn = 0;
         let lost = 0;
         let gf = 0;
         let ga = 0;
 
-        finishedTeamMatches.forEach(m => {
-          const isA = m.teamA === team.name;
-          const myScore = isA ? m.scoreA! : m.scoreB!;
-          const oppScore = isA ? m.scoreB! : m.scoreA!;
+        teamMatches.forEach(m => {
+          const isA = normalize(m.teamA) === normalize(team.name);
+          const myScore = isA ? Number(m.scoreA) : Number(m.scoreB);
+          const oppScore = isA ? Number(m.scoreB) : Number(m.scoreA);
           gf += myScore;
           ga += oppScore;
           if (myScore > oppScore) won++;
@@ -3943,15 +3994,26 @@ export default function App() {
                   )}
 
                   {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenRoundOrganizer(groupStageLetterFilter === 'all' ? 'A' : groupStageLetterFilter, typeof groupStageRoundFilter === 'number' ? groupStageRoundFilter : 1, matchStageFilter === 'r32' ? 'r32' : 'group')}
-                      className="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-amber-300 border border-amber-500/30 hover:border-amber-400/50 font-bold text-xs md:text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-                      title="تحديد مواجهات كل جولة ودور واختيار مين هيلاعب مين"
-                    >
-                      <Swords className="w-4 h-4 text-amber-400" />
-                      <span>تحديد مواجهات الجولات (مين هيلاعب مين)</span>
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIsKnockoutDrawModalOpen(true)}
+                        className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs md:text-sm shadow-md shadow-emerald-900/40 flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                        title="إجراء القرعة العشوائية للأدوار الإقصائية مع شروط المجموعات المخصصة"
+                      >
+                        <Sparkles className="w-4 h-4 text-yellow-300" />
+                        <span>قرعة الأدوار الإقصائية 🎲</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenRoundOrganizer(groupStageLetterFilter === 'all' ? 'A' : groupStageLetterFilter, typeof groupStageRoundFilter === 'number' ? groupStageRoundFilter : 1, matchStageFilter === 'r32' ? 'r32' : 'group')}
+                        className="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-amber-300 border border-amber-500/30 hover:border-amber-400/50 font-bold text-xs md:text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                        title="تحديد مواجهات كل جولة ودور واختيار مين هيلاعب مين"
+                      >
+                        <Swords className="w-4 h-4 text-amber-400" />
+                        <span>تحديد مواجهات الجولات (مين هيلاعب مين)</span>
+                      </button>
+                    </>
                   )}
 
                   {/* Vote for match button in header banner */}
@@ -4948,13 +5010,24 @@ export default function App() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => handleOpenRoundOrganizer(undefined, undefined, 'r32')}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 cursor-pointer shrink-0 transition-all"
-              >
-                <ArrowRightLeft className="w-3.5 h-3.5" />
-                <span>تنظيم مواجهات دور الـ 32 (مين هيلاعب مين)</span>
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setIsKnockoutDrawModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/30 cursor-pointer shrink-0 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                  <span>إجراء القرعة العشوائية الذكية للأدوار الإقصائية 🎲</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenRoundOrganizer(undefined, undefined, 'r32')}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs flex items-center gap-1.5 border border-amber-500/30 cursor-pointer shrink-0 transition-all"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  <span>تنظيم يدوي (مين هيلاعب مين)</span>
+                </button>
+              </div>
             </div>
 
             {/* Bracket Matches List */}
@@ -5117,6 +5190,7 @@ export default function App() {
               currentAcademicYear={currentAcademicYear}
               onOpenApprovalsModal={() => setIsApprovalsModalOpen(true)}
               onOpenRoundOrganizer={() => setIsRoundOrganizerOpen(true)}
+              onOpenKnockoutDraw={() => setIsKnockoutDrawModalOpen(true)}
               onOpenAlertComposer={() => {
                 const defaultMatch = matches.find(m => m.isScheduled) || matches[0];
                 setAlertComposerMatch(defaultMatch);
@@ -5148,6 +5222,7 @@ export default function App() {
               onDeleteTeam={handleDeleteTeam}
               onClearAllSquads={handleClearAllSquads}
               onCleanWipeKeepTeamsOnly={handleCleanWipeKeepTeamsOnly}
+              onRecordResult={(match) => handleOpenResultModal(match)}
             />
           ) : (
             <div className="bg-slate-900 border border-amber-500/30 rounded-3xl p-8 text-center max-w-lg mx-auto my-12 shadow-2xl space-y-4">
@@ -5383,94 +5458,141 @@ export default function App() {
                 {/* Score & Status Row */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                   {/* Score Inputs Box */}
-                  <div className="md:col-span-8 p-3.5 bg-slate-950 rounded-2xl border border-slate-800 space-y-2.5">
+                  <div className="md:col-span-8 p-3.5 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
                     <div className="flex items-center justify-between gap-4">
                       {/* Team A Score */}
-                      <div className="flex-1 text-center space-y-1">
+                      <div className="flex-1 text-center space-y-1.5">
                         <div className="flex items-center justify-center gap-1.5">
                           <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block shadow-sm shadow-blue-500"></span>
                           <strong className="text-xs md:text-sm font-black text-white truncate max-w-[140px] inline-block">{recordingResultMatch.teamA}</strong>
                         </div>
-                        <input
-                          type="number"
-                          min="0"
-                          max="99"
-                          required
-                          value={resultForm.scoreA}
-                          onChange={(e) => {
-                            setAutoSyncScore(false);
-                            setResultForm({ ...resultForm, scoreA: Number(e.target.value) });
-                          }}
-                          className={`w-16 md:w-20 text-center text-2xl md:text-3xl font-black rounded-xl py-1.5 font-mono mx-auto block transition-all ${
-                            autoSyncScore
-                              ? 'bg-blue-950/40 border border-blue-500/50 text-blue-400'
-                              : 'bg-slate-900 border border-slate-700 text-emerald-400 focus:outline-none focus:border-emerald-500'
-                          }`}
-                          title={autoSyncScore ? 'النتيجة محسوبة تلقائياً من أهداف اللاعبين بالأسفل' : 'تعديل النتيجة يدوياً'}
-                        />
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setResultForm(rf => ({ ...rf, scoreA: Math.max(0, (Number(rf.scoreA) || 0) - 1) }))}
+                            className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-black text-sm flex items-center justify-center transition-colors cursor-pointer border border-slate-700"
+                            title="تقليل هدف (-1)"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            min="0"
+                            max="99"
+                            required
+                            value={resultForm.scoreA}
+                            onChange={(e) => {
+                              setAutoSyncScore(false);
+                              setResultForm({ ...resultForm, scoreA: Math.max(0, Number(e.target.value) || 0) });
+                            }}
+                            className="w-16 md:w-20 text-center text-2xl md:text-3xl font-black rounded-xl py-1 font-mono mx-auto block transition-all bg-slate-900 border-2 border-blue-500/50 text-blue-400 focus:outline-none focus:border-blue-400"
+                            title="النتيجة المعتمدة للفريق الأول"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setResultForm(rf => ({ ...rf, scoreA: (Number(rf.scoreA) || 0) + 1 }))}
+                            className="w-8 h-8 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-sm flex items-center justify-center transition-colors cursor-pointer shadow-sm shadow-blue-500/20"
+                            title="زيادة هدف (+1)"
+                          >
+                            +
+                          </button>
+                        </div>
                         <span className="text-[10px] text-slate-400 font-bold block">
-                          ⚽ {totalGoalsA} أهداف مسجلة بالأسفل
+                          ⚽ {totalGoalsA} أهداف للاعبين بالأسفل (اختياري)
                         </span>
                       </div>
 
                       <div className="text-center shrink-0 px-2 space-y-0.5">
                         <span className="text-slate-600 font-black text-base md:text-lg font-mono block">VS</span>
-                        <span className="text-[10px] text-slate-500 font-bold block">النتيجة</span>
+                        <span className="text-[10px] text-slate-400 font-bold block">النتيجة الرسمية</span>
                       </div>
 
                       {/* Team B Score */}
-                      <div className="flex-1 text-center space-y-1">
+                      <div className="flex-1 text-center space-y-1.5">
                         <div className="flex items-center justify-center gap-1.5">
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-sm shadow-emerald-500"></span>
                           <strong className="text-xs md:text-sm font-black text-white truncate max-w-[140px] inline-block">{recordingResultMatch.teamB}</strong>
                         </div>
-                        <input
-                          type="number"
-                          min="0"
-                          max="99"
-                          required
-                          value={resultForm.scoreB}
-                          onChange={(e) => {
-                            setAutoSyncScore(false);
-                            setResultForm({ ...resultForm, scoreB: Number(e.target.value) });
-                          }}
-                          className={`w-16 md:w-20 text-center text-2xl md:text-3xl font-black rounded-xl py-1.5 font-mono mx-auto block transition-all ${
-                            autoSyncScore
-                              ? 'bg-emerald-950/40 border border-emerald-500/50 text-emerald-400'
-                              : 'bg-slate-900 border border-slate-700 text-emerald-400 focus:outline-none focus:border-emerald-500'
-                          }`}
-                          title={autoSyncScore ? 'النتيجة محسوبة تلقائياً من أهداف اللاعبين بالأسفل' : 'تعديل النتيجة يدوياً'}
-                        />
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setResultForm(rf => ({ ...rf, scoreB: Math.max(0, (Number(rf.scoreB) || 0) - 1) }))}
+                            className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-black text-sm flex items-center justify-center transition-colors cursor-pointer border border-slate-700"
+                            title="تقليل هدف (-1)"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            min="0"
+                            max="99"
+                            required
+                            value={resultForm.scoreB}
+                            onChange={(e) => {
+                              setAutoSyncScore(false);
+                              setResultForm({ ...resultForm, scoreB: Math.max(0, Number(e.target.value) || 0) });
+                            }}
+                            className="w-16 md:w-20 text-center text-2xl md:text-3xl font-black rounded-xl py-1 font-mono mx-auto block transition-all bg-slate-900 border-2 border-emerald-500/50 text-emerald-400 focus:outline-none focus:border-emerald-400"
+                            title="النتيجة المعتمدة للفريق الثاني"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setResultForm(rf => ({ ...rf, scoreB: (Number(rf.scoreB) || 0) + 1 }))}
+                            className="w-8 h-8 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm flex items-center justify-center transition-colors cursor-pointer shadow-sm shadow-emerald-500/20"
+                            title="زيادة هدف (+1)"
+                          >
+                            +
+                          </button>
+                        </div>
                         <span className="text-[10px] text-slate-400 font-bold block">
-                          ⚽ {totalGoalsB} أهداف مسجلة بالأسفل
+                          ⚽ {totalGoalsB} أهداف للاعبين بالأسفل (اختياري)
                         </span>
                       </div>
                     </div>
 
-                    {/* Auto-Sync Score Banner & Controls */}
+                    {/* Quick Presets */}
+                    <div className="pt-2 border-t border-slate-900 flex items-center justify-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] text-slate-400 font-bold ml-1">نتائج سريعة:</span>
+                      {[
+                        [1, 0], [2, 0], [2, 1], [3, 0], [3, 1], [3, 2], [0, 0], [1, 1], [2, 2], [0, 1], [0, 2], [1, 2], [1, 3]
+                      ].map(([a, b]) => (
+                        <button
+                          key={`${a}-${b}`}
+                          type="button"
+                          onClick={() => {
+                            setAutoSyncScore(false);
+                            setResultForm(rf => ({ ...rf, scoreA: a, scoreB: b }));
+                          }}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                            resultForm.scoreA === a && resultForm.scoreB === b
+                              ? 'bg-amber-400 text-slate-950 font-black ring-1 ring-amber-300 shadow'
+                              : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+                          }`}
+                        >
+                          {a} - {b}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Reassurance Banner & Optional Sync */}
                     <div className="pt-2 border-t border-slate-900 flex flex-wrap items-center justify-between gap-2 text-[11px] px-1">
-                      <div className="flex items-center gap-1.5 text-emerald-400">
-                        <span className={`w-2 h-2 rounded-full ${autoSyncScore ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
-                        <span className="font-bold">
-                          {autoSyncScore
-                            ? '⚡ النتيجة تتحدث تلقائياً وبشكل فوري بمجرد كتابة أهداف اللاعبين بالأسفل — لا داعي لتغييرها يدوياً'
-                            : '⚠️ وضع التعديل اليدوي للنتيجة نشط'}
+                      <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>
+                          النتيجة تُحسب فوراً بالجدول والنقاط والتأهل بمجرد الحفظ، ولا يشترط تسجيل مسجلي الأهداف.
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!autoSyncScore) {
+                      {(totalGoalsA > 0 || totalGoalsB > 0) && (
+                        <button
+                          type="button"
+                          onClick={() => {
                             setResultForm(rf => ({ ...rf, scoreA: totalGoalsA, scoreB: totalGoalsB }));
-                            setAutoSyncScore(true);
-                          } else {
-                            setAutoSyncScore(false);
-                          }
-                        }}
-                        className="text-[10px] text-slate-400 hover:text-white underline cursor-pointer"
-                      >
-                        {autoSyncScore ? 'تعديل النتيجة يدوياً ✎' : '🔄 إعادة الربط التلقائي مع أهداف اللاعبين'}
-                      </button>
+                          }}
+                          className="text-[10px] text-emerald-300 hover:text-white bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-lg cursor-pointer transition-colors"
+                        >
+                          🔄 مطابقة النتيجة مع أهداف اللاعبين المدخلة بالأسفل ({totalGoalsA} - {totalGoalsB})
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -5723,8 +5845,8 @@ export default function App() {
 
                       {teamAScorers.length === 0 ? (
                         <div className="p-3.5 rounded-xl bg-slate-950/70 border border-dashed border-slate-800 text-center space-y-1">
-                          <p className="text-xs text-slate-400 font-bold">لم تسجل أي أهداف لـ {recordingResultMatch.teamA} بعد</p>
-                          <p className="text-[11px] text-slate-500">انقر على الزر أعلاه لإضافة اسم اللاعب وعدد أهدافه وتتحدث النتيجة فوراً</p>
+                          <p className="text-xs text-slate-300 font-bold">لم تسجل أسماء هدافي {recordingResultMatch.teamA} (اختياري)</p>
+                          <p className="text-[11px] text-emerald-400/90 font-medium">النتيجة الرسمية تُحسب تلقائياً في الترتيب بدونهم. أضف أسماءهم هنا فقط إذا أردت إدراجهم في جدول الهدافين.</p>
                         </div>
                       ) : (
                         <div className="space-y-2">
@@ -6323,8 +6445,8 @@ export default function App() {
 
                       {teamBScorers.length === 0 ? (
                         <div className="p-3.5 rounded-xl bg-slate-950/70 border border-dashed border-slate-800 text-center space-y-1">
-                          <p className="text-xs text-slate-400 font-bold">لم تسجل أي أهداف لـ {recordingResultMatch.teamB} بعد</p>
-                          <p className="text-[11px] text-slate-500">انقر على الزر أعلاه لإضافة اسم اللاعب وعدد أهدافه وتتحدث النتيجة فوراً</p>
+                          <p className="text-xs text-slate-300 font-bold">لم تسجل أسماء هدافي {recordingResultMatch.teamB} (اختياري)</p>
+                          <p className="text-[11px] text-emerald-400/90 font-medium">النتيجة الرسمية تُحسب تلقائياً في الترتيب بدونهم. أضف أسماءهم هنا فقط إذا أردت إدراجهم في جدول الهدافين.</p>
                         </div>
                       ) : (
                         <div className="space-y-2">
@@ -6804,10 +6926,10 @@ export default function App() {
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg shadow-emerald-600/30 cursor-pointer flex items-center gap-1.5"
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-lg shadow-emerald-600/30 cursor-pointer flex items-center gap-2 transition-all hover:scale-[1.01]"
                   >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>اعتماد وحفظ النتيجة والأهداف</span>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                    <span>اعتماد وحفظ النتيجة ⚽ (تُحسب بالترتيب فوراً بدون اشتراط تسجيل أسماء الهدافين)</span>
                   </button>
                 </div>
               </form>
@@ -7456,13 +7578,31 @@ export default function App() {
         matches={matches}
         teams={teams}
         onSaveMatches={(updatedMatches) => {
-          setMatches(updatedMatches);
+          saveMatches(updatedMatches);
           setIsRoundOrganizerOpen(false);
           confetti({ particleCount: 60, spread: 70 });
         }}
         initialGroup={roundOrganizerConfig.group}
         initialRound={roundOrganizerConfig.round}
         initialStage={roundOrganizerConfig.stage}
+        onOpenKnockoutDraw={() => setIsKnockoutDrawModalOpen(true)}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL: KNOCKOUT RANDOM DRAW (قرعة الأدوار الإقصائية العشوائية الذكية) */}
+      {/* ========================================================================= */}
+      <KnockoutDrawModal
+        isOpen={isKnockoutDrawModalOpen}
+        onClose={() => setIsKnockoutDrawModalOpen(false)}
+        teams={teams}
+        matches={matches}
+        getGroupStandings={getGroupStandings}
+        onSaveMatches={(updatedMatches) => {
+          saveMatches(updatedMatches);
+          setIsKnockoutDrawModalOpen(false);
+          confetti({ particleCount: 80, spread: 90 });
+          alert('تم اعتماد وتطبيق نتائج القرعة العشوائية على شجرة البطولة بنجاح! 🏆🎲');
+        }}
       />
 
       {/* ========================================================================= */}

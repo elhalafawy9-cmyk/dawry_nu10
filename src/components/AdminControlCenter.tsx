@@ -98,6 +98,8 @@ interface AdminControlCenterProps {
   onDeleteTeam?: (teamNameOrId: string) => void;
   onClearAllSquads?: () => void;
   onCleanWipeKeepTeamsOnly?: () => void;
+  onRecordResult?: (match: Match) => void;
+  onOpenKnockoutDraw?: () => void;
 }
 
 export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
@@ -147,6 +149,8 @@ export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
   onDeleteTeam,
   onClearAllSquads,
   onCleanWipeKeepTeamsOnly,
+  onRecordResult,
+  onOpenKnockoutDraw,
 }) => {
   // In-App Confirmation & Audit Modals
   const [deleteTeamModalTarget, setDeleteTeamModalTarget] = useState<Team | null>(null);
@@ -1173,12 +1177,24 @@ export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2">
+                {onOpenKnockoutDraw && (
+                  <button
+                    type="button"
+                    onClick={onOpenKnockoutDraw}
+                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-emerald-600/20"
+                    title="سحب قرعة الأدوار الإقصائية مع تطبيق الشروط المخصصة"
+                  >
+                    <span>🎲</span>
+                    <span>قرعة الأدوار الإقصائية 🏆</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={onOpenRoundOrganizer}
-                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-700"
                 >
-                  <Calendar className="w-3.5 h-3.5" />
+                  <Calendar className="w-3.5 h-3.5 text-emerald-400" />
                   <span>منظم جولات المجموعات 🔄</span>
                 </button>
 
@@ -1322,13 +1338,26 @@ export const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
                     )}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => onScheduleMatch(match)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white font-bold text-xs transition-colors cursor-pointer border border-slate-700"
-                  >
-                    {match.isScheduled ? 'تعديل الموعد 📅' : 'تحديد الموعد ⚡'}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {onRecordResult && (
+                      <button
+                        type="button"
+                        onClick={() => onRecordResult(match)}
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white font-bold text-xs transition-colors cursor-pointer border border-emerald-500/30 flex items-center gap-1"
+                        title="تسجيل أو تعديل نتيجة المباراة واعتمادها في الترتيب"
+                      >
+                        <span>⚽</span>
+                        <span>{match.status === 'finished' ? 'تعديل النتيجة' : 'تسجيل النتيجة'}</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onScheduleMatch(match)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs transition-colors cursor-pointer border border-slate-700"
+                    >
+                      {match.isScheduled ? 'الموعد 📅' : 'تحديد الموعد ⚡'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

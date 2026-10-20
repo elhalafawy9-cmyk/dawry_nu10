@@ -25,6 +25,7 @@ interface RoundMatchupOrganizerModalProps {
   initialGroup?: string;
   initialRound?: number;
   initialStage?: 'group' | 'r32' | 'r16' | 'qf' | 'sf' | 'final';
+  onOpenKnockoutDraw?: () => void;
 }
 
 export const RoundMatchupOrganizerModal: React.FC<RoundMatchupOrganizerModalProps> = ({
@@ -36,6 +37,7 @@ export const RoundMatchupOrganizerModal: React.FC<RoundMatchupOrganizerModalProp
   initialGroup = 'A',
   initialRound = 1,
   initialStage = 'group',
+  onOpenKnockoutDraw,
 }) => {
   const [stageType, setStageType] = useState<'group' | 'r32' | 'r16' | 'qf' | 'sf' | 'final'>(initialStage);
   const [selectedGroup, setSelectedGroup] = useState<string>(initialGroup);
@@ -339,6 +341,27 @@ export const RoundMatchupOrganizerModal: React.FC<RoundMatchupOrganizerModalProp
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {stageType !== 'group' && onOpenKnockoutDraw && (
+            <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-500/30 text-xs">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="text-slate-300">
+                  يمكنك إجراء قرعة عشوائية ذكية مع الشروط المخصصة (عزل أول 7 عن أول وثاني 4، وتفادي التقاء فرق المجموعة قبل نصف النهائي).
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenKnockoutDraw();
+                }}
+                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs transition-all cursor-pointer shrink-0 shadow-md shadow-emerald-600/20"
+              >
+                فتح قرعة الأدوار الإقصائية 🎲
+              </button>
             </div>
           )}
 

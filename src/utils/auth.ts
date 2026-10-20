@@ -140,10 +140,22 @@ export function loadStoredUsers(): AppUser[] {
     const hasPerm = resultList.some(u => u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
     if (!hasPerm) {
       resultList.unshift(INITIAL_USERS[0]);
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(resultList));
     }
 
-    return resultList;
+    // Deduplicate by ID and email to ensure no duplicate keys (like user_super_admin)
+    const seenIds = new Set<string>();
+    const seenEmails = new Set<string>();
+    const deduped: AppUser[] = [];
+    for (const u of resultList) {
+      const emailLower = (u.email || '').trim().toLowerCase();
+      if (!seenIds.has(u.id) && !seenEmails.has(emailLower)) {
+        seenIds.add(u.id);
+        seenEmails.add(emailLower);
+        deduped.push(u);
+      }
+    }
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(deduped));
+    return deduped;
   } catch (e) {
     console.error('Error loading stored users:', e);
     return INITIAL_USERS;
@@ -176,7 +188,20 @@ export function saveStoredUsers(users: AppUser[]): void {
       sanitized.push(INITIAL_USERS[1]);
     }
 
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(sanitized));
+    // Deduplicate by ID and email
+    const seenIds = new Set<string>();
+    const seenEmails = new Set<string>();
+    const deduped: AppUser[] = [];
+    for (const u of sanitized) {
+      const emailLower = (u.email || '').trim().toLowerCase();
+      if (!seenIds.has(u.id) && !seenEmails.has(emailLower)) {
+        seenIds.add(u.id);
+        seenEmails.add(emailLower);
+        deduped.push(u);
+      }
+    }
+
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(deduped));
   } catch (e) {
     console.error('Error saving stored users:', e);
   }
