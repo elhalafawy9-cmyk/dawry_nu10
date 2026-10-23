@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { RoundMatchupOrganizerModal } from './components/RoundMatchupOrganizerModal';
 import { KnockoutDrawModal } from './components/KnockoutDrawModal';
@@ -68,6 +68,8 @@ import {
   updateServerApplicationStatus,
   fetchServerMatches,
   saveServerMatches,
+  updateServerMatch,
+  mergeTournamentMatches,
   changeUserPasswordOnServer,
   fetchServerTeams,
   saveServerTeams,
@@ -92,6 +94,16 @@ import {
   saveActiveUser,
   isSamirAlhalfawy 
 } from './utils/auth';
+import { testFirestoreConnection } from './firebase';
+import {
+  saveMatchToFirestore,
+  saveMatchesBatchToFirestore,
+  onMatchesFirestoreSnapshot,
+} from './utils/firestoreSync';
+
+// Validate Connection to Firestore on startup as mandated by Firebase skill
+testFirestoreConnection();
+
 import { 
   calculateTournamentStatsLeaders,
   MatchScorerItem,
@@ -896,20 +908,27 @@ export default function App() {
         }
       }
 
-      // 3.2. Fetch latest saved matches from server and sync
+      // 3.2. Fetch latest saved matches from server and sync safely without wiping recorded scores
       const serverMatches = await fetchServerMatches();
-      if (serverMatches && Array.isArray(serverMatches) && serverMatches.length > 0 && isMounted) {
-        setMatches(serverMatches);
-        try {
-          localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(serverMatches));
-        } catch {}
-      } else if (isMounted) {
-        // Seed server with current matches so disk has them immediately
+      if (isMounted) {
         setMatches(prev => {
-          if (Array.isArray(prev) && prev.length > 0) {
-            saveServerMatches(prev);
+          const currentList = Array.isArray(prev) && prev.length > 0 ? prev : INITIAL_MATCHES;
+          if (serverMatches && Array.isArray(serverMatches) && serverMatches.length > 0) {
+            const merged = mergeTournamentMatches(currentList, serverMatches);
+            try {
+              localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(merged));
+            } catch {}
+            // If local had scored matches that weren't on server, sync merged state up
+            saveServerMatches(merged);
+            return merged;
+          } else {
+            // Seed server with current matches so disk has all 152 matches immediately
+            saveServerMatches(currentList);
+            try {
+              localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(currentList));
+            } catch {}
+            return currentList;
           }
-          return prev;
         });
       }
 
@@ -1122,7 +1141,48 @@ export default function App() {
     } catch {}
     saveServerMatches(newMatches);
   };
+
+  // =========================================================================
+  // HOOK: Real-time Automatic Synchronization of 'matches' to Server
+  // Triggers 'saveServerMatches' whenever 'matches' state changes to ensure that
+  // match results, status updates, or manual edits are instantly synchronized to
+  // the server without needing to manually close the result recording modal.
+  // =========================================================================
+  const isFirstMatchesRender = useRef(true);
+  const lastSyncedMatchesHash = useRef<string>('');
+
+  useEffect(() => {
+    if (isFirstMatchesRender.current) {
+      isFirstMatchesRender.current = false;
+      lastSyncedMatchesHash.current = JSON.stringify(matches);
+      return;
+    }
+
+    if (!Array.isArray(matches) || matches.length === 0) return;
+
+    const serialized = JSON.stringify(matches);
+    if (serialized === lastSyncedMatchesHash.current) return;
+    lastSyncedMatchesHash.current = serialized;
+
+    // Immediately persist to localStorage
+    try {
+      localStorage.setItem('dawry_matches_storage_v2', serialized);
+    } catch {}
+
+    // Synchronize to backend server & Firestore database with slight debounce to batch rapid edits smoothly
+    const syncTimer = setTimeout(() => {
+      saveServerMatches(matches);
+      saveMatchesBatchToFirestore(matches).catch(err => {
+        console.warn('Firestore matches batch sync warning:', err);
+      });
+    }, 150);
+
+    return () => clearTimeout(syncTimer);
+  }, [matches]);
+
+
   const [scorekeepers, setScorekeepers] = useState<Scorekeeper[]>(INITIAL_SCOREKEEPERS);
+
 
   // Squads State (all 48 teams players) - Persisted across reloads and server sync
   const [squads, setSquads] = useState<Record<string, Player[]>>(() => {
@@ -1179,6 +1239,16 @@ export default function App() {
   // Active Operator
   const [activeOperatorId, setActiveOperatorId] = useState<string>('sk1');
 
+  // Success toast for saved match results
+  const [resultSuccessToast, setResultSuccessToast] = useState<{ matchName: string; score: string } | null>(null);
+
+  useEffect(() => {
+    if (resultSuccessToast) {
+      const timer = setTimeout(() => setResultSuccessToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [resultSuccessToast]);
+
   // Filter States
   const [matchScheduleTab, setMatchScheduleTab] = useState<'scheduled' | 'unscheduled' | 'all'>('scheduled');
   const [matchFilterStatus, setMatchFilterStatus] = useState<'all' | 'upcoming' | 'live' | 'finished'>('all');
@@ -1221,13 +1291,15 @@ export default function App() {
           // Do not interrupt admin while they are actively filling a modal
           if (!recordingResultMatch && !schedulingMatch) {
             setMatches(prev => {
-              const currentStr = JSON.stringify(prev);
-              const remoteStr = JSON.stringify(remoteMatches);
-              if (currentStr !== remoteStr) {
+              const currentList = Array.isArray(prev) && prev.length > 0 ? prev : INITIAL_MATCHES;
+              const merged = mergeTournamentMatches(currentList, remoteMatches);
+              const mergedStr = JSON.stringify(merged);
+              const currentStr = JSON.stringify(currentList);
+              if (currentStr !== mergedStr) {
                 try {
-                  localStorage.setItem('dawry_matches_storage_v2', remoteStr);
+                  localStorage.setItem('dawry_matches_storage_v2', mergedStr);
                 } catch {}
-                return remoteMatches;
+                return merged;
               }
               return prev;
             });
@@ -1250,6 +1322,35 @@ export default function App() {
       clearInterval(pollTimer);
       window.removeEventListener('focus', handleFocusSync);
       document.removeEventListener('visibilitychange', handleFocusSync);
+    };
+  }, [recordingResultMatch, schedulingMatch]);
+
+  // Real-time live synchronization from Firestore database across all connected devices
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+    try {
+      unsubscribe = onMatchesFirestoreSnapshot(firestoreMatches => {
+        if (!recordingResultMatch && !schedulingMatch && Array.isArray(firestoreMatches) && firestoreMatches.length > 0) {
+          setMatches(prev => {
+            const currentList = Array.isArray(prev) && prev.length > 0 ? prev : INITIAL_MATCHES;
+            const merged = mergeTournamentMatches(currentList, firestoreMatches);
+            const mergedStr = JSON.stringify(merged);
+            const currentStr = JSON.stringify(currentList);
+            if (currentStr !== mergedStr) {
+              try {
+                localStorage.setItem('dawry_matches_storage_v2', mergedStr);
+              } catch {}
+              return merged;
+            }
+            return prev;
+          });
+        }
+      });
+    } catch (e) {
+      console.warn('Firestore snapshot subscription warning:', e);
+    }
+    return () => {
+      if (unsubscribe) unsubscribe();
     };
   }, [recordingResultMatch, schedulingMatch]);
 
@@ -1328,6 +1429,85 @@ export default function App() {
   const [teamBStartersResult, setTeamBStartersResult] = useState<string[]>([]);
   const [teamBBenchResult, setTeamBBenchResult] = useState<string[]>([]);
   const [showLineupsInResultModal, setShowLineupsInResultModal] = useState<boolean>(true);
+
+  // Live synchronization of active Result Recording Modal changes into `matches` state
+  // As the operator adjusts scores (+/-), status, scorers, or cards while the modal is open,
+  // `matches` state is updated live, which in turn triggers the auto-sync hook to server and localStorage
+  // without needing to manually close the result recording modal!
+  useEffect(() => {
+    if (!recordingResultMatch) return;
+
+    const sA = resultForm.scoreA !== null && resultForm.scoreA !== undefined && !isNaN(Number(resultForm.scoreA))
+      ? Math.max(0, Math.floor(Number(resultForm.scoreA)))
+      : 0;
+    const sB = resultForm.scoreB !== null && resultForm.scoreB !== undefined && !isNaN(Number(resultForm.scoreB))
+      ? Math.max(0, Math.floor(Number(resultForm.scoreB)))
+      : 0;
+
+    const currentMatch = matches.find(m => m.id === recordingResultMatch.id);
+    if (!currentMatch) return;
+
+    const isDifferent =
+      currentMatch.scoreA !== sA ||
+      currentMatch.scoreB !== sB ||
+      currentMatch.status !== resultForm.status ||
+      (resultForm.status === 'live' && currentMatch.minute !== Number(resultForm.minute));
+
+    if (!isDifferent) return;
+
+    const summary = buildMatchScorersSummary(
+      recordingResultMatch.teamA,
+      teamAScorers,
+      teamAAssists,
+      recordingResultMatch.teamB,
+      teamBScorers,
+      teamBAssists,
+      manualResultNotes
+    );
+
+    setMatches(prev => prev.map(m => {
+      if (m.id === recordingResultMatch.id) {
+        return {
+          ...m,
+          scoreA: sA,
+          scoreB: sB,
+          status: resultForm.status,
+          minute: resultForm.status === 'live' ? Number(resultForm.minute) : undefined,
+          scorersSummary: summary.trim() || m.scorersSummary,
+          recordedBy: currentOperator.name,
+          lineups: {
+            teamAStarters: teamAStartersResult,
+            teamABench: teamABenchResult,
+            teamBStarters: teamBStartersResult,
+            teamBBench: teamBBenchResult,
+          },
+          substitutions: [...teamASubs, ...teamBSubs],
+          cards: [...teamACards, ...teamBCards],
+        };
+      }
+      return m;
+    }));
+  }, [
+    recordingResultMatch,
+    resultForm.scoreA,
+    resultForm.scoreB,
+    resultForm.status,
+    resultForm.minute,
+    teamAScorers,
+    teamAAssists,
+    teamBScorers,
+    teamBAssists,
+    teamASubs,
+    teamBSubs,
+    teamACards,
+    teamBCards,
+    teamAStartersResult,
+    teamABenchResult,
+    teamBStartersResult,
+    teamBBenchResult,
+    manualResultNotes,
+  ]);
+
 
   // Add Custom Match Form
   const [newMatchForm, setNewMatchForm] = useState({
@@ -2738,24 +2918,28 @@ export default function App() {
       manualResultNotes
     );
 
+    const updatedMatchFields = {
+      scoreA: sA,
+      scoreB: sB,
+      status: finalStatus,
+      minute: finalStatus === 'live' ? Number(resultForm.minute) : undefined,
+      scorersSummary: summary.trim() || undefined,
+      recordedBy: currentOperator.name,
+      lineups: {
+        teamAStarters: teamAStartersResult,
+        teamABench: teamABenchResult,
+        teamBStarters: teamBStartersResult,
+        teamBBench: teamBBenchResult,
+      },
+      substitutions: [...teamASubs, ...teamBSubs],
+      cards: [...teamACards, ...teamBCards],
+    };
+
     let nextMatches = matches.map(m => {
       if (m.id === recordingResultMatch.id) {
         return {
           ...m,
-          scoreA: sA,
-          scoreB: sB,
-          status: finalStatus,
-          minute: finalStatus === 'live' ? Number(resultForm.minute) : undefined,
-          scorersSummary: summary.trim() || undefined,
-          recordedBy: currentOperator.name,
-          lineups: {
-            teamAStarters: teamAStartersResult,
-            teamABench: teamABenchResult,
-            teamBStarters: teamBStartersResult,
-            teamBBench: teamBBenchResult,
-          },
-          substitutions: [...teamASubs, ...teamBSubs],
-          cards: [...teamACards, ...teamBCards],
+          ...updatedMatchFields,
         };
       }
       return m;
@@ -2780,11 +2964,22 @@ export default function App() {
       }
     }
 
+    // 1. Immediately persist this specific match to Firestore and the backend server
+    saveMatchToFirestore({ id: recordingResultMatch.id, ...updatedMatchFields }).catch(err => {
+      console.warn('Firestore single match sync error:', err);
+    });
+    updateServerMatch(recordingResultMatch.id, updatedMatchFields);
+
+    // 2. Persist full tournament matches to state, localStorage, and backend
     saveMatches(nextMatches);
 
+    // 3. Show celebratory toast and close modal without blocking alert
+    setResultSuccessToast({
+      matchName: `${recordingResultMatch.teamA} ضد ${recordingResultMatch.teamB}`,
+      score: `${sA} - ${sB}`,
+    });
     setRecordingResultMatch(null);
-    confetti({ particleCount: 60, spread: 70 });
-    alert(`تم اعتماد نتيجة المباراة (${recordingResultMatch.teamA} ${sA} - ${sB} ${recordingResultMatch.teamB}) وتحديث الترتيب والنقاط بنجاح! 🏆⚽`);
+    confetti({ particleCount: 70, spread: 80 });
   };
 
   // Save Team Edit (Single team name & group)
@@ -3452,6 +3647,28 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white" dir="rtl">
       
+      {/* Toast Notification: Match Result Saved Successfully */}
+      {resultSuccessToast && (
+        <aside aria-label="إشعار حفظ النتيجة" className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 border-2 border-emerald-500 text-white px-5 py-3 rounded-2xl shadow-2xl shadow-emerald-950/60 flex items-center gap-3 backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-200 max-w-md w-[92%]">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-black text-emerald-400">تم اعتماد وحفظ النتيجة في الترتيب والسيرفر بنجاح! 🏆⚽</p>
+            <p className="text-[11px] text-slate-300 truncate mt-0.5">
+              {resultSuccessToast.matchName} • النتيجة الرسمية: <strong className="font-mono text-amber-300 font-bold">{resultSuccessToast.score}</strong>
+            </p>
+          </div>
+          <button
+            onClick={() => setResultSuccessToast(null)}
+            className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            title="إغلاق الإشعار"
+          >
+            ✕
+          </button>
+        </aside>
+      )}
+
       {/* Top Header / App Navigation */}
       <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-emerald-950/80 px-4 md:px-8 py-3.5 shadow-2xl">
         <div className="max-w-7xl mx-auto flex flex-col gap-3">

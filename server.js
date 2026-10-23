@@ -7,13 +7,42 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 dotenv.config();
+process.on("uncaughtException", (err) => {
+  console.error("Server uncaughtException:", err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("Server unhandledRejection:", reason);
+});
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path.dirname(__filename);
 var app = express();
-var PORT = Number(process.env.PORT) || 3e3;
+function resolvePort() {
+  const portArgIndex = process.argv.indexOf("--port");
+  if (portArgIndex !== -1 && process.argv[portArgIndex + 1]) {
+    const val = Number(process.argv[portArgIndex + 1]);
+    if (!isNaN(val) && val > 0) return val;
+  }
+  if (process.env.DEFAULT_APP_PORT) {
+    const val = Number(process.env.DEFAULT_APP_PORT);
+    if (!isNaN(val) && val > 0) return val;
+  }
+  if (process.env.APP_PORT) {
+    const val = Number(process.env.APP_PORT);
+    if (!isNaN(val) && val > 0) return val;
+  }
+  if (process.env.PORT && process.env.PORT !== "8080") {
+    const val = Number(process.env.PORT);
+    if (!isNaN(val) && val > 0) return val;
+  }
+  return 3e3;
+}
+var PORT = resolvePort();
 var HOST = "0.0.0.0";
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.get(["/api/health", "/healthz", "/health"], (req, res) => {
+  res.status(200).json({ status: "ok", time: (/* @__PURE__ */ new Date()).toISOString() });
+});
 var ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || "",
   httpOptions: {
@@ -28,6 +57,9 @@ var SETTINGS_FILE = path.resolve(DATA_DIR, "settings.json");
 var APPLICATIONS_FILE = path.resolve(DATA_DIR, "applications.json");
 var SEASONS_FILE = path.resolve(DATA_DIR, "seasons.json");
 var ARCHIVED_SEASONS_FILE = path.resolve(DATA_DIR, "archived_seasons.json");
+var MATCHES_FILE = path.resolve(DATA_DIR, "matches.json");
+var TEAMS_FILE = path.resolve(DATA_DIR, "teams.json");
+var SQUADS_FILE = path.resolve(DATA_DIR, "squads.json");
 var DEFAULT_SETTINGS = {
   isPlayerEditingOpen: true,
   isRegistrationVisibleToPublic: true,
@@ -136,8 +168,73 @@ function writeArchivedSnapshots(snapshots) {
     console.error("Failed to write archived_seasons.json", e);
   }
 }
+function readMatches() {
+  ensureDataDir();
+  try {
+    if (fs.existsSync(MATCHES_FILE)) {
+      const raw = fs.readFileSync(MATCHES_FILE, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.warn("Could not read matches.json", e);
+  }
+  return [];
+}
+function writeMatches(matches) {
+  ensureDataDir();
+  try {
+    fs.writeFileSync(MATCHES_FILE, JSON.stringify(matches, null, 2), "utf-8");
+  } catch (e) {
+    console.error("Failed to write matches.json", e);
+  }
+}
+function readTeams() {
+  ensureDataDir();
+  try {
+    if (fs.existsSync(TEAMS_FILE)) {
+      const raw = fs.readFileSync(TEAMS_FILE, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.warn("Could not read teams.json", e);
+  }
+  return [];
+}
+function writeTeams(teams) {
+  ensureDataDir();
+  try {
+    fs.writeFileSync(TEAMS_FILE, JSON.stringify(teams, null, 2), "utf-8");
+  } catch (e) {
+    console.error("Failed to write teams.json", e);
+  }
+}
+function readSquads() {
+  ensureDataDir();
+  try {
+    if (fs.existsSync(SQUADS_FILE)) {
+      const raw = fs.readFileSync(SQUADS_FILE, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch (e) {
+    console.warn("Could not read squads.json", e);
+  }
+  return {};
+}
+function writeSquads(squads) {
+  ensureDataDir();
+  try {
+    fs.writeFileSync(SQUADS_FILE, JSON.stringify(squads, null, 2), "utf-8");
+  } catch (e) {
+    console.error("Failed to write squads.json", e);
+  }
+}
 var PERMANENT_ADMIN_EMAIL = "s.mohamed2442@nu.edu.eg";
 var PERMANENT_ADMIN_PASSWORD = "Hv102030";
+var FIXED_ADMIN_EMAIL_AHSABER = "ahsaber@nu.edu.eg";
+var FIXED_ADMIN_PASSWORD_AHSABER_DEFAULT = "123456";
 var DEFAULT_INITIAL_USERS = [
   {
     id: "user_super_admin",
@@ -154,6 +251,20 @@ var DEFAULT_INITIAL_USERS = [
     lastActiveAt: (/* @__PURE__ */ new Date()).toISOString(),
     isOnline: true,
     loginCount: 1
+  },
+  {
+    id: "user_ahsaber_admin",
+    name: "\u0623\u062D\u0645\u062F \u0635\u0627\u0628\u0631 (\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0628\u0637\u0648\u0644\u0629)",
+    email: FIXED_ADMIN_EMAIL_AHSABER,
+    password: FIXED_ADMIN_PASSWORD_AHSABER_DEFAULT,
+    role: "admin",
+    isPermanentAdmin: true,
+    mustChangePassword: true,
+    studentId: "241000999",
+    department: "\u0625\u062F\u0627\u0631\u0629 \u0628\u0637\u0648\u0644\u0629 \u062F\u0648\u0631\u064A \u0627\u0644\u0646\u064A\u0644",
+    registeredAt: "2026-01-01",
+    notes: "\u062D\u0633\u0627\u0628 \u0625\u062F\u0627\u0631\u064A \u0645\u0639\u062A\u0645\u062F - \u064A\u062C\u0628 \u062A\u063A\u064A\u064A\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0639\u0646\u062F \u0623\u0648\u0644 \u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    loginCount: 0
   }
 ];
 function ensureDataDir() {
@@ -168,7 +279,7 @@ function readUsers() {
       const raw = fs.readFileSync(USERS_FILE, "utf-8");
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const cleaned = parsed.filter((u) => u.email && u.email.toLowerCase() !== "elhalafawy9@gmail.com").map((u) => {
+        const cleaned = parsed.map((u) => {
           if (u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
             return {
               ...u,
@@ -178,10 +289,23 @@ function readUsers() {
               isPermanentAdmin: true
             };
           }
+          if (u.email && u.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase()) {
+            return {
+              ...u,
+              name: "\u0623\u062D\u0645\u062F \u0635\u0627\u0628\u0631 (\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0628\u0637\u0648\u0644\u0629)",
+              role: "admin",
+              isPermanentAdmin: true,
+              // Keep their changed password and mustChangePassword state intact!
+              mustChangePassword: u.mustChangePassword === false ? false : Boolean(u.mustChangePassword)
+            };
+          }
           return u;
         });
         if (!cleaned.some((u) => u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase())) {
           cleaned.unshift(DEFAULT_INITIAL_USERS[0]);
+        }
+        if (!cleaned.some((u) => u.email && u.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase())) {
+          cleaned.push(DEFAULT_INITIAL_USERS[1]);
         }
         const now = Date.now();
         return cleaned.map((u) => {
@@ -203,7 +327,7 @@ function readUsers() {
 function writeUsers(users) {
   ensureDataDir();
   try {
-    const sanitized = users.filter((u) => u.email && u.email.toLowerCase() !== "elhalafawy9@gmail.com").map((u) => {
+    const sanitized = users.map((u) => {
       if (u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase()) {
         return {
           ...u,
@@ -212,11 +336,24 @@ function writeUsers(users) {
           isPermanentAdmin: true
         };
       }
+      if (u.email && u.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase()) {
+        return {
+          ...u,
+          name: "\u0623\u062D\u0645\u062F \u0635\u0627\u0628\u0631 (\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0628\u0637\u0648\u0644\u0629)",
+          role: "admin",
+          isPermanentAdmin: true,
+          mustChangePassword: u.mustChangePassword === false ? false : Boolean(u.mustChangePassword)
+        };
+      }
       return u;
     });
     const hasPermAdmin = sanitized.some((u) => u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
     if (!hasPermAdmin) {
       sanitized.unshift(DEFAULT_INITIAL_USERS[0]);
+    }
+    const hasAhsaber = sanitized.some((u) => u.email && u.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase());
+    if (!hasAhsaber) {
+      sanitized.push(DEFAULT_INITIAL_USERS[1]);
     }
     fs.writeFileSync(USERS_FILE, JSON.stringify(sanitized, null, 2), "utf-8");
   } catch (err) {
@@ -241,15 +378,20 @@ app.post("/api/users/enter", (req, res) => {
   let updatedUser;
   if (targetIndex >= 0) {
     const current = users[targetIndex];
+    const keepAdmin = current.role === "admin" || incoming.role === "admin" || current.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase() || current.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase();
+    const resolvedMustChangePassword = current.mustChangePassword === false || incoming.mustChangePassword === false ? false : Boolean(incoming.mustChangePassword !== void 0 ? incoming.mustChangePassword : current.mustChangePassword);
+    const resolvedPassword = current.password && current.password !== FIXED_ADMIN_PASSWORD_AHSABER_DEFAULT ? current.password : incoming.password || current.password;
     updatedUser = {
       ...current,
       name: incoming.name || current.name,
-      role: current.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase() ? "admin" : incoming.role || current.role,
+      role: keepAdmin ? "admin" : incoming.role || current.role || "spectator",
       studentId: incoming.studentId || current.studentId,
       department: incoming.department || current.department,
       managedTeamName: incoming.managedTeamName !== void 0 ? incoming.managedTeamName : current.managedTeamName,
       playerTeamName: incoming.playerTeamName !== void 0 ? incoming.playerTeamName : current.playerTeamName,
       avatarUrl: incoming.avatarUrl || current.avatarUrl,
+      password: resolvedPassword,
+      mustChangePassword: resolvedMustChangePassword,
       lastLoginAt: nowIso,
       lastActiveAt: nowIso,
       isOnline: true,
@@ -267,6 +409,8 @@ app.post("/api/users/enter", (req, res) => {
       managedTeamName: incoming.managedTeamName,
       playerTeamName: incoming.playerTeamName,
       avatarUrl: incoming.avatarUrl,
+      password: incoming.password,
+      mustChangePassword: incoming.mustChangePassword,
       registeredAt: nowIso.substring(0, 10),
       lastLoginAt: nowIso,
       lastActiveAt: nowIso,
@@ -276,8 +420,31 @@ app.post("/api/users/enter", (req, res) => {
     users.unshift(updatedUser);
   }
   writeUsers(users);
-  console.log(`[USER ENTER] ${updatedUser.name} (${updatedUser.email}) logged in/entered. Total users: ${users.length}`);
+  console.log(`[USER ENTER] ${updatedUser.name} (${updatedUser.email}) logged in/entered. mustChangePassword: ${updatedUser.mustChangePassword}. Total users: ${users.length}`);
   res.json({ success: true, user: updatedUser, users });
+});
+app.post("/api/users/change-password", (req, res) => {
+  const { userId, email, newPassword } = req.body;
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ success: false, error: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u064A\u062C\u0628 \u0623\u0646 \u062A\u062A\u0643\u0648\u0646 \u0645\u0646 6 \u0623\u062D\u0631\u0641 \u0623\u0648 \u0623\u0631\u0642\u0627\u0645 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644" });
+  }
+  const users = readUsers();
+  const searchEmail = (email || "").trim().toLowerCase();
+  const targetIndex = users.findIndex(
+    (u) => userId && u.id === userId || searchEmail && u.email && u.email.toLowerCase() === searchEmail
+  );
+  if (targetIndex < 0) {
+    return res.status(404).json({ success: false, error: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
+  }
+  users[targetIndex] = {
+    ...users[targetIndex],
+    password: newPassword,
+    mustChangePassword: false,
+    lastActiveAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  writeUsers(users);
+  console.log(`[PASSWORD CHANGE] User ${users[targetIndex].name} (${users[targetIndex].email}) changed password. mustChangePassword set to FALSE.`);
+  res.json({ success: true, user: users[targetIndex], users });
 });
 app.post("/api/users/register", (req, res) => {
   const newUser = req.body;
@@ -425,9 +592,14 @@ app.post("/api/users/sync", (req, res) => {
       mapByEmail.set(email, u);
     } else {
       const existing = mapByEmail.get(email);
+      const hasChangedPassword = existing.mustChangePassword === false || u.mustChangePassword === false;
+      const keepServerPassword = existing.password && existing.password !== FIXED_ADMIN_PASSWORD_AHSABER_DEFAULT;
+      const resolvedPassword = keepServerPassword ? existing.password : u.password || existing.password;
       mapByEmail.set(email, {
         ...existing,
         ...u,
+        password: resolvedPassword,
+        mustChangePassword: hasChangedPassword ? false : existing.mustChangePassword !== void 0 ? existing.mustChangePassword : u.mustChangePassword,
         loginCount: Math.max(existing.loginCount || 1, u.loginCount || 1),
         lastLoginAt: existing.lastLoginAt || u.lastLoginAt,
         lastActiveAt: existing.lastActiveAt || u.lastActiveAt
@@ -619,12 +791,82 @@ app.post("/api/seasons/archive", (req, res) => {
   console.log(`[SEASON] Archived snapshot saved for season: ${newSnapshot.seasonName} (${newSnapshot.year})`);
   res.json({ success: true, snapshot: newSnapshot, snapshots });
 });
+app.get("/api/matches", (_req, res) => {
+  const matches = readMatches();
+  res.json({ success: true, matches });
+});
+app.post("/api/matches", (req, res) => {
+  const { matches } = req.body;
+  if (!Array.isArray(matches)) {
+    return res.status(400).json({ success: false, error: "Matches array required" });
+  }
+  const existingMatches = readMatches();
+  const mapById = /* @__PURE__ */ new Map();
+  existingMatches.forEach((m) => {
+    if (m && m.id) mapById.set(m.id, m);
+  });
+  matches.forEach((incoming) => {
+    if (!incoming || !incoming.id) return;
+    const existing = mapById.get(incoming.id);
+    if (!existing) {
+      mapById.set(incoming.id, incoming);
+    } else {
+      mapById.set(incoming.id, {
+        ...existing,
+        ...incoming
+      });
+    }
+  });
+  const merged = Array.from(mapById.values());
+  writeMatches(merged);
+  console.log(`[MATCHES] Successfully saved ${merged.length} matches to matches.json`);
+  res.json({ success: true, matches: merged });
+});
+app.put("/api/matches/:id", (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  const matches = readMatches();
+  const index = matches.findIndex((m) => m.id === id);
+  if (index >= 0) {
+    matches[index] = { ...matches[index], ...updates };
+  } else {
+    matches.push({ id, ...updates });
+  }
+  writeMatches(matches);
+  console.log(`[MATCH UPDATE] Match ${id} updated on disk.`);
+  res.json({ success: true, match: matches[index >= 0 ? index : matches.length - 1], matches });
+});
+app.get("/api/teams", (_req, res) => {
+  const teams = readTeams();
+  res.json({ success: true, teams });
+});
+app.post("/api/teams", (req, res) => {
+  const { teams } = req.body;
+  if (!Array.isArray(teams)) {
+    return res.status(400).json({ success: false, error: "Teams array required" });
+  }
+  writeTeams(teams);
+  res.json({ success: true, teams });
+});
+app.get("/api/squads", (_req, res) => {
+  const squads = readSquads();
+  res.json({ success: true, squads });
+});
+app.post("/api/squads", (req, res) => {
+  const { squads } = req.body;
+  if (!squads || typeof squads !== "object") {
+    return res.status(400).json({ success: false, error: "Squads object required" });
+  }
+  writeSquads(squads);
+  res.json({ success: true, squads });
+});
 app.get("/api/backup", (_req, res) => {
   const users = readUsers();
   const settings = readSettings();
   const applications = readApplications();
   const seasons = readSeasons();
   const archivedSnapshots = readArchivedSnapshots();
+  const matches = readMatches();
   const backupData = {
     version: "1.0",
     appName: "\u062F\u0648\u0631\u064A \u062C\u0627\u0645\u0639\u0629 \u0627\u0644\u0646\u064A\u0644 \u2014 \u0628\u0637\u0648\u0644\u0629 \u0643\u0631\u0629 \u0627\u0644\u0642\u062F\u0645",
@@ -633,7 +875,8 @@ app.get("/api/backup", (_req, res) => {
     settings,
     applications,
     seasons,
-    archivedSnapshots
+    archivedSnapshots,
+    matches
   };
   res.json({ success: true, backup: backupData });
 });
@@ -658,6 +901,9 @@ app.post("/api/backup/import", (req, res) => {
   if (Array.isArray(payload.archivedSnapshots)) {
     writeArchivedSnapshots(payload.archivedSnapshots);
   }
+  if (Array.isArray(payload.matches) && payload.matches.length > 0) {
+    writeMatches(payload.matches);
+  }
   console.log(`[BACKUP RESTORE] Successfully imported backup from ${payload.exportedAt || payload.timestamp || "unknown"}`);
   res.json({
     success: true,
@@ -666,6 +912,7 @@ app.post("/api/backup/import", (req, res) => {
     settings: readSettings(),
     applications: readApplications(),
     seasons: readSeasons(),
+    matches: readMatches(),
     archivedSnapshots: readArchivedSnapshots()
   });
 });
@@ -886,6 +1133,12 @@ app.post("/api/gemini/chat", async (req, res) => {
     });
   }
 });
+app.use((err, _req, res, _next) => {
+  console.error("Express uncaught route error:", err);
+  if (!res.headersSent) {
+    res.status(500).json({ success: false, error: "Internal server error", details: err?.message || String(err) });
+  }
+});
 async function startServer() {
   const isProd = process.env.NODE_ENV === "production";
   if (!isProd) {
@@ -906,11 +1159,13 @@ async function startServer() {
       res.sendFile(path.resolve(distPath, "index.html"));
     });
   }
-  app.listen(PORT, HOST, () => {
+  const server = app.listen(PORT, HOST, () => {
     console.log(`\u{1F3C6} Nile University Tournament Server running on http://${HOST}:${PORT}`);
+  });
+  server.on("error", (err) => {
+    console.error("Express HTTP Server error:", err);
   });
 }
 startServer().catch((err) => {
   console.error("Failed to start server:", err);
-  process.exit(1);
 });

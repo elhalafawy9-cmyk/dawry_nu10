@@ -8,11 +8,42 @@ import dotenv from 'dotenv';
 dotenv.config();
 import { GoogleGenAI } from '@google/genai';
 
+// Process error safety to prevent unexpected server termination
+process.on('uncaughtException', (err) => {
+  console.error('Server uncaughtException:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('Server unhandledRejection:', reason);
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+
+// Determine port: command line args first, then DEFAULT_APP_PORT, avoiding 8080 (which is used by nginx)
+function resolvePort(): number {
+  const portArgIndex = process.argv.indexOf('--port');
+  if (portArgIndex !== -1 && process.argv[portArgIndex + 1]) {
+    const val = Number(process.argv[portArgIndex + 1]);
+    if (!isNaN(val) && val > 0) return val;
+  }
+  if (process.env.DEFAULT_APP_PORT) {
+    const val = Number(process.env.DEFAULT_APP_PORT);
+    if (!isNaN(val) && val > 0) return val;
+  }
+  if (process.env.APP_PORT) {
+    const val = Number(process.env.APP_PORT);
+    if (!isNaN(val) && val > 0) return val;
+  }
+  if (process.env.PORT && process.env.PORT !== '8080') {
+    const val = Number(process.env.PORT);
+    if (!isNaN(val) && val > 0) return val;
+  }
+  return 3000;
+}
+
+const PORT = resolvePort();
 const HOST = '0.0.0.0';
 
 app.use(express.json({ limit: '50mb' }));
@@ -1379,6 +1410,14 @@ app.post('/api/gemini/chat', async (req: Request, res: Response) => {
 });
 
 
+// Global Express error handler
+app.use((err: any, _req: Request, res: Response, _next: any) => {
+  console.error('Express uncaught route error:', err);
+  if (!res.headersSent) {
+    res.status(500).json({ success: false, error: 'Internal server error', details: err?.message || String(err) });
+  }
+});
+
 // -------------------------------------------------------------
 // VITE DEV SERVER / STATIC PRODUCTION SERVING
 // -------------------------------------------------------------
@@ -1404,12 +1443,16 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, HOST, () => {
+  const server = app.listen(PORT, HOST, () => {
     console.log(`🏆 Nile University Tournament Server running on http://${HOST}:${PORT}`);
+  });
+
+  server.on('error', (err: any) => {
+    console.error('Express HTTP Server error:', err);
   });
 }
 
 startServer().catch(err => {
   console.error('Failed to start server:', err);
-  process.exit(1);
 });
+

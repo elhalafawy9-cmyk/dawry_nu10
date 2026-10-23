@@ -956,5 +956,87 @@ export async function saveServerSquads(squads: Record<string, any[]>): Promise<R
   return null;
 }
 
+/**
+ * Smart merge between local matches and remote matches:
+ * 1. Preserves recorded scores and finished match status (never reverts a finished match to null score).
+ * 2. Incorporates server updates when newer or available.
+ * 3. Guarantees the complete list of matches is never truncated.
+ */
+export function mergeTournamentMatches(localMatches: any[], remoteMatches: any[]): any[] {
+  if (!Array.isArray(localMatches) || localMatches.length === 0) return remoteMatches || [];
+  if (!Array.isArray(remoteMatches) || remoteMatches.length === 0) return localMatches;
+
+  const remoteMap = new Map<string, any>();
+  remoteMatches.forEach(m => {
+    if (m && m.id) remoteMap.set(m.id, m);
+  });
+
+  const merged = localMatches.map(localM => {
+    const remoteM = remoteMap.get(localM.id);
+    if (!remoteM) return localM;
+
+    const localHasScore = localM.scoreA !== null && localM.scoreA !== undefined && !isNaN(Number(localM.scoreA));
+    const remoteHasScore = remoteM.scoreA !== null && remoteM.scoreA !== undefined && !isNaN(Number(remoteM.scoreA));
+
+    // Case 1: Local has recorded score, but remote does not yet have it
+    if (localHasScore && !remoteHasScore) {
+      // KEEP LOCAL RECORDED RESULT! Do not wipe it!
+      return {
+        ...remoteM,
+        ...localM,
+        scoreA: localM.scoreA,
+        scoreB: localM.scoreB,
+        status: localM.status,
+        scorersSummary: localM.scorersSummary,
+        lineups: localM.lineups || remoteM.lineups,
+        substitutions: localM.substitutions || remoteM.substitutions,
+        cards: localM.cards || remoteM.cards,
+      };
+    }
+
+    // Case 2: Remote has recorded score, but local does not
+    if (!localHasScore && remoteHasScore) {
+      return {
+        ...localM,
+        ...remoteM,
+      };
+    }
+
+    // Case 3: Both have scores - prefer finished status, or remote as authoritative
+    if (localHasScore && remoteHasScore) {
+      if (localM.status === 'finished' && remoteM.status !== 'finished') {
+        return localM;
+      }
+      return {
+        ...localM,
+        ...remoteM,
+      };
+    }
+
+    // Case 4: Neither has scores - merge schedule, pitch, and pairings
+    return {
+      ...localM,
+      ...remoteM,
+      teamA: remoteM.teamA || localM.teamA,
+      teamB: remoteM.teamB || localM.teamB,
+      isScheduled: remoteM.isScheduled ?? localM.isScheduled,
+      date: remoteM.date || localM.date,
+      time: remoteM.time || localM.time,
+      pitch: remoteM.pitch || localM.pitch,
+    };
+  });
+
+  // Preserve any matches in remote that might not be in local
+  const localIdSet = new Set(localMatches.map(m => m.id));
+  remoteMatches.forEach(rm => {
+    if (rm && rm.id && !localIdSet.has(rm.id)) {
+      merged.push(rm);
+    }
+  });
+
+  return merged;
+}
+
+
 
 

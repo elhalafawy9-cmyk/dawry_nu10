@@ -1,0 +1,203 @@
+{
+  "entities": {
+    "Match": {
+      "title": "Match",
+      "description": "Represents an individual football tournament match in group stage or knockout bracket.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the match"
+        },
+        "stage": {
+          "type": "string",
+          "description": "Tournament stage: group, r32, r16, qf, sf, final"
+        },
+        "stageName": {
+          "type": "string",
+          "description": "Human-readable Arabic stage name"
+        },
+        "group": {
+          "type": "string",
+          "description": "Group letter A to H if group stage match"
+        },
+        "round": {
+          "type": "number",
+          "description": "Round number 1 to 5"
+        },
+        "teamA": {
+          "type": "string",
+          "description": "Name of the first team"
+        },
+        "teamB": {
+          "type": "string",
+          "description": "Name of the second team"
+        },
+        "scoreA": {
+          "type": "number",
+          "description": "Goals scored by team A"
+        },
+        "scoreB": {
+          "type": "number",
+          "description": "Goals scored by team B"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["upcoming", "live", "finished"],
+          "description": "Match status"
+        },
+        "minute": {
+          "type": "number",
+          "description": "Current minute if live"
+        },
+        "date": {
+          "type": "string",
+          "description": "Match scheduled date"
+        },
+        "time": {
+          "type": "string",
+          "description": "Match scheduled kickoff time"
+        },
+        "pitch": {
+          "type": "string",
+          "description": "Pitch name"
+        },
+        "isScheduled": {
+          "type": "boolean",
+          "description": "Whether the match date/time is confirmed"
+        },
+        "recordedBy": {
+          "type": "string",
+          "description": "Operator who recorded the match"
+        },
+        "scorersSummary": {
+          "type": "string",
+          "description": "Summary string of scorers and assists"
+        }
+      },
+      "required": ["id", "stage", "teamA", "teamB", "status"]
+    },
+    "Team": {
+      "title": "Team",
+      "description": "Represents one of the 48 participating tournament teams.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Team identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Team name"
+        },
+        "group": {
+          "type": "string",
+          "description": "Group letter A to H"
+        },
+        "played": {
+          "type": "number",
+          "description": "Matches played"
+        },
+        "won": {
+          "type": "number",
+          "description": "Matches won"
+        },
+        "drawn": {
+          "type": "number",
+          "description": "Matches drawn"
+        },
+        "lost": {
+          "type": "number",
+          "description": "Matches lost"
+        },
+        "gf": {
+          "type": "number",
+          "description": "Goals for"
+        },
+        "ga": {
+          "type": "number",
+          "description": "Goals against"
+        },
+        "gd": {
+          "type": "number",
+          "description": "Goal difference"
+        },
+        "points": {
+          "type": "number",
+          "description": "Total points"
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "URL or path of team emblem"
+        }
+      },
+      "required": ["id", "name", "group"]
+    },
+    "Squad": {
+      "title": "Squad",
+      "description": "Roster of registered players for a team.",
+      "type": "object",
+      "properties": {
+        "teamName": {
+          "type": "string",
+          "description": "Name of the team"
+        },
+        "players": {
+          "type": "array",
+          "description": "Array of player objects"
+        }
+      },
+      "required": ["teamName"]
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "Global tournament administration settings.",
+      "type": "object",
+      "properties": {
+        "activeSeasonId": {
+          "type": "string",
+          "description": "ID of active season"
+        },
+        "currentSeasonName": {
+          "type": "string",
+          "description": "Name of tournament season"
+        },
+        "isPlayerEditingOpen": {
+          "type": "boolean",
+          "description": "Whether team managers can modify rosters"
+        },
+        "isRegistrationVisibleToPublic": {
+          "type": "boolean",
+          "description": "Whether registration portal is visible"
+        }
+      },
+      "required": ["activeSeasonId", "currentSeasonName"]
+    }
+  },
+  "firestore": {
+    "/matches/{matchId}": {
+      "schema": {
+        "$ref": "#/entities/Match"
+      },
+      "description": "All 152 tournament matches and results"
+    },
+    "/teams/{teamId}": {
+      "schema": {
+        "$ref": "#/entities/Team"
+      },
+      "description": "All 48 tournament teams and standings"
+    },
+    "/squads/{teamName}": {
+      "schema": {
+        "$ref": "#/entities/Squad"
+      },
+      "description": "Squad rosters for all teams"
+    },
+    "/settings/{settingId}": {
+      "schema": {
+        "$ref": "#/entities/AppSettings"
+      },
+      "description": "System-wide tournament settings"
+    }
+  }
+}
