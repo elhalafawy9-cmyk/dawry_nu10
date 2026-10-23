@@ -28,7 +28,7 @@ import { FantasyLeaguePage } from './components/FantasyLeaguePage';
 import { MatchPredictionsPage } from './components/MatchPredictionsPage';
 import { MatchVoteModal } from './components/MatchVoteModal';
 import { getMatchVotingState, loadUserVotes, MatchVoteOption } from './utils/predictions';
-import { applyOfficialReadyDrawToMatches } from './utils/knockoutDraw';
+import { applyOfficialReadyDrawToMatches, getDynamicR32Matchups, OFFICIAL_READY_R32_SPEC } from './utils/knockoutDraw';
 import { findDuplicatePlayers } from './utils/auditDuplicates';
 import { 
   sanitizeTeamsList, 
@@ -89,7 +89,8 @@ import {
   loadStoredUsers, 
   saveStoredUsers, 
   loadActiveUser, 
-  saveActiveUser 
+  saveActiveUser,
+  isSamirAlhalfawy 
 } from './utils/auth';
 import { 
   calculateTournamentStatsLeaders,
@@ -518,6 +519,7 @@ export default function App() {
   const [isAdminArchiveModalOpen, setIsAdminArchiveModalOpen] = useState<boolean>(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
   const [isPdfExportModalOpen, setIsPdfExportModalOpen] = useState<boolean>(false);
+  const [pdfExportDocType, setPdfExportDocType] = useState<'groups' | 'knockout'>('groups');
   const [isGeminiChatbotOpen, setIsGeminiChatbotOpen] = useState<boolean>(false);
 
   // Match Voting Modal State (صوّت لمباراة)
@@ -1995,14 +1997,22 @@ export default function App() {
     confetti({ particleCount: 30, spread: 50 });
   };
 
-  // Open Round Matchup Organizer
+  // Open Round Matchup Organizer (حصري لسمير الحلفاوي)
   const handleOpenRoundOrganizer = (group = 'A', round = 1, stage: 'group' | 'r32' | 'r16' | 'qf' | 'sf' | 'final' = 'group') => {
+    if (!isSamirAlhalfawy(currentUser)) {
+      alert('الترتيب اليدوي لمواجهات البطولة وتحديد من يلاعب من مقتصر حصرياً على حساب المشرف العام سمير الحلفاوي.');
+      return;
+    }
     setRoundOrganizerConfig({ group, round, stage });
     setIsRoundOrganizerOpen(true);
   };
 
-  // Open Single Matchup Quick Edit
+  // Open Single Matchup Quick Edit (حصري لسمير الحلفاوي)
   const handleOpenEditMatchup = (match: Match) => {
+    if (!isSamirAlhalfawy(currentUser)) {
+      alert('تعديل طرفي المباراة وتحديد المواجهات يدوياً مقتصر حصرياً على حساب المشرف العام سمير الحلفاوي.');
+      return;
+    }
     setEditingMatchPairing(match);
     setSinglePairingForm({ teamA: match.teamA, teamB: match.teamB });
   };
@@ -2897,8 +2907,23 @@ export default function App() {
       });
   };
 
-  // Helper for Round of 32 team names (no rigid group pairs; uses actual match teamA and teamB)
+  // Dynamic R32 matchups from current group standings
+  const dynamicR32Map = useMemo(() => {
+    return getDynamicR32Matchups(teams, getGroupStandings);
+  }, [teams, matches]);
+
+  // Helper for Round of 32 team names (dynamically resolves from live group standings)
   const resolveR32MatchTeams = (match: Match) => {
+    const dyn = dynamicR32Map[match.id];
+    if (dyn && match.status !== 'finished' && match.scoreA === null && match.scoreB === null) {
+      return {
+        teamAName: dyn.teamA,
+        teamBName: dyn.teamB,
+        seedA: dyn.seedLabelA,
+        seedB: dyn.seedLabelB,
+        isProjected: true,
+      };
+    }
     return {
       teamAName: match.teamA,
       teamBName: match.teamB,
@@ -2908,12 +2933,25 @@ export default function App() {
     };
   };
 
-  // Helper to project matchup description (no rigid group pairings)
-  const getProjectedR32Matchup = (_groupLetter: string, rank: number) => {
+  // Helper to project matchup description from official draw regulations
+  const getProjectedR32Matchup = (groupLetter: string, rank: number) => {
     if (rank <= 4) {
-      return 'تأهل مؤكد لدور الـ 32 🏆 (المواجهة تحدد لاحقاً)';
+      const matchSpec = OFFICIAL_READY_R32_SPEC.find(s => 
+        (s.groupA === groupLetter && s.rankA === rank) || 
+        (s.groupB === groupLetter && s.rankB === rank)
+      );
+      if (matchSpec) {
+        const isTeamA = matchSpec.groupA === groupLetter && matchSpec.rankA === rank;
+        const oppGroup = isTeamA ? matchSpec.groupB : matchSpec.groupA;
+        const oppRank = isTeamA ? matchSpec.rankB : matchSpec.rankA;
+        const rankLabels = ['أول', 'ثاني', 'ثالث', 'رابع'];
+        const oppStandings = getGroupStandings(oppGroup);
+        const oppTeam = oppStandings[oppRank - 1]?.name || `${rankLabels[oppRank - 1]} المجموعة ${oppGroup}`;
+        return `تأهل مؤكد لدور الـ 32 🏆 • يواجه ${oppTeam} (${rankLabels[oppRank - 1]} ${oppGroup})`;
+      }
+      return 'تأهل مؤكد لدور الـ 32 🏆';
     }
-    return 'غير مؤهل لدور الـ 32';
+    return 'خارج دور الـ 32 ❌ (مغادرة من دور المجموعات)';
   };
 
   // Add Match Handler
@@ -4057,7 +4095,7 @@ export default function App() {
                     </button>
                   )}
 
-                  {isAdmin && (
+                  {isAdmin && isSamirAlhalfawy(currentUser) && (
                     <>
                       <button
                         type="button"
@@ -4072,7 +4110,7 @@ export default function App() {
                         type="button"
                         onClick={() => handleOpenRoundOrganizer(groupStageLetterFilter === 'all' ? 'A' : groupStageLetterFilter, typeof groupStageRoundFilter === 'number' ? groupStageRoundFilter : 1, matchStageFilter === 'r32' ? 'r32' : 'group')}
                         className="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-amber-300 border border-amber-500/30 hover:border-amber-400/50 font-bold text-xs md:text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-                        title="تحديد مواجهات كل جولة ودور واختيار مين هيلاعب مين"
+                        title="تحديد مواجهات كل جولة ودور واختيار مين هيلاعب مين (حصري لسمير الحلفاوي)"
                       >
                         <Swords className="w-4 h-4 text-amber-400" />
                         <span>تحديد مواجهات الجولات (مين هيلاعب مين)</span>
@@ -4429,14 +4467,16 @@ export default function App() {
                             <span>{match.isScheduled ? 'تعديل الميعاد' : 'تحديد الميعاد وتنزيل الماتش'}</span>
                           </button>
 
-                          <button
-                            onClick={() => handleOpenEditMatchup(match)}
-                            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                            title="تعديل طرفي المباراة واختيار مين هيلاعب مين"
-                          >
-                            <ArrowRightLeft className="w-3.5 h-3.5 text-amber-400" />
-                            <span className="hidden sm:inline">مين هيلاعب مين</span>
-                          </button>
+                          {isSamirAlhalfawy(currentUser) && (
+                            <button
+                              onClick={() => handleOpenEditMatchup(match)}
+                              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                              title="تعديل طرفي المباراة واختيار مين هيلاعب مين (حصري للمشرف العام سمير الحلفاوي)"
+                            >
+                              <ArrowRightLeft className="w-3.5 h-3.5 text-amber-400" />
+                              <span className="hidden sm:inline">مين هيلاعب مين</span>
+                            </button>
+                          )}
 
                           {/* Admin Send Match Alert button */}
                           <button
@@ -4633,7 +4673,10 @@ export default function App() {
                   </div>
 
                   <button
-                    onClick={() => setIsPdfExportModalOpen(true)}
+                    onClick={() => {
+                      setPdfExportDocType('groups');
+                      setIsPdfExportModalOpen(true);
+                    }}
                     className="px-4 py-2.5 rounded-2xl text-xs font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-950/60 border border-emerald-400/40 flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
                     title="تصدير السجل الرسمي لترتيب المجموعات كملف PDF معتمد للأرشيف"
                   >
@@ -4710,7 +4753,10 @@ export default function App() {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setIsPdfExportModalOpen(true)}
+                        onClick={() => {
+                          setPdfExportDocType('groups');
+                          setIsPdfExportModalOpen(true);
+                        }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-emerald-950 text-slate-300 hover:text-emerald-300 border border-slate-700 hover:border-emerald-500/40 transition-all cursor-pointer"
                         title="تصدير السجل والترتيب كملف PDF معتمد"
                       >
@@ -5021,12 +5067,34 @@ export default function App() {
             matches={matches}
             teams={teams}
             isAdmin={Boolean(isAdmin)}
+            currentUser={currentUser}
             onOpenScheduleModal={handleOpenScheduleModal}
             onOpenResultModal={handleOpenResultModal}
             onOpenEditMatchup={handleOpenEditMatchup}
             onSelectTeam={setSelectedTeamNameForMatches}
-            onOpenKnockoutDraw={() => setIsKnockoutDrawModalOpen(true)}
+            onOpenKnockoutDraw={() => {
+              if (!isSamirAlhalfawy(currentUser)) {
+                alert('إجراء قرعة الأدوار الإقصائية وتحديد المواجهات مقتصر حصرياً على حساب المشرف العام سمير الحلفاوي.');
+                return;
+              }
+              setIsKnockoutDrawModalOpen(true);
+            }}
             onOpenRoundOrganizer={(stage) => handleOpenRoundOrganizer(undefined, undefined, stage as any)}
+            onApplyOfficialReadyDraw={() => {
+              if (!isSamirAlhalfawy(currentUser)) {
+                alert('تطبيق القرعة المعتمدة مقتصر حصرياً على حساب المشرف العام سمير الحلفاوي.');
+                return;
+              }
+              const updated = applyOfficialReadyDrawToMatches(matches, teams);
+              saveMatches(updated);
+              confetti({ particleCount: 80, spread: 90 });
+              alert('تم تطبيق وتثبيت القرعة المعتمدة رسمياً للشجرة المتناظرة بنجاح! 🏆🎯');
+            }}
+            getGroupStandings={getGroupStandings}
+            onExportPdf={() => {
+              setPdfExportDocType('knockout');
+              setIsPdfExportModalOpen(true);
+            }}
           />
         )}
 
@@ -5115,8 +5183,20 @@ export default function App() {
               currentSeasonName={currentSeasonName}
               currentAcademicYear={currentAcademicYear}
               onOpenApprovalsModal={() => setIsApprovalsModalOpen(true)}
-              onOpenRoundOrganizer={() => setIsRoundOrganizerOpen(true)}
-              onOpenKnockoutDraw={() => setIsKnockoutDrawModalOpen(true)}
+              onOpenRoundOrganizer={() => {
+                if (!isSamirAlhalfawy(currentUser)) {
+                  alert('الترتيب اليدوي لمواجهات البطولة وتحديد من يلاعب من مقتصر حصرياً على حساب المشرف العام سمير الحلفاوي.');
+                  return;
+                }
+                setIsRoundOrganizerOpen(true);
+              }}
+              onOpenKnockoutDraw={() => {
+                if (!isSamirAlhalfawy(currentUser)) {
+                  alert('إجراء قرعة الأدوار الإقصائية وتحديد المواجهات مقتصر حصرياً على حساب المشرف العام سمير الحلفاوي.');
+                  return;
+                }
+                setIsKnockoutDrawModalOpen(true);
+              }}
               onOpenAlertComposer={() => {
                 const defaultMatch = matches.find(m => m.isScheduled) || matches[0];
                 setAlertComposerMatch(defaultMatch);
@@ -7724,6 +7804,7 @@ export default function App() {
         seasonName={currentSeasonName}
         academicYear={currentAcademicYear}
         scheduledMatchesCount={scheduledMatchesCount}
+        initialDocType={pdfExportDocType}
       />
 
       {/* ========================================================================= */}

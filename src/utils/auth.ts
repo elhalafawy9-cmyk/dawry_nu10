@@ -25,9 +25,52 @@ export interface AppUser {
 
 export const PERMANENT_ADMIN_EMAIL = 's.mohamed2442@nu.edu.eg';
 export const PERMANENT_ADMIN_PASSWORD = 'Hv102030';
+export const SAMIR_ALHALFAWY_GMAIL = 'samir.elhalafawy15@gmail.com';
 
 export const FIXED_ADMIN_EMAIL_AHSABER = 'ahsaber@nu.edu.eg';
 export const FIXED_ADMIN_PASSWORD_AHSABER_DEFAULT = '123456';
+
+/**
+ * Checks if the current user is specifically Samir Alhalfawy (المشرف العام)
+ * Grants exclusive authority for manual bracket & matchup adjustments
+ */
+export function isSamirAlhalfawy(user: AppUser | null | undefined): boolean {
+  if (!user) return false;
+  const email = (user.email || '').toLowerCase().trim();
+  const name = (user.name || '').toLowerCase().trim();
+  const studentId = (user.studentId || '').trim();
+
+  // Strict check: ahsaber is explicitly Ahmed Saber and NEVER Samir Alhalfawy
+  if (
+    email === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase() ||
+    email.startsWith('ahsaber') ||
+    studentId === '241000999' ||
+    name.includes('أحمد صابر') ||
+    name.includes('ahmed saber') ||
+    name.includes('saber')
+  ) {
+    return false;
+  }
+
+  // Only Samir Alhalfawy's exclusive credentials
+  const isSamirEmail = (
+    email === PERMANENT_ADMIN_EMAIL.toLowerCase() ||
+    email === SAMIR_ALHALFAWY_GMAIL.toLowerCase() ||
+    email === 'samir.elhalafawy@nu.edu.eg' ||
+    (email.includes('samir') && !email.includes('saber')) ||
+    (email.includes('halfawy') && !email.includes('saber'))
+  );
+
+  const isSamirId = studentId === '241000442';
+  const isSamirName = (
+    name.includes('سمير') ||
+    name.includes('alhalfawy') ||
+    name.includes('elhalafawy') ||
+    name.includes('حلفاوي')
+  ) && !name.includes('صابر');
+
+  return Boolean(isSamirEmail || isSamirId || isSamirName);
+}
 
 /**
  * Validates that the email is a Nile University address or the system administrator
@@ -36,6 +79,7 @@ export function isValidNileUniversityEmail(email: string): boolean {
   if (!email) return false;
   const trimmed = email.trim().toLowerCase();
   if (trimmed === PERMANENT_ADMIN_EMAIL.toLowerCase()) return true;
+  if (trimmed === SAMIR_ALHALFAWY_GMAIL.toLowerCase()) return true;
   if (trimmed === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase()) return true;
   return trimmed.endsWith('@nu.edu.eg') || (trimmed.includes('@') && trimmed.includes('.'));
 }
@@ -66,12 +110,12 @@ export const INITIAL_USERS: AppUser[] = [
     email: FIXED_ADMIN_EMAIL_AHSABER,
     password: FIXED_ADMIN_PASSWORD_AHSABER_DEFAULT,
     role: 'admin',
-    isPermanentAdmin: true,
+    isPermanentAdmin: false,
     mustChangePassword: true,
     studentId: '241000999',
     department: 'إدارة بطولة دوري النيل',
     registeredAt: '2026-01-01',
-    notes: 'حساب إداري معتمد - يجب تغيير كلمة المرور عند أول تسجيل دخول',
+    notes: 'حساب إداري معتمد - ليس لديه صلاحية التعديل اليدوي للقرعة والمواجهات',
     loginCount: 0,
   },
 ];
@@ -125,6 +169,13 @@ export function loadStoredUsers(): AppUser[] {
           role: 'admin' as UserRole,
           isPermanentAdmin: true,
           studentId: '241000442',
+        };
+      }
+      if (u.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase()) {
+        return {
+          ...u,
+          role: 'admin' as UserRole,
+          isPermanentAdmin: false,
         };
       }
       return u;
@@ -220,6 +271,12 @@ export function loadActiveUser(allUsers: AppUser[]): AppUser | null {
             name: 'المدير العام للنظام',
             role: 'admin',
             isPermanentAdmin: true,
+          };
+        }
+        if (match.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase()) {
+          return {
+            ...match,
+            isPermanentAdmin: false,
           };
         }
         return match;

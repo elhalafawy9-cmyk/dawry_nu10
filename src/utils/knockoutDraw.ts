@@ -619,6 +619,18 @@ export const OFFICIAL_READY_R32_SPEC = [
   { matchId: 'r32_16', groupA: 'A', rankA: 2, groupB: 'B', rankB: 3 },
 ];
 
+export interface DynamicR32MatchInfo {
+  matchId: string;
+  teamA: string;
+  teamB: string;
+  seedLabelA: string;
+  seedLabelB: string;
+  groupA: string;
+  rankA: number;
+  groupB: string;
+  rankB: number;
+}
+
 /**
  * Builds the complete 32 knockout matches pre-populated with the official draw requested by the user.
  */
@@ -633,6 +645,42 @@ export function buildOfficialReadyKnockoutMatches(
     const tA = seeds[spec.groupA]?.[spec.rankA - 1]?.teamName || `أول المجموعة ${spec.groupA}`;
     const tB = seeds[spec.groupB]?.[spec.rankB - 1]?.teamName || `متأهل المجموعة ${spec.groupB}`;
     result[spec.matchId] = { teamA: tA, teamB: tB };
+  });
+
+  return result;
+}
+
+/**
+ * Returns dynamic live R32 match details using current real-time standings of all 8 groups.
+ * Ensures the top 4 teams from each group qualify and pair according to official regulations.
+ */
+export function getDynamicR32Matchups(
+  teams: Team[],
+  getGroupStandings?: (groupLetter: string) => Team[]
+): Record<string, DynamicR32MatchInfo> {
+  const seeds = getTournamentQualifiedSeeds(teams, getGroupStandings);
+  const result: Record<string, DynamicR32MatchInfo> = {};
+
+  const rankLabels = ['أول', 'ثاني', 'ثالث', 'رابع'];
+
+  OFFICIAL_READY_R32_SPEC.forEach(spec => {
+    const sA = seeds[spec.groupA]?.[spec.rankA - 1];
+    const sB = seeds[spec.groupB]?.[spec.rankB - 1];
+
+    const labelA = `${rankLabels[spec.rankA - 1]} المجموعة ${spec.groupA}`;
+    const labelB = `${rankLabels[spec.rankB - 1]} المجموعة ${spec.groupB}`;
+
+    result[spec.matchId] = {
+      matchId: spec.matchId,
+      teamA: sA?.teamName || labelA,
+      teamB: sB?.teamName || labelB,
+      seedLabelA: labelA,
+      seedLabelB: labelB,
+      groupA: spec.groupA,
+      rankA: spec.rankA,
+      groupB: spec.groupB,
+      rankB: spec.rankB,
+    };
   });
 
   return result;
