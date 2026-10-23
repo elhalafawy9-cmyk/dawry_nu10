@@ -846,4 +846,115 @@ export async function updateServerMatch(matchId: string, updates: any): Promise<
   return null;
 }
 
+/**
+ * Changes a user's password on the backend server and permanently clears mustChangePassword.
+ */
+export async function changeUserPasswordOnServer(userId?: string, email?: string, newPassword?: string): Promise<{ success: boolean; user?: AppUser; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/users/change-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ userId, email, newPassword }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Server returned ${res.status}`);
+    }
+    const data = await res.json();
+    if (data.users && Array.isArray(data.users)) {
+      saveStoredUsers(data.users);
+    }
+    return { success: true, user: data.user };
+  } catch (err: any) {
+    console.error('Failed to change password on server:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Fetches all 48 teams from the server.
+ */
+export async function fetchServerTeams(): Promise<any[] | null> {
+  try {
+    const res = await fetch(`${API_BASE}/teams`, {
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+    if (Array.isArray(data.teams) && data.teams.length > 0) {
+      return data.teams;
+    }
+  } catch (err) {
+    console.warn('Could not fetch teams from server:', err);
+  }
+  return null;
+}
+
+/**
+ * Saves all 48 teams to the server.
+ */
+export async function saveServerTeams(teams: any[]): Promise<any[] | null> {
+  try {
+    const res = await fetch(`${API_BASE}/teams`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ teams }),
+    });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+    return data.teams || null;
+  } catch (err) {
+    console.warn('Failed to save teams to server:', err);
+  }
+  return null;
+}
+
+/**
+ * Fetches player squads from the server.
+ */
+export async function fetchServerSquads(): Promise<Record<string, any[]> | null> {
+  try {
+    const res = await fetch(`${API_BASE}/squads`, {
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+    if (data.squads && typeof data.squads === 'object' && Object.keys(data.squads).length > 0) {
+      return data.squads;
+    }
+  } catch (err) {
+    console.warn('Could not fetch squads from server:', err);
+  }
+  return null;
+}
+
+/**
+ * Saves player squads to the server.
+ */
+export async function saveServerSquads(squads: Record<string, any[]>): Promise<Record<string, any[]> | null> {
+  try {
+    const res = await fetch(`${API_BASE}/squads`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ squads }),
+    });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+    return data.squads || null;
+  } catch (err) {
+    console.warn('Failed to save squads to server:', err);
+  }
+  return null;
+}
+
+
 

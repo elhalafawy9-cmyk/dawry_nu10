@@ -12,7 +12,7 @@
     "notes": "المدير الدائم المعتمد والوحيد للنظام - كامل صلاحيات الإدارة",
     "lastLoginAt": "2026-10-18T11:00:30.333Z",
     "lastActiveAt": "2026-10-20T20:46:15.412Z",
-    "isOnline": true,
+    "isOnline": false,
     "loginCount": 7
   },
   {
@@ -27,6 +27,7 @@
     "department": "إدارة بطولة دوري النيل",
     "registeredAt": "2026-01-01",
     "notes": "حساب إداري معتمد - يجب تغيير كلمة المرور عند أول تسجيل دخول",
-    "loginCount": 0
+    "loginCount": 0,
+    "isOnline": false
   }
 ]

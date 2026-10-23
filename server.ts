@@ -40,6 +40,8 @@ const APPLICATIONS_FILE = path.resolve(DATA_DIR, 'applications.json');
 const SEASONS_FILE = path.resolve(DATA_DIR, 'seasons.json');
 const ARCHIVED_SEASONS_FILE = path.resolve(DATA_DIR, 'archived_seasons.json');
 const MATCHES_FILE = path.resolve(DATA_DIR, 'matches.json');
+const TEAMS_FILE = path.resolve(DATA_DIR, 'teams.json');
+const SQUADS_FILE = path.resolve(DATA_DIR, 'squads.json');
 
 interface AppSettings {
   isPlayerEditingOpen: boolean;
@@ -240,10 +242,58 @@ function writeMatches(matches: any[]): void {
   }
 }
 
+function readTeams(): any[] {
+  ensureDataDir();
+  try {
+    if (fs.existsSync(TEAMS_FILE)) {
+      const raw = fs.readFileSync(TEAMS_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.warn('Could not read teams.json', e);
+  }
+  return [];
+}
+
+function writeTeams(teams: any[]): void {
+  ensureDataDir();
+  try {
+    fs.writeFileSync(TEAMS_FILE, JSON.stringify(teams, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to write teams.json', e);
+  }
+}
+
+function readSquads(): Record<string, any[]> {
+  ensureDataDir();
+  try {
+    if (fs.existsSync(SQUADS_FILE)) {
+      const raw = fs.readFileSync(SQUADS_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed;
+    }
+  } catch (e) {
+    console.warn('Could not read squads.json', e);
+  }
+  return {};
+}
+
+function writeSquads(squads: Record<string, any[]>): void {
+  ensureDataDir();
+  try {
+    fs.writeFileSync(SQUADS_FILE, JSON.stringify(squads, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to write squads.json', e);
+  }
+}
+
 const PERMANENT_ADMIN_EMAIL = 's.mohamed2442@nu.edu.eg';
 const PERMANENT_ADMIN_PASSWORD = 'Hv102030';
+const FIXED_ADMIN_EMAIL_AHSABER = 'ahsaber@nu.edu.eg';
+const FIXED_ADMIN_PASSWORD_AHSABER_DEFAULT = '123456';
 
-// Initial default seed users - ONLY user s.mohamed2442@nu.edu.eg as super admin
+// Initial default seed users - Super admin & Ahmed Saber admin account
 const DEFAULT_INITIAL_USERS = [
   {
     id: 'user_super_admin',
@@ -260,6 +310,20 @@ const DEFAULT_INITIAL_USERS = [
     lastActiveAt: new Date().toISOString(),
     isOnline: true,
     loginCount: 1,
+  },
+  {
+    id: 'user_ahsaber_admin',
+    name: 'أحمد صابر (إدارة البطولة)',
+    email: FIXED_ADMIN_EMAIL_AHSABER,
+    password: FIXED_ADMIN_PASSWORD_AHSABER_DEFAULT,
+    role: 'admin',
+    isPermanentAdmin: true,
+    mustChangePassword: true,
+    studentId: '241000999',
+    department: 'إدارة بطولة دوري النيل',
+    registeredAt: '2026-01-01',
+    notes: 'حساب إداري معتمد - يجب تغيير كلمة المرور عند أول تسجيل دخول',
+    loginCount: 0,
   },
 ];
 
@@ -288,11 +352,28 @@ function readUsers(): any[] {
               isPermanentAdmin: true,
             };
           }
+          if (u.email && u.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase()) {
+            return {
+              ...u,
+              name: 'أحمد صابر (إدارة البطولة)',
+              role: 'admin',
+              isPermanentAdmin: true,
+              // Keep their changed password and mustChangePassword state intact!
+              mustChangePassword: u.mustChangePassword === false ? false : Boolean(u.mustChangePassword),
+            };
+          }
           return u;
         });
+
+        // Ensure permanent admin exists
         if (!cleaned.some(u => u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase())) {
           cleaned.unshift(DEFAULT_INITIAL_USERS[0]);
         }
+        // Ensure Ahmed Saber exists
+        if (!cleaned.some(u => u.email && u.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase())) {
+          cleaned.push(DEFAULT_INITIAL_USERS[1]);
+        }
+
         // Compute online status dynamically (active within 3 minutes)
         const now = Date.now();
         return cleaned.map(u => {
@@ -326,12 +407,25 @@ function writeUsers(users: any[]) {
           isPermanentAdmin: true,
         };
       }
+      if (u.email && u.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase()) {
+        return {
+          ...u,
+          name: 'أحمد صابر (إدارة البطولة)',
+          role: 'admin',
+          isPermanentAdmin: true,
+          mustChangePassword: u.mustChangePassword === false ? false : Boolean(u.mustChangePassword),
+        };
+      }
       return u;
     });
 
     const hasPermAdmin = sanitized.some(u => u.email && u.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
     if (!hasPermAdmin) {
       sanitized.unshift(DEFAULT_INITIAL_USERS[0]);
+    }
+    const hasAhsaber = sanitized.some(u => u.email && u.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase());
+    if (!hasAhsaber) {
+      sanitized.push(DEFAULT_INITIAL_USERS[1]);
     }
 
     fs.writeFileSync(USERS_FILE, JSON.stringify(sanitized, null, 2), 'utf-8');
@@ -371,7 +465,18 @@ app.post('/api/users/enter', (req: Request, res: Response) => {
   if (targetIndex >= 0) {
     // Existing user entering the app
     const current = users[targetIndex];
-    const keepAdmin = current.role === 'admin' || incoming.role === 'admin' || current.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase();
+    const keepAdmin = current.role === 'admin' || incoming.role === 'admin' || current.email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase() || current.email.toLowerCase() === FIXED_ADMIN_EMAIL_AHSABER.toLowerCase();
+    
+    // Crucial: If password was already changed (mustChangePassword is false) either on server or incoming, KEEP IT FALSE!
+    const resolvedMustChangePassword = (current.mustChangePassword === false || incoming.mustChangePassword === false)
+      ? false
+      : Boolean(incoming.mustChangePassword !== undefined ? incoming.mustChangePassword : current.mustChangePassword);
+
+    // Keep non-default custom password
+    const resolvedPassword = (current.password && current.password !== FIXED_ADMIN_PASSWORD_AHSABER_DEFAULT)
+      ? current.password
+      : (incoming.password || current.password);
+
     updatedUser = {
       ...current,
       name: incoming.name || current.name,
@@ -381,6 +486,8 @@ app.post('/api/users/enter', (req: Request, res: Response) => {
       managedTeamName: incoming.managedTeamName !== undefined ? incoming.managedTeamName : current.managedTeamName,
       playerTeamName: incoming.playerTeamName !== undefined ? incoming.playerTeamName : current.playerTeamName,
       avatarUrl: incoming.avatarUrl || current.avatarUrl,
+      password: resolvedPassword,
+      mustChangePassword: resolvedMustChangePassword,
       lastLoginAt: nowIso,
       lastActiveAt: nowIso,
       isOnline: true,
@@ -399,6 +506,8 @@ app.post('/api/users/enter', (req: Request, res: Response) => {
       managedTeamName: incoming.managedTeamName,
       playerTeamName: incoming.playerTeamName,
       avatarUrl: incoming.avatarUrl,
+      password: incoming.password,
+      mustChangePassword: incoming.mustChangePassword,
       registeredAt: nowIso.substring(0, 10),
       lastLoginAt: nowIso,
       lastActiveAt: nowIso,
@@ -409,8 +518,39 @@ app.post('/api/users/enter', (req: Request, res: Response) => {
   }
 
   writeUsers(users);
-  console.log(`[USER ENTER] ${updatedUser.name} (${updatedUser.email}) logged in/entered. Total users: ${users.length}`);
+  console.log(`[USER ENTER] ${updatedUser.name} (${updatedUser.email}) logged in/entered. mustChangePassword: ${updatedUser.mustChangePassword}. Total users: ${users.length}`);
   res.json({ success: true, user: updatedUser, users });
+});
+
+// 2.1. POST /api/users/change-password - Change user password and permanently clear mustChangePassword
+app.post('/api/users/change-password', (req: Request, res: Response) => {
+  const { userId, email, newPassword } = req.body;
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ success: false, error: 'كلمة المرور يجب أن تتكون من 6 أحرف أو أرقام على الأقل' });
+  }
+
+  const users = readUsers();
+  const searchEmail = (email || '').trim().toLowerCase();
+
+  const targetIndex = users.findIndex(u => 
+    (userId && u.id === userId) || 
+    (searchEmail && u.email && u.email.toLowerCase() === searchEmail)
+  );
+
+  if (targetIndex < 0) {
+    return res.status(404).json({ success: false, error: 'المستخدم غير موجود' });
+  }
+
+  users[targetIndex] = {
+    ...users[targetIndex],
+    password: newPassword,
+    mustChangePassword: false,
+    lastActiveAt: new Date().toISOString(),
+  };
+
+  writeUsers(users);
+  console.log(`[PASSWORD CHANGE] User ${users[targetIndex].name} (${users[targetIndex].email}) changed password. mustChangePassword set to FALSE.`);
+  res.json({ success: true, user: users[targetIndex], users });
 });
 
 // 3. POST /api/users/register - Register brand new user account
@@ -593,10 +733,16 @@ app.post('/api/users/sync', (req: Request, res: Response) => {
       mapByEmail.set(email, u);
     } else {
       const existing = mapByEmail.get(email);
-      // Keep most recent active info
+      // NEVER revert mustChangePassword: false back to true if it has already been changed!
+      const hasChangedPassword = existing.mustChangePassword === false || u.mustChangePassword === false;
+      const keepServerPassword = (existing.password && existing.password !== FIXED_ADMIN_PASSWORD_AHSABER_DEFAULT);
+      const resolvedPassword = keepServerPassword ? existing.password : (u.password || existing.password);
+
       mapByEmail.set(email, {
         ...existing,
         ...u,
+        password: resolvedPassword,
+        mustChangePassword: hasChangedPassword ? false : (existing.mustChangePassword !== undefined ? existing.mustChangePassword : u.mustChangePassword),
         loginCount: Math.max(existing.loginCount || 1, u.loginCount || 1),
         lastLoginAt: existing.lastLoginAt || u.lastLoginAt,
         lastActiveAt: existing.lastActiveAt || u.lastActiveAt,
@@ -847,8 +993,32 @@ app.post('/api/matches', (req: Request, res: Response) => {
   if (!Array.isArray(matches)) {
     return res.status(400).json({ success: false, error: 'Matches array required' });
   }
-  writeMatches(matches);
-  res.json({ success: true, matches });
+
+  // Smart merge with existing matches on disk
+  const existingMatches = readMatches();
+  const mapById = new Map<string, any>();
+  existingMatches.forEach(m => {
+    if (m && m.id) mapById.set(m.id, m);
+  });
+
+  matches.forEach(incoming => {
+    if (!incoming || !incoming.id) return;
+    const existing = mapById.get(incoming.id);
+    if (!existing) {
+      mapById.set(incoming.id, incoming);
+    } else {
+      // If incoming has scores or scheduled info, or if both have info, merge gracefully
+      mapById.set(incoming.id, {
+        ...existing,
+        ...incoming,
+      });
+    }
+  });
+
+  const merged = Array.from(mapById.values());
+  writeMatches(merged);
+  console.log(`[MATCHES] Successfully saved ${merged.length} matches to matches.json`);
+  res.json({ success: true, matches: merged });
 });
 
 // 17.3. PUT /api/matches/:id - Update specific match score or details
@@ -863,7 +1033,40 @@ app.put('/api/matches/:id', (req: Request, res: Response) => {
     matches.push({ id, ...updates });
   }
   writeMatches(matches);
+  console.log(`[MATCH UPDATE] Match ${id} updated on disk.`);
   res.json({ success: true, match: matches[index >= 0 ? index : matches.length - 1], matches });
+});
+
+// 17.4. GET /api/teams - Get all registered 48 teams
+app.get('/api/teams', (_req: Request, res: Response) => {
+  const teams = readTeams();
+  res.json({ success: true, teams });
+});
+
+// 17.5. POST /api/teams - Save all 48 teams
+app.post('/api/teams', (req: Request, res: Response) => {
+  const { teams } = req.body;
+  if (!Array.isArray(teams)) {
+    return res.status(400).json({ success: false, error: 'Teams array required' });
+  }
+  writeTeams(teams);
+  res.json({ success: true, teams });
+});
+
+// 17.6. GET /api/squads - Get all player squads
+app.get('/api/squads', (_req: Request, res: Response) => {
+  const squads = readSquads();
+  res.json({ success: true, squads });
+});
+
+// 17.7. POST /api/squads - Save player squads
+app.post('/api/squads', (req: Request, res: Response) => {
+  const { squads } = req.body;
+  if (!squads || typeof squads !== 'object') {
+    return res.status(400).json({ success: false, error: 'Squads object required' });
+  }
+  writeSquads(squads);
+  res.json({ success: true, squads });
 });
 
 // 18. GET /api/backup - Export complete system backup

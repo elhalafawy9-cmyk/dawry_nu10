@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { RoundMatchupOrganizerModal } from './components/RoundMatchupOrganizerModal';
 import { KnockoutDrawModal } from './components/KnockoutDrawModal';
+import { KnockoutBracketTree } from './components/KnockoutBracketTree';
 import { TeamsRosterPage } from './components/TeamsRosterPage';
 import { StatsLeadersPage } from './components/StatsLeadersPage';
 import { SpectatorPortalPage } from './components/SpectatorPortalPage';
@@ -27,6 +28,7 @@ import { FantasyLeaguePage } from './components/FantasyLeaguePage';
 import { MatchPredictionsPage } from './components/MatchPredictionsPage';
 import { MatchVoteModal } from './components/MatchVoteModal';
 import { getMatchVotingState, loadUserVotes, MatchVoteOption } from './utils/predictions';
+import { applyOfficialReadyDrawToMatches } from './utils/knockoutDraw';
 import { findDuplicatePlayers } from './utils/auditDuplicates';
 import { 
   sanitizeTeamsList, 
@@ -66,6 +68,11 @@ import {
   updateServerApplicationStatus,
   fetchServerMatches,
   saveServerMatches,
+  changeUserPasswordOnServer,
+  fetchServerTeams,
+  saveServerTeams,
+  fetchServerSquads,
+  saveServerSquads,
 } from './utils/apiSync';
 import { TeamLogo, getTeamLogoUrl } from './utils/teamLogos';
 import { 
@@ -342,27 +349,33 @@ const generateGroupStageMatches = (): Match[] => {
 };
 
 // Initial Knockout Bracket Matches (32 matches from Round of 32 down to Grand Final)
-// All start unscheduled until reached / scheduled by admin
+// Official Ready Draw: Group 7 (مان سيتي & اكتوبر) on LEFT, Group 4 (باريس & اسبانيا) on RIGHT
 const INITIAL_KNOCKOUT_MATCHES: Match[] = [
-  { id: 'r32_1', stage: 'r32', stageName: 'دور الـ 32 (مباراة 1)', teamA: 'فريق متأهل (1)', teamB: 'فريق متأهل (2)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
-  { id: 'r32_2', stage: 'r32', stageName: 'دور الـ 32 (مباراة 2)', teamA: 'فريق متأهل (3)', teamB: 'فريق متأهل (4)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
-  { id: 'r32_3', stage: 'r32', stageName: 'دور الـ 32 (مباراة 3)', teamA: 'فريق متأهل (5)', teamB: 'فريق متأهل (6)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
-  { id: 'r32_4', stage: 'r32', stageName: 'دور الـ 32 (مباراة 4)', teamA: 'فريق متأهل (7)', teamB: 'فريق متأهل (8)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  // --- الجناح الأيسر (الشمال: 16 فريقاً / 8 مباريات) ---
+  // الربع الأول (مسار نصف النهائي 1)
+  { id: 'r32_1', stage: 'r32', stageName: 'دور الـ 32 (مباراة 1)', teamA: 'مان سيتي', teamB: 'اليابان', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  { id: 'r32_2', stage: 'r32', stageName: 'دور الـ 32 (مباراة 2)', teamA: 'انتر ميلان', teamB: 'هولندا', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  { id: 'r32_3', stage: 'r32', stageName: 'دور الـ 32 (مباراة 3)', teamA: 'برشلونة', teamB: 'ايطاليا', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  { id: 'r32_4', stage: 'r32', stageName: 'دور الـ 32 (مباراة 4)', teamA: 'امريكا', teamB: 'توتنهام', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
   
-  { id: 'r32_5', stage: 'r32', stageName: 'دور الـ 32 (مباراة 5)', teamA: 'فريق متأهل (9)', teamB: 'فريق متأهل (10)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
-  { id: 'r32_6', stage: 'r32', stageName: 'دور الـ 32 (مباراة 6)', teamA: 'فريق متأهل (11)', teamB: 'فريق متأهل (12)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
-  { id: 'r32_7', stage: 'r32', stageName: 'دور الـ 32 (مباراة 7)', teamA: 'فريق متأهل (13)', teamB: 'فريق متأهل (14)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
-  { id: 'r32_8', stage: 'r32', stageName: 'دور الـ 32 (مباراة 8)', teamA: 'فريق متأهل (15)', teamB: 'فريق متأهل (16)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  // الربع الثاني (مسار نصف النهائي 1)
+  { id: 'r32_5', stage: 'r32', stageName: 'دور الـ 32 (مباراة 5)', teamA: 'بروسيا', teamB: 'جنوب افريقيا', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  { id: 'r32_6', stage: 'r32', stageName: 'دور الـ 32 (مباراة 6)', teamA: 'اكتوبر', teamB: 'ميلان', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  { id: 'r32_7', stage: 'r32', stageName: 'دور الـ 32 (مباراة 7)', teamA: 'الجزائر', teamB: 'غزل المحلة', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  { id: 'r32_8', stage: 'r32', stageName: 'دور الـ 32 (مباراة 8)', teamA: 'الاهلي', teamB: 'البرازيل', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
 
-  { id: 'r32_9', stage: 'r32', stageName: 'دور الـ 32 (مباراة 9)', teamA: 'فريق متأهل (17)', teamB: 'فريق متأهل (18)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
-  { id: 'r32_10', stage: 'r32', stageName: 'دور الـ 32 (مباراة 10)', teamA: 'فريق متأهل (19)', teamB: 'فريق متأهل (20)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
-  { id: 'r32_11', stage: 'r32', stageName: 'دور الـ 32 (مباراة 11)', teamA: 'فريق متأهل (21)', teamB: 'فريق متأهل (22)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
-  { id: 'r32_12', stage: 'r32', stageName: 'دور الـ 32 (مباراة 12)', teamA: 'فريق متأهل (23)', teamB: 'فريق متأهل (24)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  // --- الجناح الأيمن (اليمين: 16 فريقاً / 8 مباريات) ---
+  // الربع الثالث (مسار نصف النهائي 2)
+  { id: 'r32_9', stage: 'r32', stageName: 'دور الـ 32 (مباراة 9)', teamA: 'باريس', teamB: 'فلسطين', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  { id: 'r32_10', stage: 'r32', stageName: 'دور الـ 32 (مباراة 10)', teamA: 'مينيرو', teamB: 'ارسنال', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  { id: 'r32_11', stage: 'r32', stageName: 'دور الـ 32 (مباراة 11)', teamA: 'بلباو', teamB: 'الزمالك', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  { id: 'r32_12', stage: 'r32', stageName: 'دور الـ 32 (مباراة 12)', teamA: 'بايرن', teamB: 'يونايتد', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
 
-  { id: 'r32_13', stage: 'r32', stageName: 'دور الـ 32 (مباراة 13)', teamA: 'فريق متأهل (25)', teamB: 'فريق متأهل (26)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
-  { id: 'r32_14', stage: 'r32', stageName: 'دور الـ 32 (مباراة 14)', teamA: 'فريق متأهل (27)', teamB: 'فريق متأهل (28)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
-  { id: 'r32_15', stage: 'r32', stageName: 'دور الـ 32 (مباراة 15)', teamA: 'فريق متأهل (29)', teamB: 'فريق متأهل (30)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
-  { id: 'r32_16', stage: 'r32', stageName: 'دور الـ 32 (مباراة 16)', teamA: 'فريق متأهل (31)', teamB: 'فريق متأهل (32)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  // الربع الرابع (مسار نصف النهائي 2)
+  { id: 'r32_13', stage: 'r32', stageName: 'دور الـ 32 (مباراة 13)', teamA: 'استون فيلا', teamB: 'نيوكاسل', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  { id: 'r32_14', stage: 'r32', stageName: 'دور الـ 32 (مباراة 14)', teamA: 'اسبانيا', teamB: 'ريال مدريد', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  { id: 'r32_15', stage: 'r32', stageName: 'دور الـ 32 (مباراة 15)', teamA: 'يوفنتوس', teamB: 'الارجنتين', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
+  { id: 'r32_16', stage: 'r32', stageName: 'دور الـ 32 (مباراة 16)', teamA: 'انجلترا', teamB: 'فرانكفورت', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
 
   // --- دور الـ 16 (8 مباريات) ---
   { id: 'r16_1', stage: 'r16', stageName: 'دور الـ 16 (مباراة 1)', teamA: 'الفائز من م1 (دور 32)', teamB: 'الفائز من م2 (دور 32)', scoreA: null, scoreB: null, status: 'upcoming', date: '', time: '', pitch: '', isScheduled: false },
@@ -888,6 +901,34 @@ export default function App() {
         try {
           localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(serverMatches));
         } catch {}
+      } else if (isMounted) {
+        // Seed server with current matches so disk has them immediately
+        setMatches(prev => {
+          if (Array.isArray(prev) && prev.length > 0) {
+            saveServerMatches(prev);
+          }
+          return prev;
+        });
+      }
+
+      // 3.3. Fetch saved teams and squads from server
+      try {
+        const [serverTeams, serverSquads] = await Promise.all([
+          fetchServerTeams(),
+          fetchServerSquads(),
+        ]);
+        if (serverTeams && Array.isArray(serverTeams) && serverTeams.length > 0 && isMounted) {
+          setTeams(serverTeams);
+          try {
+            localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(serverTeams));
+          } catch {}
+        }
+        if (serverSquads && typeof serverSquads === 'object' && Object.keys(serverSquads).length > 0 && isMounted) {
+          setSquads(serverSquads);
+          saveStoredSquads(serverSquads);
+        }
+      } catch (err) {
+        console.warn('Could not sync teams/squads from server on mount:', err);
       }
 
       // 3.5. Fetch tournament settings (isPlayerEditingOpen, isRegistrationVisibleToPublic, isRegistrationOpen)
@@ -972,71 +1013,6 @@ export default function App() {
     }, 20000);
   }, [currentUser?.id]);
 
-  // One-time automatic cleanup to wipe out all numbers and old dummy data, keeping only clean 48 teams
-  useEffect(() => {
-    try {
-      const wipedFlag = localStorage.getItem('dawry_data_wiped_teams_only_v5');
-      if (!wipedFlag) {
-        // 1. Clean zero teams
-        const cleanTeams = INITIAL_TEAMS.map(t => ({
-          ...t,
-          played: 0,
-          won: 0,
-          drawn: 0,
-          lost: 0,
-          gf: 0,
-          ga: 0,
-          gd: 0,
-          points: 0,
-          logoUrl: t.logoUrl || getTeamLogoUrl(t.name) || undefined,
-        }));
-        setTeams(cleanTeams);
-        localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(cleanTeams));
-        localStorage.removeItem('dawry_teams_custom_v1');
-
-        // 2. Clean upcoming matches
-        const cleanMatches = INITIAL_MATCHES.map(m => ({
-          ...m,
-          scoreA: null,
-          scoreB: null,
-          status: 'upcoming' as const,
-          minute: undefined,
-          scorersSummary: undefined,
-          recordedBy: undefined,
-          isScheduled: false,
-          lineups: undefined,
-          substitutions: [],
-          cards: [],
-        }));
-        setMatches(cleanMatches);
-        localStorage.removeItem('dawry_matches_storage_v1');
-
-        // 3. Clean empty squads for all teams so newly added players reflect cleanly
-        const cleanSquads = generateInitialSquads(INITIAL_TEAMS.map(t => t.name));
-        setSquads(cleanSquads);
-        saveStoredSquads(cleanSquads);
-
-        // 4. Wipe fantasy teams, prediction votes, and community votes
-        try {
-          Object.keys(localStorage).forEach(key => {
-            if (key.startsWith('nu_tournament_fantasy_team') || key.startsWith('nu_tournament_match_votes') || key.startsWith('nu_tournament_community_votes')) {
-              localStorage.removeItem(key);
-            }
-          });
-        } catch {}
-
-        // 5. Clean requests and alerts
-        setPlayerRequests([]);
-        saveStoredPlayerRequests([]);
-        setMatchAlerts([]);
-        saveStoredMatchAlerts([]);
-
-        localStorage.setItem('dawry_data_wiped_teams_only_v5', 'true');
-      }
-    } catch (e) {
-      console.warn('Auto cleanup migration error:', e);
-    }
-  }, []);
 
   // Data States - All 48 teams start with clean 0 points (Sanitized against rogue/duplicate teams)
   const [teams, setTeams] = useState<Team[]>(() => {
@@ -1095,7 +1071,24 @@ export default function App() {
       const stored = localStorage.getItem('dawry_matches_storage_v2');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // If knockout matches still have old placeholder teams, upgrade with INITIAL_KNOCKOUT_MATCHES
+          const r32_1 = parsed.find((m: any) => m.id === 'r32_1');
+          if (r32_1 && (r32_1.teamA === 'فريق متأهل (1)' || r32_1.teamA.includes('فريق متأهل'))) {
+            const initialMap = new Map<string, Match>();
+            INITIAL_KNOCKOUT_MATCHES.forEach(m => initialMap.set(m.id, m));
+            const upgraded = parsed.map((m: any) => {
+              if (initialMap.has(m.id)) {
+                const init = initialMap.get(m.id)!;
+                return { ...m, teamA: init.teamA, teamB: init.teamB };
+              }
+              return m;
+            });
+            localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(upgraded));
+            return upgraded;
+          }
+          return parsed;
+        }
       }
     } catch {}
     return INITIAL_MATCHES.map(m => {
@@ -1113,6 +1106,13 @@ export default function App() {
     });
   });
 
+  const handleApplyOfficialReadyDraw = () => {
+    const updated = applyOfficialReadyDrawToMatches(matches, teams, getGroupStandings);
+    saveMatches(updated);
+    confetti({ particleCount: 90, spread: 80 });
+    alert('تم اعتماد وتطبيق القرعة الجاهزة بنجاح! 🎯\nالمجموعة 4 (باريس واسبانيا) في الجناح الأيمن\nالمجموعة 7 (مان سيتي واكتوبر) في الجناح الأيسر\nوباقي المجموعات موزعة بتوازن تام 🏆');
+  };
+
   const saveMatches = (newMatches: Match[]) => {
     setMatches(newMatches);
     try {
@@ -1122,15 +1122,9 @@ export default function App() {
   };
   const [scorekeepers, setScorekeepers] = useState<Scorekeeper[]>(INITIAL_SCOREKEEPERS);
 
-  // Squads State (all 48 teams players) - Starts clean with empty squads for real player registration
+  // Squads State (all 48 teams players) - Persisted across reloads and server sync
   const [squads, setSquads] = useState<Record<string, Player[]>>(() => {
     const defaultTeamNames = INITIAL_TEAMS.map(t => t.name);
-    const wipedFlag = localStorage.getItem('dawry_data_wiped_teams_only_v5');
-    if (!wipedFlag) {
-      const clean = generateInitialSquads(defaultTeamNames);
-      saveStoredSquads(clean);
-      return clean;
-    }
     const loaded = loadStoredSquads(defaultTeamNames);
     if (loaded['نابولي'] && !loaded['هولندا']) {
       loaded['هولندا'] = loaded['نابولي'];
@@ -1211,6 +1205,51 @@ export default function App() {
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [globalDeleteTeamTarget, setGlobalDeleteTeamTarget] = useState<Team | null>(null);
   const [isAddingMatch, setIsAddingMatch] = useState<boolean>(false);
+
+  // Continuous real-time synchronization for tournament matches, schedules, and scores
+  // So any action by ANY admin (match scheduling, score recording with/without scorers, lineups)
+  // appears immediately across all connected users, admins, and spectators!
+  useEffect(() => {
+    let isCancelled = false;
+
+    const syncLiveTournamentData = async () => {
+      try {
+        const remoteMatches = await fetchServerMatches();
+        if (remoteMatches && Array.isArray(remoteMatches) && remoteMatches.length > 0 && !isCancelled) {
+          // Do not interrupt admin while they are actively filling a modal
+          if (!recordingResultMatch && !schedulingMatch) {
+            setMatches(prev => {
+              const currentStr = JSON.stringify(prev);
+              const remoteStr = JSON.stringify(remoteMatches);
+              if (currentStr !== remoteStr) {
+                try {
+                  localStorage.setItem('dawry_matches_storage_v2', remoteStr);
+                } catch {}
+                return remoteMatches;
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Live tournament polling error:', err);
+      }
+    };
+
+    // Poll every 5 seconds for real-time updates across all users
+    const pollTimer = setInterval(syncLiveTournamentData, 5000);
+
+    const handleFocusSync = () => { syncLiveTournamentData(); };
+    window.addEventListener('focus', handleFocusSync);
+    document.addEventListener('visibilitychange', handleFocusSync);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(pollTimer);
+      window.removeEventListener('focus', handleFocusSync);
+      document.removeEventListener('visibilitychange', handleFocusSync);
+    };
+  }, [recordingResultMatch, schedulingMatch]);
 
   // Form states for Match Schedule / Reschedule
   const [scheduleForm, setScheduleForm] = useState({
@@ -2747,15 +2786,21 @@ export default function App() {
     const newName = editingTeam.name.trim();
     if (!newName) return;
 
-    setTeams(prev => prev.map(t => t.id === editingTeam.id ? editingTeam : t));
+    const updatedTeams = teams.map(t => t.id === editingTeam.id ? editingTeam : t);
+    setTeams(updatedTeams);
+    try {
+      localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(updatedTeams));
+    } catch {}
+    saveServerTeams(updatedTeams);
 
     if (oldName !== newName) {
       // 1. Update matches
-      setMatches(prev => prev.map(m => ({
+      const updatedMatches = matches.map(m => ({
         ...m,
         teamA: m.teamA === oldName ? newName : m.teamA,
         teamB: m.teamB === oldName ? newName : m.teamB,
-      })));
+      }));
+      saveMatches(updatedMatches);
 
       // 2. Update squads so players stay with the renamed team
       setSquads(prev => {
@@ -2767,6 +2812,7 @@ export default function App() {
           next[newName] = [];
         }
         saveStoredSquads(next);
+        saveServerSquads(next);
         return next;
       });
 
@@ -2890,7 +2936,7 @@ export default function App() {
       recordedBy: currentOperator.name,
     };
 
-    setMatches(prev => [newM, ...prev]);
+    saveMatches([newM, ...matches]);
     setIsAddingMatch(false);
     confetti({ particleCount: 50, spread: 60 });
     alert('تمت إضافة المباراة بنجاح! ⚽');
@@ -3007,13 +3053,18 @@ export default function App() {
     });
 
     setTeams(newTeams);
+    try {
+      localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(newTeams));
+    } catch {}
+    saveServerTeams(newTeams);
 
     if (Object.keys(renameMap).length > 0) {
-      setMatches(prev => prev.map(m => ({
+      const updatedMatches = matches.map(m => ({
         ...m,
         teamA: renameMap[m.teamA] || m.teamA,
         teamB: renameMap[m.teamB] || m.teamB,
-      })));
+      }));
+      saveMatches(updatedMatches);
     }
 
     setIsBulkEditingTeams(false);
@@ -3199,8 +3250,13 @@ export default function App() {
         setUsers(serverUsers);
         const fresh = serverUsers.find(u => u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase());
         if (fresh) {
-          setCurrentUser(fresh);
-          saveActiveUser(fresh);
+          const sanitizedFresh: AppUser = {
+            ...fresh,
+            mustChangePassword: user.mustChangePassword === false ? false : Boolean(fresh.mustChangePassword),
+            password: (fresh.password && fresh.password !== '123456') ? fresh.password : (user.password || fresh.password),
+          };
+          setCurrentUser(sanitizedFresh);
+          saveActiveUser(sanitizedFresh);
         }
       }
     });
@@ -3216,7 +3272,7 @@ export default function App() {
     }
 
     // Check if user is required to change password on first login
-    if (user.mustChangePassword) {
+    if (user.mustChangePassword === true) {
       setShowFirstLoginPasswordModal(true);
       setNewPasswordInput('');
       setConfirmPasswordInput('');
@@ -3224,7 +3280,7 @@ export default function App() {
     }
   };
 
-  const handleSaveNewPassword = (e: React.FormEvent) => {
+  const handleSaveNewPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordChangeError('');
 
@@ -3261,6 +3317,14 @@ export default function App() {
     });
 
     setShowFirstLoginPasswordModal(false);
+
+    // Call server to persist the new password permanently on disk in data/users.json
+    try {
+      await changeUserPasswordOnServer(currentUser.id, currentUser.email, newPasswordInput);
+    } catch (err) {
+      console.warn('Failed to persist changed password to server:', err);
+    }
+
     confetti({ particleCount: 70, spread: 80 });
     alert('تم تغيير وتعيين كلمة المرور الجديدة بنجاح! تم حفظ حسابك بأمان ولن يُطلب منك تغييرها مرة أخرى. 🔒🎉');
   };
@@ -4953,155 +5017,17 @@ export default function App() {
         {/* TAB 3: KNOCKOUT BRACKET (دور الـ 32 وحتى المباراة النهائية) */}
         {/* ========================================================================= */}
         {currentTab === 'bracket' && (
-          <div className="space-y-6">
-            <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl space-y-5">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold mb-2">
-                    <Swords className="w-3.5 h-3.5" />
-                    <span>المسار الإقصائي الكامل (Knockout Bracket)</span>
-                  </div>
-                  <h2 className="text-xl md:text-2xl font-black text-white flex items-center gap-2">
-                    شجرة البطولة: من دور الـ 32 حتى التتويج باللقب 🏆
-                  </h2>
-                  <p className="text-xs md:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                    يتواجه المتأهلون الأربعة من كل مجموعة في <strong className="text-emerald-400">دور الـ 32 (16 مواجهة)</strong>، ويتأهل الفائزون تباعاً لدور الـ 16، وربع النهائي، ونصف النهائي حتى النهائي الحاسم.
-                  </p>
-                </div>
-
-                {/* Quick Stage Filter Selector */}
-                <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
-                  {[
-                    { key: 'all', label: 'الكل' },
-                    { key: 'r32', label: 'دور الـ 32 (16 مباراة)' },
-                    { key: 'r16', label: 'دور الـ 16 (8 مباريات)' },
-                    { key: 'qf', label: 'ربع النهائي' },
-                    { key: 'sf', label: 'نصف النهائي' },
-                    { key: 'final', label: 'النهائي 🏆' },
-                  ].map((stageItem) => (
-                    <button
-                      key={stageItem.key}
-                      onClick={() => setBracketStageFilter(stageItem.key as any)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        bracketStageFilter === stageItem.key
-                          ? 'bg-amber-500 text-slate-950 font-black shadow-md'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {stageItem.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Round of 32 Flexibility & Organizer Notice */}
-            <div className="bg-amber-950/20 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
-                  <Swords className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs md:text-sm font-black text-amber-300">
-                    ملاحظة للمنظم: مواجهات دور الـ 32 قابلة للترتيب والتحديد يدوياً بالكامل
-                  </h4>
-                  <p className="text-[11px] text-slate-300">
-                    المواجهات قيد ترتيبك الخاص — يمكنك تحديد وتعديل طرفي كل مباراة في دور الـ 32 واختيار أي مواجهات تفضلها مباشرة بضغطة زر.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setIsKnockoutDrawModalOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/30 cursor-pointer shrink-0 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                  <span>إجراء القرعة العشوائية الذكية للأدوار الإقصائية 🎲</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleOpenRoundOrganizer(undefined, undefined, 'r32')}
-                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs flex items-center gap-1.5 border border-amber-500/30 cursor-pointer shrink-0 transition-all"
-                >
-                  <ArrowRightLeft className="w-3.5 h-3.5" />
-                  <span>تنظيم يدوي (مين هيلاعب مين)</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Bracket Matches List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {matches
-                .filter(m => m.stage !== 'group')
-                .filter(m => bracketStageFilter === 'all' ? true : m.stage === bracketStageFilter)
-                .map((m) => {
-                  const r32Info = m.stage === 'r32' ? resolveR32MatchTeams(m) : null;
-                  const tA = r32Info ? r32Info.teamAName : m.teamA;
-                  const tB = r32Info ? r32Info.teamBName : m.teamB;
-
-                  return (
-                    <div key={m.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 border-b border-slate-800 pb-2">
-                        <span className="font-bold text-amber-400">{m.stageName}</span>
-                        <span>{m.isScheduled ? `${m.date} • ${m.time}` : 'لم يُحدد الموعد بعد'}</span>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="p-2 bg-slate-950 rounded-xl flex items-center justify-between text-xs font-bold text-white">
-                          <button onClick={() => setSelectedTeamNameForMatches(tA)} className="hover:text-emerald-300 truncate cursor-pointer flex items-center gap-1.5">
-                            <TeamLogo teamName={tA} size="xs" />
-                            <span className="truncate">{tA}</span>
-                          </button>
-                          <span className="font-mono text-emerald-400">{m.scoreA !== null ? m.scoreA : '-'}</span>
-                        </div>
-                        <div className="p-2 bg-slate-950 rounded-xl flex items-center justify-between text-xs font-bold text-white">
-                          <button onClick={() => setSelectedTeamNameForMatches(tB)} className="hover:text-emerald-300 truncate cursor-pointer flex items-center gap-1.5">
-                            <TeamLogo teamName={tB} size="xs" />
-                            <span className="truncate">{tB}</span>
-                          </button>
-                          <span className="font-mono text-emerald-400">{m.scoreB !== null ? m.scoreB : '-'}</span>
-                        </div>
-                      </div>
-
-                      {isAdmin ? (
-                        <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-1 text-[11px]">
-                          <button
-                            onClick={() => handleOpenEditMatchup(m)}
-                            className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-bold border border-amber-500/30 cursor-pointer transition-all"
-                            title="تعديل الفريقين وتحديد من يلاعب من"
-                          >
-                            تحديد الفريقين
-                          </button>
-                          <button
-                            onClick={() => handleOpenScheduleModal(m)}
-                            className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold cursor-pointer"
-                          >
-                            {m.isScheduled ? 'الميعاد' : 'تحديد موعد'}
-                          </button>
-                          <button
-                            onClick={() => handleOpenResultModal(m)}
-                            className="px-2 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white font-bold cursor-pointer"
-                          >
-                            النتيجة
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="pt-2 border-t border-slate-800 text-center text-[11px] text-slate-400 font-bold">
-                          {m.status === 'finished' ? (
-                            <span className="text-emerald-400 font-mono">انتهت النتيجة الرسمية FT</span>
-                          ) : m.isScheduled ? (
-                            <span className="text-slate-300">{m.date} • {m.time}</span>
-                          ) : (
-                            <span className="text-amber-400/80">بانتظار اكتمال المتأهلين والموعد</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
+          <KnockoutBracketTree
+            matches={matches}
+            teams={teams}
+            isAdmin={Boolean(isAdmin)}
+            onOpenScheduleModal={handleOpenScheduleModal}
+            onOpenResultModal={handleOpenResultModal}
+            onOpenEditMatchup={handleOpenEditMatchup}
+            onSelectTeam={setSelectedTeamNameForMatches}
+            onOpenKnockoutDraw={() => setIsKnockoutDrawModalOpen(true)}
+            onOpenRoundOrganizer={(stage) => handleOpenRoundOrganizer(undefined, undefined, stage as any)}
+          />
         )}
 
         {/* ========================================================================= */}

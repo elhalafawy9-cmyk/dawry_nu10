@@ -108,20 +108,21 @@ function generateR16KnockoutDraw(
   let solved = false;
 
   for (let attempt = 0; attempt < 500; attempt++) {
-    const g1InTop = Math.random() < 0.5;
-    const topQuarters = g1InTop ? [0, 1] : [2, 3];
-    const botQuarters = g1InTop ? [2, 3] : [0, 1];
+    // Constraint: Group 7 (G) on Left (Quarters 0, 1) and Group 4 (D) on Right (Quarters 2, 3)
+    const topQuarters = [0, 1]; // Left Half (الشمال) -> SF1
+    const botQuarters = [2, 3]; // Right Half (اليمين) -> SF2
 
     groupQ = {};
 
-    // 1. Group G (7): G1 goes to topQuarters, G2 to any quarter different from G1
-    const g1Quarter = topQuarters[Math.floor(Math.random() * 2)];
-    const otherForG = [0, 1, 2, 3].filter(q => q !== g1Quarter).sort(() => Math.random() - 0.5);
-    groupQ['G'] = [g1Quarter, otherForG[0]];
+    // 1. Group G (7): G1 goes to Quarter 0 or 1, G2 to the other quarter in Left Half!
+    const g1Quarter = Math.random() < 0.5 ? 0 : 1;
+    const g2Quarter = g1Quarter === 0 ? 1 : 0;
+    groupQ['G'] = [g1Quarter, g2Quarter];
 
-    // 2. Group D (4): D1 and D2 BOTH go to botQuarters, one in each quarter!
-    const dBot = Math.random() < 0.5 ? [botQuarters[0], botQuarters[1]] : [botQuarters[1], botQuarters[0]];
-    groupQ['D'] = [dBot[0], dBot[1]];
+    // 2. Group D (4): D1 and D2 BOTH go to Right Half (Quarters 2, 3), one in each quarter!
+    const d1Quarter = Math.random() < 0.5 ? 2 : 3;
+    const d2Quarter = d1Quarter === 2 ? 3 : 2;
+    groupQ['D'] = [d1Quarter, d2Quarter];
 
     // Track counts of rank 1 and rank 2 per quarter (target: exactly 2 per quarter for each rank)
     const rankCounts: Record<number, number[]> = {
@@ -315,21 +316,27 @@ function generateR32KnockoutDraw(
   let solved = false;
 
   for (let attempt = 0; attempt < 500; attempt++) {
-    const g1InTop = Math.random() < 0.5;
-    const topQuarters = g1InTop ? [0, 1] : [2, 3];
-    const botQuarters = g1InTop ? [2, 3] : [0, 1];
+    // Constraint: Group 7 (G) on Left (Quarters 0, 1) and Group 4 (D) on Right (Quarters 2, 3)
+    const topQuarters = [0, 1]; // Left Half (الشمال) -> SF1
+    const botQuarters = [2, 3]; // Right Half (اليمين) -> SF2
 
     groupQ = {};
 
-    // 1. Group G (Group 7): G1 goes to a random quarter in topQuarters
-    const g1Quarter = topQuarters[Math.floor(Math.random() * 2)];
-    const remainingForG = [0, 1, 2, 3].filter(q => q !== g1Quarter).sort(() => Math.random() - 0.5);
-    groupQ['G'] = [g1Quarter, remainingForG[0], remainingForG[1], remainingForG[2]];
+    // 1. Group G (Group 7): G1 goes to Quarter 0 or 1, G2 to the other quarter in Left Half!
+    // G3 & G4 go to Right Half (Quarters 2 & 3)
+    const g1Quarter = Math.random() < 0.5 ? 0 : 1;
+    const g2Quarter = g1Quarter === 0 ? 1 : 0;
+    const g3Quarter = Math.random() < 0.5 ? 2 : 3;
+    const g4Quarter = g3Quarter === 2 ? 3 : 2;
+    groupQ['G'] = [g1Quarter, g2Quarter, g3Quarter, g4Quarter];
 
-    // 2. Group D (Group 4): D1 and D2 MUST BOTH go to botQuarters (one in botQuarters[0], one in botQuarters[1])
-    const dBotQuarters = Math.random() < 0.5 ? [botQuarters[0], botQuarters[1]] : [botQuarters[1], botQuarters[0]];
-    const remainingForD = [0, 1, 2, 3].filter(q => !dBotQuarters.includes(q)).sort(() => Math.random() - 0.5);
-    groupQ['D'] = [dBotQuarters[0], dBotQuarters[1], remainingForD[0], remainingForD[1]];
+    // 2. Group D (Group 4): D1 goes to Quarter 2 or 3, D2 to the other quarter in Right Half!
+    // D3 & D4 go to Left Half (Quarters 0 & 1)
+    const d1Quarter = Math.random() < 0.5 ? 2 : 3;
+    const d2Quarter = d1Quarter === 2 ? 3 : 2;
+    const d3Quarter = Math.random() < 0.5 ? 0 : 1;
+    const d4Quarter = d3Quarter === 0 ? 1 : 0;
+    groupQ['D'] = [d1Quarter, d2Quarter, d3Quarter, d4Quarter];
 
     const rankCounts: Record<number, number[]> = {
       1: [0, 0, 0, 0],
@@ -564,4 +571,137 @@ export function applyDrawToTournamentMatches(
     return m;
   });
 }
+
+/**
+ * Official Tournament Ready Draw Specifications (المجموعة 4 يمين و المجموعة 7 شمال):
+ * 
+ * ⬅️ LEFT HALF (الشمال):
+ * - Quarter 0:
+ *   r32_1: مان سيتي (أول G / 7) 🆚 اليابان (رابع B / 2)
+ *   r32_2: انتر ميلان (ثاني C / 3) 🆚 هولندا (ثالث D / 4)
+ *   r32_3: برشلونة (أول A / 1) 🆚 ايطاليا (رابع F / 6)
+ *   r32_4: امريكا (ثاني E / 5) 🆚 توتنهام (ثالث H / 8)
+ * - Quarter 1:
+ *   r32_5: بروسيا (أول F / 6) 🆚 جنوب افريقيا (رابع E / 5)
+ *   r32_6: اكتوبر (ثاني G / 7) 🆚 ميلان (ثالث A / 1)
+ *   r32_7: الجزائر (أول B / 2) 🆚 غزل المحلة (رابع D / 4)
+ *   r32_8: الاهلي (ثاني H / 8) 🆚 البرازيل (ثالث C / 3)
+ * 
+ * ➡️ RIGHT HALF (اليمين):
+ * - Quarter 2:
+ *   r32_9: باريس (أول D / 4) 🆚 فلسطين (رابع H / 8)
+ *   r32_10: مينيرو (ثاني B / 2) 🆚 ارسنال (ثالث E / 5)
+ *   r32_11: بلباو (أول C / 3) 🆚 الزمالك (رابع A / 1)
+ *   r32_12: بايرن (ثاني F / 6) 🆚 يونايتد (ثالث G / 7)
+ * - Quarter 3:
+ *   r32_13: استون فيلا (أول E / 5) 🆚 نيوكاسل (رابع C / 3)
+ *   r32_14: اسبانيا (ثاني D / 4) 🆚 ريال مدريد (ثالث F / 6)
+ *   r32_15: يوفنتوس (أول H / 8) 🆚 الارجنتين (رابع G / 7)
+ *   r32_16: انجلترا (ثاني A / 1) 🆚 فرانكفورت (ثالث B / 2)
+ */
+export const OFFICIAL_READY_R32_SPEC = [
+  { matchId: 'r32_1', groupA: 'G', rankA: 1, groupB: 'B', rankB: 4 },
+  { matchId: 'r32_2', groupA: 'C', rankA: 2, groupB: 'D', rankB: 3 },
+  { matchId: 'r32_3', groupA: 'A', rankA: 1, groupB: 'F', rankB: 4 },
+  { matchId: 'r32_4', groupA: 'E', rankA: 2, groupB: 'H', rankB: 3 },
+  { matchId: 'r32_5', groupA: 'F', rankA: 1, groupB: 'E', rankB: 4 },
+  { matchId: 'r32_6', groupA: 'G', rankA: 2, groupB: 'A', rankB: 3 },
+  { matchId: 'r32_7', groupA: 'B', rankA: 1, groupB: 'D', rankB: 4 },
+  { matchId: 'r32_8', groupA: 'H', rankA: 2, groupB: 'C', rankB: 3 },
+
+  { matchId: 'r32_9',  groupA: 'D', rankA: 1, groupB: 'H', rankB: 4 },
+  { matchId: 'r32_10', groupA: 'B', rankA: 2, groupB: 'E', rankB: 3 },
+  { matchId: 'r32_11', groupA: 'C', rankA: 1, groupB: 'A', rankB: 4 },
+  { matchId: 'r32_12', groupA: 'F', rankA: 2, groupB: 'G', rankB: 3 },
+  { matchId: 'r32_13', groupA: 'E', rankA: 1, groupB: 'C', rankB: 4 },
+  { matchId: 'r32_14', groupA: 'D', rankA: 2, groupB: 'F', rankB: 3 },
+  { matchId: 'r32_15', groupA: 'H', rankA: 1, groupB: 'G', rankB: 4 },
+  { matchId: 'r32_16', groupA: 'A', rankA: 2, groupB: 'B', rankB: 3 },
+];
+
+/**
+ * Builds the complete 32 knockout matches pre-populated with the official draw requested by the user.
+ */
+export function buildOfficialReadyKnockoutMatches(
+  teams: Team[],
+  getGroupStandings?: (groupLetter: string) => Team[]
+): Record<string, { teamA: string; teamB: string }> {
+  const seeds = getTournamentQualifiedSeeds(teams, getGroupStandings);
+  const result: Record<string, { teamA: string; teamB: string }> = {};
+
+  OFFICIAL_READY_R32_SPEC.forEach(spec => {
+    const tA = seeds[spec.groupA]?.[spec.rankA - 1]?.teamName || `أول المجموعة ${spec.groupA}`;
+    const tB = seeds[spec.groupB]?.[spec.rankB - 1]?.teamName || `متأهل المجموعة ${spec.groupB}`;
+    result[spec.matchId] = { teamA: tA, teamB: tB };
+  });
+
+  return result;
+}
+
+/**
+ * Applies the official ready draw (م4 يمين وم7 شمال) directly to matches list.
+ */
+export function applyOfficialReadyDrawToMatches(
+  existingMatches: Match[],
+  teams: Team[],
+  getGroupStandings?: (groupLetter: string) => Team[]
+): Match[] {
+  const readyR32 = buildOfficialReadyKnockoutMatches(teams, getGroupStandings);
+
+  return existingMatches.map(m => {
+    if (readyR32[m.id]) {
+      return {
+        ...m,
+        teamA: readyR32[m.id].teamA,
+        teamB: readyR32[m.id].teamB,
+        scoreA: null,
+        scoreB: null,
+        status: 'upcoming',
+        minute: undefined,
+        scorersSummary: undefined,
+        substitutions: [],
+        cards: [],
+      };
+    }
+
+    // Reset dependent knockout matches
+    if (['r16', 'qf', 'sf', 'final'].includes(m.stage)) {
+      let resetA = m.teamA;
+      let resetB = m.teamB;
+
+      if (m.id === 'r16_1') { resetA = `الفائز من م1 (دور 32)`; resetB = `الفائز من م2 (دور 32)`; }
+      else if (m.id === 'r16_2') { resetA = `الفائز من م3 (دور 32)`; resetB = `الفائز من م4 (دور 32)`; }
+      else if (m.id === 'r16_3') { resetA = `الفائز من م5 (دور 32)`; resetB = `الفائز من م6 (دور 32)`; }
+      else if (m.id === 'r16_4') { resetA = `الفائز من م7 (دور 32)`; resetB = `الفائز من م8 (دور 32)`; }
+      else if (m.id === 'r16_5') { resetA = `الفائز من م9 (دور 32)`; resetB = `الفائز من م10 (دور 32)`; }
+      else if (m.id === 'r16_6') { resetA = `الفائز من م11 (دور 32)`; resetB = `الفائز من م12 (دور 32)`; }
+      else if (m.id === 'r16_7') { resetA = `الفائز من م13 (دور 32)`; resetB = `الفائز من م14 (دور 32)`; }
+      else if (m.id === 'r16_8') { resetA = `الفائز من م15 (دور 32)`; resetB = `الفائز من م16 (دور 32)`; }
+      else if (m.id === 'qf1') { resetA = `المتأهل من دور 16 (1)`; resetB = `المتأهل من دور 16 (2)`; }
+      else if (m.id === 'qf2') { resetA = `المتأهل من دور 16 (3)`; resetB = `المتأهل من دور 16 (4)`; }
+      else if (m.id === 'qf3') { resetA = `المتأهل من دور 16 (5)`; resetB = `المتأهل من دور 16 (6)`; }
+      else if (m.id === 'qf4') { resetA = `المتأهل من دور 16 (7)`; resetB = `المتأهل من دور 16 (8)`; }
+      else if (m.id === 'sf1') { resetA = `المتأهل من ربع النهائي (1)`; resetB = `المتأهل من ربع النهائي (2)`; }
+      else if (m.id === 'sf2') { resetA = `المتأهل من ربع النهائي (3)`; resetB = `المتأهل من ربع النهائي (4)`; }
+      else if (m.id === 'fin') { resetA = `المتأهل للنهائي (1)`; resetB = `المتأهل للنهائي (2)`; }
+      else if (m.id === 'third') { resetA = `الخاسر من نصف النهائي (1)`; resetB = `الخاسر من نصف النهائي (2)`; }
+
+      return {
+        ...m,
+        teamA: resetA,
+        teamB: resetB,
+        scoreA: null,
+        scoreB: null,
+        status: 'upcoming',
+        minute: undefined,
+        scorersSummary: undefined,
+        substitutions: [],
+        cards: [],
+      };
+    }
+
+    return m;
+  });
+}
+
 
