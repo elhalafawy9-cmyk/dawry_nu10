@@ -1,0 +1,64 @@
+{
+  "version": "2.0",
+  "appName": "دوري جامعة النيل — بطولة كرة القدم",
+  "exportedAt": "2026-10-24T10:48:37.658Z",
+  "exportedBy": "s.mohamed2442@nu.edu.eg",
+  "activeSeasonId": "season_2026",
+  "currentSeasonName": "دوري جامعة النيل 2026 - النسخة الخامسة (48 فريقاً)",
+  "currentAcademicYear": "2025 / 2026",
+  "users": [
+    {
+      "id": "user_super_admin",
+      "name": "المدير العام للنظام",
+      "email": "s.mohamed2442@nu.edu.eg",
+      "password": "Hv102030",
+      "role": "admin",
+      "isPermanentAdmin": true,
+      "studentId": "241000442",
+      "department": "إدارة بطولة دوري النيل",
+      "registeredAt": "2026-01-01",
+      "notes": "المدير الدائم المعتمد والوحيد للنظام - كامل صلاحيات الإدارة",
+      "lastLoginAt": "2026-10-24T10:17:51.858Z",
+      "lastActiveAt": "2026-10-24T10:48:32.504Z",
+      "isOnline": true,
+      "loginCount": 33,
+      "mustChangePassword": false
+    },
+    {
+      "id": "user_ahsaber_admin",
+      "name": "أحمد صابر (إدارة البطولة)",
+      "email": "ahsaber@nu.edu.eg",
+      "password": "hlfawy66",
+      "role": "admin",
+      "isPermanentAdmin": false,
+      "mustChangePassword": false,
+      "studentId": "241000999",
+      "department": "إدارة بطولة دوري النيل",
+      "registeredAt": "2026-01-01",
+      "notes": "حساب إداري معتمد",
+      "loginCount": 10,
+      "isOnline": true,
+      "lastLoginAt": "2026-10-24T09:22:56.306Z",
+      "lastActiveAt": "2026-10-24T10:46:36.963Z"
+    }
+  ],
+  "settings": {
+    "isPlayerEditingOpen": true,
+    "isRegistrationVisibleToPublic": true,
+    "isRegistrationOpen": true,
+    "registrationDeadline": "2026-11-30",
+    "activeSeasonId": "season_2026",
+    "currentSeasonName": "دوري جامعة النيل 2026 - النسخة الخامسة (48 فريقاً)",
+    "currentAcademicYear": "2025 / 2026"
+  },
+  "seasons": [
+    {
+      "id": "season_2026",
+      "name": "دوري جامعة النيل 2026 - النسخة الخامسة (48 فريقاً)",
+      "year": "2025 / 2026",
+      "teamsCount": 48,
+      "status": "active",
+      "createdAt": "2026-01-01"
+    }
+  ]
+}

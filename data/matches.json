@@ -1,19 +1,45 @@
 [
   {
     "id": "grp_a_r1_m1",
+    "scoreA": 2,
+    "scoreB": 1,
+    "status": "finished",
     "group": "A",
     "round": 1,
     "stage": "group",
     "stageName": "المجموعة A (الجولة 1)",
     "teamA": "برشلونة",
-    "teamB": "الدوري",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "teamB": "فرنسا",
+    "date": "2026-10-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "طاهر وائل",
+        "ياسين وائل",
+        "مهند أسامه",
+        "عبد العزيز احمد",
+        "احمد سعيد",
+        "أحمد محمد",
+        "فيصل يامين"
+      ],
+      "teamABench": [
+        "فضل ياسر"
+      ],
+      "teamBStarters": [
+        "يوسف اشرف",
+        "احمد اسامه",
+        "ادم عمار",
+        "احمد كمال",
+        "عبد الرحمن شريف",
+        "احمد هشام"
+      ],
+      "teamBBench": []
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_a_r1_m2",
@@ -22,14 +48,15 @@
     "stage": "group",
     "stageName": "المجموعة A (الجولة 1)",
     "teamA": "انجلترا",
-    "teamB": "سيتي مصر",
+    "teamB": "روما",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_a_r1_m3",
@@ -42,10 +69,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_a_r2_m1",
@@ -54,14 +82,15 @@
     "stage": "group",
     "stageName": "المجموعة A (الجولة 2)",
     "teamA": "برشلونة",
-    "teamB": "سيتي مصر",
+    "teamB": "روما",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_a_r2_m2",
@@ -69,15 +98,16 @@
     "round": 2,
     "stage": "group",
     "stageName": "المجموعة A (الجولة 2)",
-    "teamA": "الدوري",
+    "teamA": "فرنسا",
     "teamB": "الزمالك",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_a_r2_m3",
@@ -93,7 +123,8 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_a_r3_m1",
@@ -106,10 +137,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_a_r3_m2",
@@ -117,15 +149,16 @@
     "round": 3,
     "stage": "group",
     "stageName": "المجموعة A (الجولة 3)",
-    "teamA": "سيتي مصر",
+    "teamA": "روما",
     "teamB": "ميلان",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_a_r3_m3",
@@ -133,7 +166,7 @@
     "round": 3,
     "stage": "group",
     "stageName": "المجموعة A (الجولة 3)",
-    "teamA": "الدوري",
+    "teamA": "فرنسا",
     "teamB": "انجلترا",
     "scoreA": null,
     "scoreB": null,
@@ -141,7 +174,8 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_a_r4_m1",
@@ -154,10 +188,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_a_r4_m2",
@@ -173,7 +208,8 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_a_r4_m3",
@@ -181,15 +217,16 @@
     "round": 4,
     "stage": "group",
     "stageName": "المجموعة A (الجولة 4)",
-    "teamA": "سيتي مصر",
-    "teamB": "الدوري",
+    "teamA": "روما",
+    "teamB": "فرنسا",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_a_r5_m1",
@@ -205,7 +242,8 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_a_r5_m2",
@@ -214,14 +252,15 @@
     "stage": "group",
     "stageName": "المجموعة A (الجولة 5)",
     "teamA": "ميلان",
-    "teamB": "الدوري",
+    "teamB": "فرنسا",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_a_r5_m3",
@@ -230,14 +269,15 @@
     "stage": "group",
     "stageName": "المجموعة A (الجولة 5)",
     "teamA": "الزمالك",
-    "teamB": "سيتي مصر",
+    "teamB": "روما",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r1_m1",
@@ -246,14 +286,46 @@
     "stage": "group",
     "stageName": "المجموعة B (الجولة 1)",
     "teamA": "الجزائر",
-    "teamB": "ليفانتي",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "teamB": "ميامي",
+    "scoreA": 8,
+    "scoreB": 0,
+    "status": "finished",
+    "date": "0026-10-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "Belal sayed",
+        "Malek bakir",
+        "Selim mohamed",
+        "Mamdouh reda",
+        "Malek mohamed",
+        "عبد الله",
+        "Mohand hadi"
+      ],
+      "teamABench": [
+        "Mohamed Mohamed",
+        "Mohamed Hisham"
+      ],
+      "teamBStarters": [
+        "Abdelrahman Ashraf",
+        "Amr Saroy",
+        "Abdelhamid Elamir",
+        "Omar Yasser",
+        "Youssef Elhamaky",
+        "Omar Mahmoud",
+        "Mohamed Omar"
+      ],
+      "teamBBench": [
+        "Ahmed Abdelnaim",
+        "Abdelrahman Tarek",
+        "Omar Amin"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_b_r1_m2",
@@ -262,14 +334,15 @@
     "stage": "group",
     "stageName": "المجموعة B (الجولة 1)",
     "teamA": "مينيرو",
-    "teamB": "اشبيلية",
+    "teamB": "النرويج",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r1_m3",
@@ -282,10 +355,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r2_m1",
@@ -294,14 +368,15 @@
     "stage": "group",
     "stageName": "المجموعة B (الجولة 2)",
     "teamA": "الجزائر",
-    "teamB": "اشبيلية",
+    "teamB": "النرويج",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r2_m2",
@@ -309,15 +384,16 @@
     "round": 2,
     "stage": "group",
     "stageName": "المجموعة B (الجولة 2)",
-    "teamA": "ليفانتي",
+    "teamA": "ميامي",
     "teamB": "اليابان",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r2_m3",
@@ -330,10 +406,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r3_m1",
@@ -346,10 +423,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r3_m2",
@@ -357,15 +435,16 @@
     "round": 3,
     "stage": "group",
     "stageName": "المجموعة B (الجولة 3)",
-    "teamA": "اشبيلية",
+    "teamA": "النرويج",
     "teamB": "فرانكفورت",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r3_m3",
@@ -373,15 +452,16 @@
     "round": 3,
     "stage": "group",
     "stageName": "المجموعة B (الجولة 3)",
-    "teamA": "ليفانتي",
+    "teamA": "ميامي",
     "teamB": "مينيرو",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r4_m1",
@@ -394,10 +474,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r4_m2",
@@ -410,10 +491,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r4_m3",
@@ -421,15 +503,16 @@
     "round": 4,
     "stage": "group",
     "stageName": "المجموعة B (الجولة 4)",
-    "teamA": "اشبيلية",
-    "teamB": "ليفانتي",
+    "teamA": "النرويج",
+    "teamB": "ميامي",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r5_m1",
@@ -442,10 +525,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r5_m2",
@@ -454,14 +538,15 @@
     "stage": "group",
     "stageName": "المجموعة B (الجولة 5)",
     "teamA": "فرانكفورت",
-    "teamB": "ليفانتي",
+    "teamB": "ميامي",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_b_r5_m3",
@@ -470,14 +555,15 @@
     "stage": "group",
     "stageName": "المجموعة B (الجولة 5)",
     "teamA": "اليابان",
-    "teamB": "اشبيلية",
+    "teamB": "النرويج",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_c_r1_m1",
@@ -485,15 +571,44 @@
     "round": 1,
     "stage": "group",
     "stageName": "المجموعة C (الجولة 1)",
-    "teamA": "بلباو",
-    "teamB": "المقاولون",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "teamA": "بلجيكا",
+    "teamB": "مصر",
+    "scoreA": 0,
+    "scoreB": 2,
+    "status": "finished",
+    "date": "0026-10-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "اسر بركات",
+        "فاروق احمد",
+        "يوسف البطراوي",
+        "سيف احمد",
+        "احمد جلال",
+        "عمر خالد",
+        "ياسين العاشري"
+      ],
+      "teamABench": [],
+      "teamBStarters": [
+        "عمر علي",
+        "عبد الرحمن مصطفي",
+        "وسام انور",
+        "عمر اشرف",
+        "فارس عمرو",
+        "محمد عبد الواحد",
+        "عمر ناجد"
+      ],
+      "teamBBench": [
+        "ابراهيم علي",
+        "Hamed Amer",
+        "Zyad elkholy"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_c_r1_m2",
@@ -502,14 +617,44 @@
     "stage": "group",
     "stageName": "المجموعة C (الجولة 1)",
     "teamA": "انتر ميلان",
-    "teamB": "فياريال",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "teamB": "النصر",
+    "scoreA": 2,
+    "scoreB": 0,
+    "status": "finished",
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)",
+    "lineups": {
+      "teamAStarters": [
+        "ياسين احمد",
+        "يوسف حماده",
+        "عمر هادي",
+        "مازن علاء",
+        "سيف علي",
+        "ياسين بدر",
+        "زياد هاني"
+      ],
+      "teamABench": [
+        "يوسف وائل",
+        "عمر محمد"
+      ],
+      "teamBStarters": [
+        "ادهم منصور",
+        "عمر سالم",
+        "محمد سامح",
+        "سيف سامي",
+        "سيف عمر",
+        "فهد محمد",
+        "احمد هشام"
+      ],
+      "teamBBench": [
+        "ياسين احمد"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_c_r1_m3",
@@ -518,14 +663,15 @@
     "stage": "group",
     "stageName": "المجموعة C (الجولة 1)",
     "teamA": "البرازيل",
-    "teamB": "نيوكاسل",
+    "teamB": "كرواتيا",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_c_r2_m1",
@@ -533,15 +679,16 @@
     "round": 2,
     "stage": "group",
     "stageName": "المجموعة C (الجولة 2)",
-    "teamA": "بلباو",
-    "teamB": "فياريال",
+    "teamA": "بلجيكا",
+    "teamB": "النصر",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-01-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_c_r2_m2",
@@ -549,15 +696,16 @@
     "round": 2,
     "stage": "group",
     "stageName": "المجموعة C (الجولة 2)",
-    "teamA": "المقاولون",
-    "teamB": "نيوكاسل",
+    "teamA": "مصر",
+    "teamB": "كرواتيا",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-12-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_c_r2_m3",
@@ -570,10 +718,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0006-12-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_c_r3_m1",
@@ -581,15 +730,16 @@
     "round": 3,
     "stage": "group",
     "stageName": "المجموعة C (الجولة 3)",
-    "teamA": "بلباو",
-    "teamB": "نيوكاسل",
+    "teamA": "بلجيكا",
+    "teamB": "كرواتيا",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-12-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_c_r3_m2",
@@ -597,15 +747,16 @@
     "round": 3,
     "stage": "group",
     "stageName": "المجموعة C (الجولة 3)",
-    "teamA": "فياريال",
+    "teamA": "النصر",
     "teamB": "البرازيل",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-02-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_c_r3_m3",
@@ -613,15 +764,16 @@
     "round": 3,
     "stage": "group",
     "stageName": "المجموعة C (الجولة 3)",
-    "teamA": "المقاولون",
+    "teamA": "مصر",
     "teamB": "انتر ميلان",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_c_r4_m1",
@@ -629,15 +781,16 @@
     "round": 4,
     "stage": "group",
     "stageName": "المجموعة C (الجولة 4)",
-    "teamA": "بلباو",
+    "teamA": "بلجيكا",
     "teamB": "البرازيل",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_c_r4_m2",
@@ -645,15 +798,16 @@
     "round": 4,
     "stage": "group",
     "stageName": "المجموعة C (الجولة 4)",
-    "teamA": "نيوكاسل",
+    "teamA": "كرواتيا",
     "teamB": "انتر ميلان",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_c_r4_m3",
@@ -661,15 +815,16 @@
     "round": 4,
     "stage": "group",
     "stageName": "المجموعة C (الجولة 4)",
-    "teamA": "فياريال",
-    "teamB": "المقاولون",
+    "teamA": "النصر",
+    "teamB": "مصر",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_c_r5_m1",
@@ -677,15 +832,16 @@
     "round": 5,
     "stage": "group",
     "stageName": "المجموعة C (الجولة 5)",
-    "teamA": "بلباو",
+    "teamA": "بلجيكا",
     "teamB": "انتر ميلان",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_c_r5_m2",
@@ -694,14 +850,15 @@
     "stage": "group",
     "stageName": "المجموعة C (الجولة 5)",
     "teamA": "البرازيل",
-    "teamB": "المقاولون",
+    "teamB": "مصر",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_c_r5_m3",
@@ -709,15 +866,16 @@
     "round": 5,
     "stage": "group",
     "stageName": "المجموعة C (الجولة 5)",
-    "teamA": "نيوكاسل",
-    "teamB": "فياريال",
+    "teamA": "كرواتيا",
+    "teamB": "النصر",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_d_r1_m1",
@@ -726,14 +884,47 @@
     "stage": "group",
     "stageName": "المجموعة D (الجولة 1)",
     "teamA": "باريس",
-    "teamB": "روما",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "teamB": "المانيا",
+    "scoreA": 7,
+    "scoreB": 0,
+    "status": "finished",
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "samir alhalafawy",
+        "andrew ashraf",
+        "ahmed samir",
+        "mohamed amer",
+        "mohamed galal",
+        "youssef zaghloul",
+        "saifelden mahmoud"
+      ],
+      "teamABench": [
+        "abdelrahman emad",
+        "ziad Eissa",
+        "moataz hany"
+      ],
+      "teamBStarters": [
+        "حسام محمد",
+        "محمود محمد",
+        "مصطفى محمود",
+        "مؤمن خيري",
+        "محمد عزت",
+        "عبد الله هشام",
+        "ياسين جلال"
+      ],
+      "teamBBench": [
+        "عمر أسامة",
+        "محمد عرفه",
+        "شادي محمد"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_d_r1_m2",
@@ -742,14 +933,15 @@
     "stage": "group",
     "stageName": "المجموعة D (الجولة 1)",
     "teamA": "اسبانيا",
-    "teamB": "سلتيك",
+    "teamB": "اتلتيكو مدريد",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_d_r1_m3",
@@ -762,10 +954,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_d_r2_m1",
@@ -774,14 +967,15 @@
     "stage": "group",
     "stageName": "المجموعة D (الجولة 2)",
     "teamA": "باريس",
-    "teamB": "سلتيك",
+    "teamB": "اتلتيكو مدريد",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-22",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_d_r2_m2",
@@ -789,15 +983,16 @@
     "round": 2,
     "stage": "group",
     "stageName": "المجموعة D (الجولة 2)",
-    "teamA": "روما",
+    "teamA": "المانيا",
     "teamB": "غزل المحلة",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_d_r2_m3",
@@ -810,10 +1005,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_d_r3_m1",
@@ -826,10 +1022,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-12-12",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_d_r3_m2",
@@ -837,15 +1034,43 @@
     "round": 3,
     "stage": "group",
     "stageName": "المجموعة D (الجولة 3)",
-    "teamA": "سلتيك",
+    "teamA": "اتلتيكو مدريد",
     "teamB": "هولندا",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 1,
+    "scoreB": 5,
+    "status": "finished",
+    "date": "0026-12-12",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "Ahmed tamer",
+        "Adam hassan",
+        "Omar nashaat",
+        "Nour mahalawy",
+        "Ali el hosseny",
+        "Omar wessam",
+        "Omar galal"
+      ],
+      "teamABench": [
+        "Ibrahim hany",
+        "Ziad osama"
+      ],
+      "teamBStarters": [
+        "احمد اسماعيل",
+        "ميشيل هاني",
+        "احمد لطفي",
+        "لؤي عادل",
+        "انس عبد الكريم",
+        "ليث عبد الغفار",
+        "مازن عمرو"
+      ],
+      "teamBBench": []
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_d_r3_m3",
@@ -853,15 +1078,16 @@
     "round": 3,
     "stage": "group",
     "stageName": "المجموعة D (الجولة 3)",
-    "teamA": "روما",
+    "teamA": "المانيا",
     "teamB": "اسبانيا",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_d_r4_m1",
@@ -874,10 +1100,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_d_r4_m2",
@@ -890,10 +1117,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_d_r4_m3",
@@ -901,15 +1129,16 @@
     "round": 4,
     "stage": "group",
     "stageName": "المجموعة D (الجولة 4)",
-    "teamA": "سلتيك",
-    "teamB": "روما",
+    "teamA": "اتلتيكو مدريد",
+    "teamB": "المانيا",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_d_r5_m1",
@@ -922,10 +1151,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_d_r5_m2",
@@ -934,14 +1164,15 @@
     "stage": "group",
     "stageName": "المجموعة D (الجولة 5)",
     "teamA": "هولندا",
-    "teamB": "روما",
+    "teamB": "المانيا",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_d_r5_m3",
@@ -950,14 +1181,15 @@
     "stage": "group",
     "stageName": "المجموعة D (الجولة 5)",
     "teamA": "غزل المحلة",
-    "teamB": "سلتيك",
+    "teamB": "اتلتيكو مدريد",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_e_r1_m1",
@@ -967,13 +1199,42 @@
     "stageName": "المجموعة E (الجولة 1)",
     "teamA": "استون فيلا",
     "teamB": "طرابزون",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 1,
+    "scoreB": 2,
+    "status": "finished",
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "عمار احمد",
+        "محمد شيندي",
+        "محمد مجدي",
+        "احمد خالد",
+        "يوسف كمال",
+        "يوسف عمرو",
+        "عمرو ايمن"
+      ],
+      "teamABench": [
+        "Mohab Abdelfattah"
+      ],
+      "teamBStarters": [
+        "يوسف وليد",
+        "احمد سايدو",
+        "محمد هاني",
+        "احمد مدحت",
+        "عبد الرحمن اشرف",
+        "ايهاب عجمي",
+        "يوسف ايمن"
+      ],
+      "teamBBench": [
+        "ادم هاني"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_e_r1_m2",
@@ -983,13 +1244,44 @@
     "stageName": "المجموعة E (الجولة 1)",
     "teamA": "امريكا",
     "teamB": "المغرب",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 0,
+    "scoreB": 0,
+    "status": "finished",
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "مهند جسام",
+        "نورالدين حسين",
+        "يوسف حازم",
+        "عمرو غيث",
+        "محمد علاء",
+        "عمر البلتاجي",
+        "احمد شطا"
+      ],
+      "teamABench": [
+        "عبد الرحمن الاطروش"
+      ],
+      "teamBStarters": [
+        "احمد وليد عباس",
+        "احمد محمود مصطفي",
+        "علي احمد علي",
+        "احمد كريم إبراهيم",
+        "انس كريم إبراهيم",
+        "ادهم إدريس",
+        "عمرو احمد صقر"
+      ],
+      "teamBBench": [
+        "عمر ايمن",
+        "عمر حلافاوي",
+        "محمود زيادة"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_e_r1_m3",
@@ -998,14 +1290,39 @@
     "stage": "group",
     "stageName": "المجموعة E (الجولة 1)",
     "teamA": "ارسنال",
-    "teamB": "جنوب افريقيا",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "teamB": "كلومبيا",
+    "scoreA": 6,
+    "scoreB": 0,
+    "status": "finished",
+    "date": "0026-11-22",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "حمزه مصطفي",
+        "عمر رشاد",
+        "لؤي احمد",
+        "كريم هيثم",
+        "عمر حماده",
+        "عمر",
+        "فاروق خالد"
+      ],
+      "teamABench": [],
+      "teamBStarters": [
+        "مازن احمد",
+        "عمر محمد فوزي",
+        "يوسف حمدي",
+        "عمر محمد كمال",
+        "مارك فادي",
+        "مصطفي عليوة",
+        "علي محمد فوزي"
+      ],
+      "teamBBench": []
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_e_r2_m1",
@@ -1015,13 +1332,44 @@
     "stageName": "المجموعة E (الجولة 2)",
     "teamA": "استون فيلا",
     "teamB": "المغرب",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 0,
+    "scoreB": 2,
+    "status": "finished",
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "عمار احمد",
+        "محمد شيندي",
+        "محمد مجدي",
+        "احمد خالد",
+        "يوسف كمال",
+        "يوسف عمرو",
+        "عمرو ايمن"
+      ],
+      "teamABench": [
+        "Mohab Abdelfattah"
+      ],
+      "teamBStarters": [
+        "احمد وليد عباس",
+        "احمد محمود مصطفي",
+        "علي احمد علي",
+        "احمد كريم إبراهيم",
+        "انس كريم إبراهيم",
+        "ادهم إدريس",
+        "عمرو احمد صقر"
+      ],
+      "teamBBench": [
+        "عمر ايمن",
+        "عمر حلافاوي",
+        "محمود زيادة"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_e_r2_m2",
@@ -1030,14 +1378,15 @@
     "stage": "group",
     "stageName": "المجموعة E (الجولة 2)",
     "teamA": "طرابزون",
-    "teamB": "جنوب افريقيا",
+    "teamB": "كلومبيا",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-12-12",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_e_r2_m3",
@@ -1050,10 +1399,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_e_r3_m1",
@@ -1062,14 +1412,15 @@
     "stage": "group",
     "stageName": "المجموعة E (الجولة 3)",
     "teamA": "استون فيلا",
-    "teamB": "جنوب افريقيا",
+    "teamB": "كلومبيا",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_e_r3_m2",
@@ -1082,10 +1433,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_e_r3_m3",
@@ -1098,10 +1450,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_e_r4_m1",
@@ -1114,10 +1467,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_e_r4_m2",
@@ -1125,15 +1479,16 @@
     "round": 4,
     "stage": "group",
     "stageName": "المجموعة E (الجولة 4)",
-    "teamA": "جنوب افريقيا",
+    "teamA": "كلومبيا",
     "teamB": "امريكا",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_e_r4_m3",
@@ -1146,10 +1501,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_e_r5_m1",
@@ -1162,10 +1518,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_e_r5_m2",
@@ -1178,10 +1535,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_e_r5_m3",
@@ -1189,15 +1547,16 @@
     "round": 5,
     "stage": "group",
     "stageName": "المجموعة E (الجولة 5)",
-    "teamA": "جنوب افريقيا",
+    "teamA": "كلومبيا",
     "teamB": "المغرب",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_f_r1_m1",
@@ -1207,13 +1566,38 @@
     "stageName": "المجموعة F (الجولة 1)",
     "teamA": "بروسيا",
     "teamB": "تشيلسي",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 1,
+    "scoreB": 0,
+    "status": "finished",
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "عمر عصام",
+        "Omar mostafa",
+        "Youssef magdy",
+        "Mohamed taher",
+        "Mohamed mohsen",
+        "Youssef batour",
+        "Adhm tamer"
+      ],
+      "teamABench": [],
+      "teamBStarters": [
+        "يوسف محمد طاهر",
+        "علي وليد الحسيني",
+        "عبد الرحمن محمد طاهر",
+        "عمر ايمن",
+        "طالحه حسام",
+        "لؤي عمرو",
+        "يوسف هاني"
+      ],
+      "teamBBench": []
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_f_r1_m2",
@@ -1223,13 +1607,44 @@
     "stageName": "المجموعة F (الجولة 1)",
     "teamA": "بايرن",
     "teamB": "السعودية",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 0,
+    "scoreB": 5,
+    "status": "finished",
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "محمد عمرو",
+        "يحيي اشرف علي",
+        "ايمن نعمان",
+        "يوسف قنديل",
+        "محمد اسامه",
+        "عمر محمد عبد الحميد",
+        "محمد طلبه"
+      ],
+      "teamABench": [
+        "علي سامح",
+        "يحيي رضوان"
+      ],
+      "teamBStarters": [
+        "بلال ممدوح",
+        "احمد السيد",
+        "محمد زياد",
+        "عمرو علاء",
+        "رياض الشيمي",
+        "سيف عبد المؤمن",
+        "محمد وليد"
+      ],
+      "teamBBench": [
+        "عبد الرحمن نادر",
+        "احمد فهمي"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_f_r1_m3",
@@ -1239,13 +1654,40 @@
     "stageName": "المجموعة F (الجولة 1)",
     "teamA": "ريال مدريد",
     "teamB": "ايطاليا",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 0,
+    "scoreB": 0,
+    "status": "finished",
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "ياسين حسام",
+        "محمد مجدي",
+        "كريم البلوك",
+        "جاسر محمد",
+        "علي اشرف",
+        "اياد محمد",
+        "احمد تامر"
+      ],
+      "teamABench": [],
+      "teamBStarters": [
+        "كريم محمود",
+        "محمد احمد",
+        "يوسف وليد",
+        "عمر سيد",
+        "عمرو عبد التواب",
+        "احمد ايمن",
+        "زياد نبيل"
+      ],
+      "teamBBench": [
+        "نور يحيى"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_f_r2_m1",
@@ -1255,13 +1697,41 @@
     "stageName": "المجموعة F (الجولة 2)",
     "teamA": "بروسيا",
     "teamB": "السعودية",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 2,
+    "scoreB": 3,
+    "status": "finished",
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "عمر عصام",
+        "Omar mostafa",
+        "Youssef magdy",
+        "Mohamed taher",
+        "Mohamed mohsen",
+        "Youssef batour",
+        "Adhm tamer"
+      ],
+      "teamABench": [],
+      "teamBStarters": [
+        "بلال ممدوح",
+        "احمد السيد",
+        "محمد زياد",
+        "عمرو علاء",
+        "رياض الشيمي",
+        "سيف عبد المؤمن",
+        "محمد وليد"
+      ],
+      "teamBBench": [
+        "عبد الرحمن نادر",
+        "احمد فهمي"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_f_r2_m2",
@@ -1274,10 +1744,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_f_r2_m3",
@@ -1290,10 +1761,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_f_r3_m1",
@@ -1306,10 +1778,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_f_r3_m2",
@@ -1322,10 +1795,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_f_r3_m3",
@@ -1338,10 +1812,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_f_r4_m1",
@@ -1354,10 +1829,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_f_r4_m2",
@@ -1370,10 +1846,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_f_r4_m3",
@@ -1386,10 +1863,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_f_r5_m1",
@@ -1402,10 +1880,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_f_r5_m2",
@@ -1418,10 +1897,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-22",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_f_r5_m3",
@@ -1434,10 +1914,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-22",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_g_r1_m1",
@@ -1447,13 +1928,45 @@
     "stageName": "المجموعة G (الجولة 1)",
     "teamA": "مان سيتي",
     "teamB": "ليفركوزن",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 5,
+    "scoreB": 0,
+    "status": "finished",
+    "date": "0026-11-22",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "ادم دياب",
+        "يوسف مايكل",
+        "محمد عاطف",
+        "معاذ حسين",
+        "احمد وليد",
+        "محمد جمال",
+        "سيف الدين"
+      ],
+      "teamABench": [
+        "ايمن محمد",
+        "حمزه احمد",
+        "محمد الجويلي"
+      ],
+      "teamBStarters": [
+        "محمد محمود",
+        "اسامه محروس",
+        "كريم عبد الرحيم",
+        "عبد الحليم امين",
+        "مهند هادي",
+        "عبد الله محمد",
+        "عادل شريف"
+      ],
+      "teamBBench": [
+        "محمد خالد",
+        "يوسف محمد"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_g_r1_m2",
@@ -1463,13 +1976,41 @@
     "stageName": "المجموعة G (الجولة 1)",
     "teamA": "اكتوبر",
     "teamB": "ليفربول",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 7,
+    "scoreB": 1,
+    "status": "finished",
+    "date": "0026-11-22",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "محمود محمد حامد",
+        "عبد الرحمن احمد كمال",
+        "إبراهيم اشرف عبد المعز",
+        "كريم خالد مراد",
+        "ادم احمد عبد الله",
+        "عمر احمد محمد فاروق",
+        "محمد حازم طه"
+      ],
+      "teamABench": [],
+      "teamBStarters": [
+        "يحيى منذر",
+        "محمد خالد",
+        "يوسف منذر",
+        "ادم عويس",
+        "حمزه طارق",
+        "عمرو سعيد",
+        "يوسف محمد"
+      ],
+      "teamBBench": [
+        "علي يسري",
+        "بلال طارق"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_g_r1_m3",
@@ -1477,15 +2018,43 @@
     "round": 1,
     "stage": "group",
     "stageName": "المجموعة G (الجولة 1)",
-    "teamA": "يونايتد",
+    "teamA": "مان يونايتد",
     "teamB": "الارجنتين",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 1,
+    "scoreB": 2,
+    "status": "finished",
+    "date": "0026-12-12",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "Yassin Altahawy",
+        "Yassin Khaled",
+        "Youssef mohamed",
+        "Opy Alaa",
+        "Hazem amir",
+        "Yassin Gouda",
+        "Ziad sobhy"
+      ],
+      "teamABench": [
+        "Karim Hadi",
+        "Mazen mabrouk",
+        "Omar Khaled"
+      ],
+      "teamBStarters": [
+        "صالح شريف",
+        "Adam alsheikh",
+        "Anas hazem",
+        "Hady ahmed",
+        "Akram wael",
+        "Abdelrhman ragaby"
+      ],
+      "teamBBench": []
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_g_r2_m1",
@@ -1495,13 +2064,45 @@
     "stageName": "المجموعة G (الجولة 2)",
     "teamA": "مان سيتي",
     "teamB": "ليفربول",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 1,
+    "scoreB": 1,
+    "status": "finished",
+    "date": "0026-02-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "ادم دياب",
+        "يوسف مايكل",
+        "محمد عاطف",
+        "معاذ حسين",
+        "احمد وليد",
+        "محمد جمال",
+        "سيف الدين"
+      ],
+      "teamABench": [
+        "ايمن محمد",
+        "حمزه احمد",
+        "محمد الجويلي"
+      ],
+      "teamBStarters": [
+        "يحيى منذر",
+        "محمد خالد",
+        "يوسف منذر",
+        "ادم عويس",
+        "حمزه طارق",
+        "عمرو سعيد",
+        "يوسف محمد"
+      ],
+      "teamBBench": [
+        "علي يسري",
+        "بلال طارق"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_g_r2_m2",
@@ -1514,10 +2115,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_g_r2_m3",
@@ -1526,14 +2128,15 @@
     "stage": "group",
     "stageName": "المجموعة G (الجولة 2)",
     "teamA": "اكتوبر",
-    "teamB": "يونايتد",
+    "teamB": "مان يونايتد",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_g_r3_m1",
@@ -1546,10 +2149,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_g_r3_m2",
@@ -1558,14 +2162,15 @@
     "stage": "group",
     "stageName": "المجموعة G (الجولة 3)",
     "teamA": "ليفربول",
-    "teamB": "يونايتد",
+    "teamB": "مان يونايتد",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_g_r3_m3",
@@ -1578,10 +2183,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_g_r4_m1",
@@ -1590,14 +2196,15 @@
     "stage": "group",
     "stageName": "المجموعة G (الجولة 4)",
     "teamA": "مان سيتي",
-    "teamB": "يونايتد",
+    "teamB": "مان يونايتد",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_g_r4_m2",
@@ -1610,10 +2217,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_g_r4_m3",
@@ -1626,10 +2234,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_g_r5_m1",
@@ -1642,10 +2251,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_g_r5_m2",
@@ -1653,15 +2263,16 @@
     "round": 5,
     "stage": "group",
     "stageName": "المجموعة G (الجولة 5)",
-    "teamA": "يونايتد",
+    "teamA": "مان يونايتد",
     "teamB": "ليفركوزن",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_g_r5_m3",
@@ -1674,10 +2285,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_h_r1_m1",
@@ -1687,13 +2299,44 @@
     "stageName": "المجموعة H (الجولة 1)",
     "teamA": "يوفنتوس",
     "teamB": "البرتغال",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 0,
+    "scoreB": 2,
+    "status": "finished",
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "معاذ جلال",
+        "عمر خالد",
+        "فادي سامح",
+        "احمد ايهاب على",
+        "علي اسعد",
+        "عمر درويش",
+        "احمد شعبان"
+      ],
+      "teamABench": [
+        "يوسف ادهم",
+        "براء احمد",
+        "مروان احمد"
+      ],
+      "teamBStarters": [
+        "زياد علي",
+        "إبراهيم احمد",
+        "محمد عادل",
+        "ياسين محمد",
+        "محمد صبري",
+        "عمر سامح",
+        "مازن وليد"
+      ],
+      "teamBBench": [
+        "محمد دراز"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_h_r1_m2",
@@ -1703,13 +2346,42 @@
     "stageName": "المجموعة H (الجولة 1)",
     "teamA": "الاهلي",
     "teamB": "المكسيك",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 5,
+    "scoreB": 1,
+    "status": "finished",
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "Eprahim abdelnapy",
+        "Emad Mohamed",
+        "Yehia nady",
+        "Abdelrahman Khalil",
+        "Ziad Ahmed",
+        "Aly Hosny",
+        "Mohamed Farag"
+      ],
+      "teamABench": [
+        "Ahmed Nasr"
+      ],
+      "teamBStarters": [
+        "yassin mohamed",
+        "al gaser waleed",
+        "omar yousri",
+        "omar barakat",
+        "abdelrahman mahmoud",
+        "omar ayman",
+        "yahya essam"
+      ],
+      "teamBBench": [
+        "mohamed marwan"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_h_r1_m3",
@@ -1719,13 +2391,41 @@
     "stageName": "المجموعة H (الجولة 1)",
     "teamA": "توتنهام",
     "teamB": "فلسطين",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 5,
+    "scoreB": 2,
+    "status": "finished",
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "زياد محمد غنيم",
+        "احمد ياسين صبري",
+        "عبد الرحمن احمد صلاح",
+        "عبد الله احمد السيد",
+        "جاسر احمد رشدي",
+        "ياسين فريد محمد",
+        "تيم احمد كمال"
+      ],
+      "teamABench": [
+        "مروان احمد صابر",
+        "احمد حسين سيد"
+      ],
+      "teamBStarters": [
+        "فاروق أسامه",
+        "يوسف المسيدي",
+        "سيف شريف",
+        "احمد ابراهيم",
+        "احمد ساري",
+        "يوسف رحيم",
+        "زين وجيه"
+      ],
+      "teamBBench": []
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_h_r2_m1",
@@ -1735,13 +2435,44 @@
     "stageName": "المجموعة H (الجولة 2)",
     "teamA": "يوفنتوس",
     "teamB": "المكسيك",
-    "scoreA": null,
-    "scoreB": null,
-    "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "scoreA": 2,
+    "scoreB": 0,
+    "status": "finished",
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام)",
+    "lineups": {
+      "teamAStarters": [
+        "معاذ جلال",
+        "عمر خالد",
+        "فادي سامح",
+        "احمد ايهاب على",
+        "علي اسعد",
+        "عمر درويش",
+        "احمد شعبان"
+      ],
+      "teamABench": [
+        "يوسف ادهم",
+        "براء احمد",
+        "مروان احمد"
+      ],
+      "teamBStarters": [
+        "yassin mohamed",
+        "al gaser waleed",
+        "omar yousri",
+        "omar barakat",
+        "abdelrahman mahmoud",
+        "omar ayman",
+        "yahya essam"
+      ],
+      "teamBBench": [
+        "mohamed marwan"
+      ]
+    },
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "grp_h_r2_m2",
@@ -1754,10 +2485,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_h_r2_m3",
@@ -1770,10 +2502,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_h_r3_m1",
@@ -1786,10 +2519,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_h_r3_m2",
@@ -1802,10 +2536,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_h_r3_m3",
@@ -1818,10 +2553,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_h_r4_m1",
@@ -1834,10 +2570,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_h_r4_m2",
@@ -1850,10 +2587,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_h_r4_m3",
@@ -1866,10 +2604,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_h_r5_m1",
@@ -1882,10 +2621,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_h_r5_m2",
@@ -1898,10 +2638,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "grp_h_r5_m3",
@@ -1914,10 +2655,11 @@
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
-    "date": "",
-    "time": "",
-    "pitch": "",
-    "isScheduled": false
+    "date": "0026-11-11",
+    "time": "04:00 م",
+    "pitch": "الملعب الرئيسي (A)",
+    "isScheduled": true,
+    "recordedBy": "سمير (المدير العام) (تحديد موعد)"
   },
   {
     "id": "r32_1",
@@ -1931,7 +2673,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_2",
@@ -1945,7 +2689,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_3",
@@ -1959,7 +2705,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_4",
@@ -1973,21 +2721,25 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_5",
     "stage": "r32",
     "stageName": "دور الـ 32 (مباراة 5)",
     "teamA": "بروسيا",
-    "teamB": "جنوب افريقيا",
+    "teamB": "كلومبيا",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_6",
@@ -2001,7 +2753,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_7",
@@ -2015,7 +2769,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_8",
@@ -2029,7 +2785,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_9",
@@ -2043,7 +2801,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_10",
@@ -2057,13 +2817,15 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_11",
     "stage": "r32",
     "stageName": "دور الـ 32 (مباراة 11)",
-    "teamA": "بلباو",
+    "teamA": "بلجيكا",
     "teamB": "الزمالك",
     "scoreA": null,
     "scoreB": null,
@@ -2071,35 +2833,41 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_12",
     "stage": "r32",
     "stageName": "دور الـ 32 (مباراة 12)",
     "teamA": "بايرن",
-    "teamB": "يونايتد",
+    "teamB": "مان يونايتد",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_13",
     "stage": "r32",
     "stageName": "دور الـ 32 (مباراة 13)",
     "teamA": "استون فيلا",
-    "teamB": "نيوكاسل",
+    "teamB": "كرواتيا",
     "scoreA": null,
     "scoreB": null,
     "status": "upcoming",
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_14",
@@ -2113,7 +2881,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_15",
@@ -2127,7 +2897,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r32_16",
@@ -2141,7 +2913,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r16_1",
@@ -2155,7 +2929,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r16_2",
@@ -2169,7 +2945,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r16_3",
@@ -2183,7 +2961,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r16_4",
@@ -2197,7 +2977,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r16_5",
@@ -2211,7 +2993,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r16_6",
@@ -2225,7 +3009,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r16_7",
@@ -2239,7 +3025,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "r16_8",
@@ -2253,7 +3041,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "qf1",
@@ -2267,7 +3057,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "qf2",
@@ -2281,7 +3073,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "qf3",
@@ -2295,7 +3089,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "qf4",
@@ -2309,7 +3105,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "sf1",
@@ -2323,7 +3121,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "sf2",
@@ -2337,7 +3137,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "third",
@@ -2351,7 +3153,9 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   },
   {
     "id": "fin",
@@ -2365,6 +3169,8 @@
     "date": "",
     "time": "",
     "pitch": "",
-    "isScheduled": false
+    "isScheduled": false,
+    "substitutions": [],
+    "cards": []
   }
 ]

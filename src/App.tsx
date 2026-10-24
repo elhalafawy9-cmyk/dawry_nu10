@@ -101,6 +101,10 @@ import {
   onMatchesFirestoreSnapshot,
 } from './utils/firestoreSync';
 
+import officialMatches from './data/official_matches.json';
+import officialTeams from './data/official_teams.json';
+import officialSquads from './data/official_squads.json';
+
 // Validate Connection to Firestore on startup as mandated by Firebase skill
 testFirestoreConnection();
 
@@ -912,18 +916,23 @@ export default function App() {
       const serverMatches = await fetchServerMatches();
       if (isMounted) {
         setMatches(prev => {
-          const currentList = Array.isArray(prev) && prev.length > 0 ? prev : INITIAL_MATCHES;
+          const currentList = Array.isArray(prev) && prev.length > 0 ? prev : (officialMatches as Match[]);
           if (serverMatches && Array.isArray(serverMatches) && serverMatches.length > 0) {
             const merged = mergeTournamentMatches(currentList, serverMatches);
             try {
               localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(merged));
             } catch {}
-            // If local had scored matches that weren't on server, sync merged state up
-            saveServerMatches(merged);
+            // Only sync up if currentList had scored matches that weren't on server yet
+            const currentHasNewScores = currentList.some(m => m.scoreA !== null && !serverMatches.some(sm => sm.id === m.id && sm.scoreA !== null));
+            if (currentHasNewScores) {
+              saveServerMatches(merged);
+            }
             return merged;
           } else {
-            // Seed server with current matches so disk has all 152 matches immediately
-            saveServerMatches(currentList);
+            // If server returned empty, but we have official/local scored matches, seed server with merged scores!
+            if (currentList.some(m => m.scoreA !== null)) {
+              saveServerMatches(currentList);
+            }
             try {
               localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(currentList));
             } catch {}
@@ -1093,38 +1102,23 @@ export default function App() {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // If knockout matches still have old placeholder teams, upgrade with INITIAL_KNOCKOUT_MATCHES
-          const r32_1 = parsed.find((m: any) => m.id === 'r32_1');
-          if (r32_1 && (r32_1.teamA === 'فريق متأهل (1)' || r32_1.teamA.includes('فريق متأهل'))) {
-            const initialMap = new Map<string, Match>();
-            INITIAL_KNOCKOUT_MATCHES.forEach(m => initialMap.set(m.id, m));
-            const upgraded = parsed.map((m: any) => {
-              if (initialMap.has(m.id)) {
-                const init = initialMap.get(m.id)!;
-                return { ...m, teamA: init.teamA, teamB: init.teamB };
-              }
-              return m;
-            });
-            localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(upgraded));
-            return upgraded;
+          const hasScores = parsed.some((m: any) => m.scoreA !== null && m.scoreA !== undefined && !isNaN(Number(m.scoreA)));
+          if (hasScores) {
+            return parsed;
           }
-          return parsed;
+          // If stored has 0 scored matches, merge with official verified matches
+          const mergedWithOfficial = mergeTournamentMatches(parsed, officialMatches as Match[]);
+          localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(mergedWithOfficial));
+          return mergedWithOfficial;
         }
       }
     } catch {}
-    return INITIAL_MATCHES.map(m => {
-      let tA = m.teamA;
-      let tB = m.teamB;
-      if (tA === 'نابولي' || tA === 'Napoli') tA = 'هولندا';
-      if (tA === 'اياكس' || tA === 'أياكس' || tA === 'Ajax') tA = 'السعودية';
-      if (tA === 'سانتوس' || tA === 'Santos') tA = 'بلباو';
-      if (tA === 'كولومبيا' || tA === 'Colombia') tA = 'جنوب افريقيا';
-      if (tB === 'نابولي' || tB === 'Napoli') tB = 'هولندا';
-      if (tB === 'اياكس' || tB === 'أياكس' || tB === 'Ajax') tB = 'السعودية';
-      if (tB === 'سانتوس' || tB === 'Santos') tB = 'بلباو';
-      if (tB === 'كولومبيا' || tB === 'Colombia') tB = 'جنوب افريقيا';
-      return { ...m, teamA: tA, teamB: tB };
-    });
+
+    const seed = (officialMatches as Match[]) || INITIAL_MATCHES;
+    try {
+      localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(seed));
+    } catch {}
+    return seed;
   });
 
   const handleApplyOfficialReadyDraw = () => {
@@ -1210,6 +1204,15 @@ export default function App() {
         loaded[tName] = [...roster];
       }
     });
+
+    if (officialSquads && typeof officialSquads === 'object') {
+      Object.entries(officialSquads as Record<string, Player[]>).forEach(([tName, roster]) => {
+        if (!loaded[tName] || loaded[tName].length === 0) {
+          loaded[tName] = [...roster];
+        }
+      });
+    }
+
     const sanitized = sanitizeSquads(loaded, defaultTeamNames, true);
     saveStoredSquads(sanitized);
     return sanitized;
@@ -1332,7 +1335,7 @@ export default function App() {
       unsubscribe = onMatchesFirestoreSnapshot(firestoreMatches => {
         if (!recordingResultMatch && !schedulingMatch && Array.isArray(firestoreMatches) && firestoreMatches.length > 0) {
           setMatches(prev => {
-            const currentList = Array.isArray(prev) && prev.length > 0 ? prev : INITIAL_MATCHES;
+            const currentList = Array.isArray(prev) && prev.length > 0 ? prev : (officialMatches as Match[]);
             const merged = mergeTournamentMatches(currentList, firestoreMatches);
             const mergedStr = JSON.stringify(merged);
             const currentStr = JSON.stringify(currentList);

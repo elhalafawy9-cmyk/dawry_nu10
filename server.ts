@@ -250,24 +250,54 @@ function writeArchivedSnapshots(snapshots: ArchivedSeasonSnapshot[]): void {
   }
 }
 
+const OFFICIAL_MATCHES_FILE = path.resolve(__dirname, 'src', 'data', 'official_matches.json');
+const OFFICIAL_TEAMS_FILE = path.resolve(__dirname, 'src', 'data', 'official_teams.json');
+const OFFICIAL_SQUADS_FILE = path.resolve(__dirname, 'src', 'data', 'official_squads.json');
+
 function readMatches(): any[] {
   ensureDataDir();
   try {
     if (fs.existsSync(MATCHES_FILE)) {
       const raw = fs.readFileSync(MATCHES_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const hasScores = parsed.some(m => m.scoreA !== null && m.scoreA !== undefined && !isNaN(Number(m.scoreA)));
+        if (hasScores) return parsed;
+      }
     }
   } catch (e) {
     console.warn('Could not read matches.json', e);
   }
+
+  // Fallback to official bundled matches to prevent data loss on cold start
+  try {
+    if (fs.existsSync(OFFICIAL_MATCHES_FILE)) {
+      const raw = fs.readFileSync(OFFICIAL_MATCHES_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        writeMatches(parsed);
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('Could not read official_matches.json fallback', e);
+  }
+
   return [];
 }
 
 function writeMatches(matches: any[]): void {
+  if (!Array.isArray(matches) || matches.length === 0) {
+    console.warn('[WRITE MATCHES] Attempted to write empty matches array. Aborted.');
+    return;
+  }
   ensureDataDir();
   try {
     fs.writeFileSync(MATCHES_FILE, JSON.stringify(matches, null, 2), 'utf-8');
+    // Also persist to src/data to keep bundled copy synchronized
+    try {
+      fs.writeFileSync(OFFICIAL_MATCHES_FILE, JSON.stringify(matches, null, 2), 'utf-8');
+    } catch {}
   } catch (e) {
     console.error('Failed to write matches.json', e);
   }
@@ -284,13 +314,33 @@ function readTeams(): any[] {
   } catch (e) {
     console.warn('Could not read teams.json', e);
   }
+
+  // Fallback to official teams
+  try {
+    if (fs.existsSync(OFFICIAL_TEAMS_FILE)) {
+      const raw = fs.readFileSync(OFFICIAL_TEAMS_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        writeTeams(parsed);
+        return parsed;
+      }
+    }
+  } catch {}
+
   return [];
 }
 
 function writeTeams(teams: any[]): void {
+  if (!Array.isArray(teams) || teams.length === 0) {
+    console.warn('[WRITE TEAMS] Attempted to write empty teams array. Aborted.');
+    return;
+  }
   ensureDataDir();
   try {
     fs.writeFileSync(TEAMS_FILE, JSON.stringify(teams, null, 2), 'utf-8');
+    try {
+      fs.writeFileSync(OFFICIAL_TEAMS_FILE, JSON.stringify(teams, null, 2), 'utf-8');
+    } catch {}
   } catch (e) {
     console.error('Failed to write teams.json', e);
   }
@@ -302,18 +352,38 @@ function readSquads(): Record<string, any[]> {
     if (fs.existsSync(SQUADS_FILE)) {
       const raw = fs.readFileSync(SQUADS_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') return parsed;
+      if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) return parsed;
     }
   } catch (e) {
     console.warn('Could not read squads.json', e);
   }
+
+  // Fallback to official squads
+  try {
+    if (fs.existsSync(OFFICIAL_SQUADS_FILE)) {
+      const raw = fs.readFileSync(OFFICIAL_SQUADS_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+        writeSquads(parsed);
+        return parsed;
+      }
+    }
+  } catch {}
+
   return {};
 }
 
 function writeSquads(squads: Record<string, any[]>): void {
+  if (!squads || typeof squads !== 'object' || Object.keys(squads).length === 0) {
+    console.warn('[WRITE SQUADS] Attempted to write empty squads object. Aborted.');
+    return;
+  }
   ensureDataDir();
   try {
     fs.writeFileSync(SQUADS_FILE, JSON.stringify(squads, null, 2), 'utf-8');
+    try {
+      fs.writeFileSync(OFFICIAL_SQUADS_FILE, JSON.stringify(squads, null, 2), 'utf-8');
+    } catch {}
   } catch (e) {
     console.error('Failed to write squads.json', e);
   }
@@ -1038,11 +1108,55 @@ app.post('/api/matches', (req: Request, res: Response) => {
     if (!existing) {
       mapById.set(incoming.id, incoming);
     } else {
-      // If incoming has scores or scheduled info, or if both have info, merge gracefully
-      mapById.set(incoming.id, {
-        ...existing,
-        ...incoming,
-      });
+      const existingHasScore = existing.scoreA !== null && existing.scoreA !== undefined && !isNaN(Number(existing.scoreA));
+      const incomingHasScore = incoming.scoreA !== null && incoming.scoreA !== undefined && !isNaN(Number(incoming.scoreA));
+
+      // 1. If existing has a valid recorded score, and incoming has NO score:
+      // STRICT RULE: NEVER wipe the recorded score!
+      if (existingHasScore && !incomingHasScore) {
+        mapById.set(incoming.id, {
+          ...incoming,
+          ...existing,
+          // Allow updating schedule/pitch if incoming explicitly provided them
+          date: incoming.date || existing.date,
+          time: incoming.time || existing.time,
+          pitch: incoming.pitch || existing.pitch,
+          isScheduled: incoming.isScheduled ?? existing.isScheduled,
+        });
+      } else if (!existingHasScore && incomingHasScore) {
+        // 2. Incoming has recorded scores, existing does not
+        mapById.set(incoming.id, {
+          ...existing,
+          ...incoming,
+        });
+      } else if (existingHasScore && incomingHasScore) {
+        // 3. Both have scores: keep finished match intact or take latest incoming updates
+        if (existing.status === 'finished' && incoming.status !== 'finished') {
+          mapById.set(incoming.id, {
+            ...incoming,
+            ...existing,
+            scorersSummary: incoming.scorersSummary || existing.scorersSummary,
+            lineups: incoming.lineups || existing.lineups,
+          });
+        } else {
+          mapById.set(incoming.id, {
+            ...existing,
+            ...incoming,
+          });
+        }
+      } else {
+        // 4. Neither has scores: merge schedule, venue, and team pairings
+        mapById.set(incoming.id, {
+          ...existing,
+          ...incoming,
+          teamA: incoming.teamA || existing.teamA,
+          teamB: incoming.teamB || existing.teamB,
+          date: incoming.date || existing.date,
+          time: incoming.time || existing.time,
+          pitch: incoming.pitch || existing.pitch,
+          isScheduled: incoming.isScheduled ?? existing.isScheduled,
+        });
+      }
     }
   });
 

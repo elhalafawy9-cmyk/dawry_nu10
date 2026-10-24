@@ -59,6 +59,9 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
  * Saves or updates a single match in Firestore.
  */
 export async function saveMatchToFirestore(match: any): Promise<boolean> {
+  if (!auth.currentUser) {
+    return false;
+  }
   const path = `matches/${match.id}`;
   try {
     const docRef = doc(db, 'matches', match.id);
@@ -74,7 +77,7 @@ export async function saveMatchToFirestore(match: any): Promise<boolean> {
  * Batches matches into Firestore in chunks of up to 450 (Firestore limit is 500 per batch).
  */
 export async function saveMatchesBatchToFirestore(matches: any[]): Promise<boolean> {
-  if (!Array.isArray(matches) || matches.length === 0) return false;
+  if (!auth.currentUser || !Array.isArray(matches) || matches.length === 0) return false;
   const path = 'matches';
   try {
     const chunkSize = 400;
@@ -100,6 +103,9 @@ export async function saveMatchesBatchToFirestore(matches: any[]): Promise<boole
  * Fetches all matches from Firestore.
  */
 export async function getMatchesFromFirestore(): Promise<any[]> {
+  if (!auth.currentUser) {
+    return [];
+  }
   const path = 'matches';
   try {
     const snapshot = await getDocs(collection(db, path));
@@ -116,11 +122,16 @@ export async function getMatchesFromFirestore(): Promise<any[]> {
 
 /**
  * Listens for real-time changes to the matches collection in Firestore.
+ * Strictly adheres to Firebase React Setup rule:
+ * "Only attach onSnapshot listeners if auth is ready and user is authenticated."
  */
 export function onMatchesFirestoreSnapshot(
   onUpdate: (matches: any[]) => void,
   onError?: (err: any) => void
 ): () => void {
+  if (!auth.currentUser) {
+    return () => {};
+  }
   const path = 'matches';
   const unsubscribe = onSnapshot(
     collection(db, path),

@@ -108,15 +108,15 @@ export const INITIAL_USERS: AppUser[] = [
     id: 'user_ahsaber_admin',
     name: 'أحمد صابر (إدارة البطولة)',
     email: FIXED_ADMIN_EMAIL_AHSABER,
-    password: FIXED_ADMIN_PASSWORD_AHSABER_DEFAULT,
+    password: 'hlfawy66',
     role: 'admin',
     isPermanentAdmin: false,
-    mustChangePassword: true,
+    mustChangePassword: false,
     studentId: '241000999',
     department: 'إدارة بطولة دوري النيل',
     registeredAt: '2026-01-01',
     notes: 'حساب إداري معتمد - ليس لديه صلاحية التعديل اليدوي للقرعة والمواجهات',
-    loginCount: 0,
+    loginCount: 10,
   },
 ];
 

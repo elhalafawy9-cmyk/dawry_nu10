@@ -10,26 +10,26 @@ service cloud.firestore {
 
     // Tournament Matches: read by spectators and players, write by operators/admins
     match /matches/{matchId} {
-      allow read: if isValidId(matchId);
-      allow write: if isValidId(matchId);
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(matchId);
     }
 
     // Teams (48 teams): public standings read, operator write
     match /teams/{teamId} {
-      allow read: if isValidId(teamId);
-      allow write: if isValidId(teamId);
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(teamId);
     }
 
     // Squads: rosters read and update
     match /squads/{teamName} {
-      allow read: if isValidId(teamName);
-      allow write: if isValidId(teamName);
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(teamName);
     }
 
     // App Settings
     match /settings/{settingId} {
-      allow read: if isValidId(settingId);
-      allow write: if isValidId(settingId);
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(settingId);
     }
 
     // Test connection probe
