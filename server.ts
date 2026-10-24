@@ -261,15 +261,14 @@ function readMatches(): any[] {
       const raw = fs.readFileSync(MATCHES_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const hasScores = parsed.some(m => m.scoreA !== null && m.scoreA !== undefined && !isNaN(Number(m.scoreA)));
-        if (hasScores) return parsed;
+        return parsed;
       }
     }
   } catch (e) {
     console.warn('Could not read matches.json', e);
   }
 
-  // Fallback to official bundled matches to prevent data loss on cold start
+  // Fallback to official bundled matches only if matches.json does not exist or is empty
   try {
     if (fs.existsSync(OFFICIAL_MATCHES_FILE)) {
       const raw = fs.readFileSync(OFFICIAL_MATCHES_FILE, 'utf-8');

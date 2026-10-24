@@ -957,14 +957,35 @@ export async function saveServerSquads(squads: Record<string, any[]>): Promise<R
 }
 
 /**
+/**
  * Smart merge between local matches and remote matches:
  * 1. Preserves recorded scores and finished match status (never reverts a finished match to null score).
- * 2. Incorporates server updates when newer or available.
- * 3. Guarantees the complete list of matches is never truncated.
+ * 2. Preserves schedules, pitches, and dates (never reverts a scheduled match to empty or unscheduled).
+ * 3. Preserves actual team assignments (never reverts actual teams to placeholder texts).
+ * 4. Preserves lineups, substitutions, cards, and scorers summaries.
  */
 export function mergeTournamentMatches(localMatches: any[], remoteMatches: any[]): any[] {
   if (!Array.isArray(localMatches) || localMatches.length === 0) return remoteMatches || [];
   if (!Array.isArray(remoteMatches) || remoteMatches.length === 0) return localMatches;
+
+  const isPlaceholderTeam = (name?: string): boolean => {
+    if (!name || typeof name !== 'string') return true;
+    const t = name.trim();
+    return (
+      t === '' ||
+      t.startsWith('الفائز') ||
+      t.startsWith('المتأهل') ||
+      t.startsWith('الخاسر') ||
+      t.includes('(دور 32)') ||
+      t.includes('(دور 16)')
+    );
+  };
+
+  const resolveTeam = (a?: string, b?: string): string => {
+    if (!isPlaceholderTeam(a)) return a!;
+    if (!isPlaceholderTeam(b)) return b!;
+    return a || b || '';
+  };
 
   const remoteMap = new Map<string, any>();
   remoteMatches.forEach(m => {
@@ -978,19 +999,38 @@ export function mergeTournamentMatches(localMatches: any[], remoteMatches: any[]
     const localHasScore = localM.scoreA !== null && localM.scoreA !== undefined && !isNaN(Number(localM.scoreA));
     const remoteHasScore = remoteM.scoreA !== null && remoteM.scoreA !== undefined && !isNaN(Number(remoteM.scoreA));
 
+    // Resolve persistent schedule fields: if either has scheduled it, keep it scheduled!
+    const isScheduled = Boolean(
+      localM.isScheduled ||
+      remoteM.isScheduled ||
+      (localM.date && localM.date.trim() !== '') ||
+      (remoteM.date && remoteM.date.trim() !== '')
+    );
+    const date = (localM.date && localM.date.trim() !== '') ? localM.date : (remoteM.date || '');
+    const time = (localM.time && localM.time.trim() !== '') ? localM.time : (remoteM.time || '');
+    const pitch = (localM.pitch && localM.pitch.trim() !== '') ? localM.pitch : (remoteM.pitch || '');
+    const teamA = resolveTeam(localM.teamA, remoteM.teamA);
+    const teamB = resolveTeam(localM.teamB, remoteM.teamB);
+
     // Case 1: Local has recorded score, but remote does not yet have it
     if (localHasScore && !remoteHasScore) {
-      // KEEP LOCAL RECORDED RESULT! Do not wipe it!
       return {
         ...remoteM,
         ...localM,
+        teamA,
+        teamB,
         scoreA: localM.scoreA,
         scoreB: localM.scoreB,
         status: localM.status,
-        scorersSummary: localM.scorersSummary,
+        isScheduled,
+        date,
+        time,
+        pitch,
+        scorersSummary: localM.scorersSummary || remoteM.scorersSummary,
         lineups: localM.lineups || remoteM.lineups,
         substitutions: localM.substitutions || remoteM.substitutions,
         cards: localM.cards || remoteM.cards,
+        recordedBy: localM.recordedBy || remoteM.recordedBy,
       };
     }
 
@@ -999,30 +1039,56 @@ export function mergeTournamentMatches(localMatches: any[], remoteMatches: any[]
       return {
         ...localM,
         ...remoteM,
+        teamA,
+        teamB,
+        scoreA: remoteM.scoreA,
+        scoreB: remoteM.scoreB,
+        status: remoteM.status,
+        isScheduled,
+        date,
+        time,
+        pitch,
+        scorersSummary: remoteM.scorersSummary || localM.scorersSummary,
+        lineups: remoteM.lineups || localM.lineups,
+        substitutions: remoteM.substitutions || localM.substitutions,
+        cards: remoteM.cards || localM.cards,
+        recordedBy: remoteM.recordedBy || localM.recordedBy,
       };
     }
 
-    // Case 3: Both have scores - prefer finished status, or remote as authoritative
+    // Case 3: Both have scores - prefer finished status or the one with richer event details
     if (localHasScore && remoteHasScore) {
-      if (localM.status === 'finished' && remoteM.status !== 'finished') {
-        return localM;
-      }
+      const preferred = (localM.status === 'finished' && remoteM.status !== 'finished') ? localM : remoteM;
       return {
         ...localM,
         ...remoteM,
+        ...preferred,
+        teamA,
+        teamB,
+        isScheduled,
+        date,
+        time,
+        pitch,
+        scorersSummary: preferred.scorersSummary || localM.scorersSummary || remoteM.scorersSummary,
+        lineups: preferred.lineups || localM.lineups || remoteM.lineups,
+        substitutions: preferred.substitutions || localM.substitutions || remoteM.substitutions,
+        cards: preferred.cards || localM.cards || remoteM.cards,
       };
     }
 
-    // Case 4: Neither has scores - merge schedule, pitch, and pairings
+    // Case 4: Neither has scores - preserve teams, schedule, and lineups
     return {
       ...localM,
       ...remoteM,
-      teamA: remoteM.teamA || localM.teamA,
-      teamB: remoteM.teamB || localM.teamB,
-      isScheduled: remoteM.isScheduled ?? localM.isScheduled,
-      date: remoteM.date || localM.date,
-      time: remoteM.time || localM.time,
-      pitch: remoteM.pitch || localM.pitch,
+      teamA,
+      teamB,
+      isScheduled,
+      date,
+      time,
+      pitch,
+      lineups: localM.lineups || remoteM.lineups,
+      substitutions: localM.substitutions || remoteM.substitutions,
+      cards: localM.cards || remoteM.cards,
     };
   });
 

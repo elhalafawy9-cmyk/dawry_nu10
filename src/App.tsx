@@ -98,7 +98,12 @@ import { testFirestoreConnection } from './firebase';
 import {
   saveMatchToFirestore,
   saveMatchesBatchToFirestore,
+  getMatchesFromFirestore,
   onMatchesFirestoreSnapshot,
+  saveTeamsToFirestore,
+  getTeamsFromFirestore,
+  saveSquadsToFirestore,
+  getSquadsFromFirestore,
 } from './utils/firestoreSync';
 
 import officialMatches from './data/official_matches.json';
@@ -913,7 +918,17 @@ export default function App() {
       }
 
       // 3.2. Fetch latest saved matches from server and sync safely without wiping recorded scores
-      const serverMatches = await fetchServerMatches();
+      let serverMatches = await fetchServerMatches();
+      if (!serverMatches || !Array.isArray(serverMatches) || serverMatches.length === 0) {
+        try {
+          const fsMatches = await getMatchesFromFirestore();
+          if (fsMatches && Array.isArray(fsMatches) && fsMatches.length > 0) {
+            serverMatches = fsMatches;
+            saveServerMatches(fsMatches);
+          }
+        } catch {}
+      }
+
       if (isMounted) {
         setMatches(prev => {
           const currentList = Array.isArray(prev) && prev.length > 0 ? prev : (officialMatches as Match[]);
@@ -922,16 +937,14 @@ export default function App() {
             try {
               localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(merged));
             } catch {}
-            // Only sync up if currentList had scored matches that weren't on server yet
-            const currentHasNewScores = currentList.some(m => m.scoreA !== null && !serverMatches.some(sm => sm.id === m.id && sm.scoreA !== null));
-            if (currentHasNewScores) {
-              saveServerMatches(merged);
-            }
+            saveServerMatches(merged);
+            saveMatchesBatchToFirestore(merged).catch(() => {});
             return merged;
           } else {
             // If server returned empty, but we have official/local scored matches, seed server with merged scores!
-            if (currentList.some(m => m.scoreA !== null)) {
+            if (currentList.some(m => m.scoreA !== null || m.isScheduled)) {
               saveServerMatches(currentList);
+              saveMatchesBatchToFirestore(currentList).catch(() => {});
             }
             try {
               localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(currentList));
@@ -941,21 +954,44 @@ export default function App() {
         });
       }
 
-      // 3.3. Fetch saved teams and squads from server
+      // 3.3. Fetch saved teams and squads from server & Firestore
       try {
-        const [serverTeams, serverSquads] = await Promise.all([
+        let [serverTeams, serverSquads] = await Promise.all([
           fetchServerTeams(),
           fetchServerSquads(),
         ]);
+
+        if (!serverTeams || serverTeams.length === 0) {
+          try {
+            const fsTeams = await getTeamsFromFirestore();
+            if (fsTeams && fsTeams.length > 0) {
+              serverTeams = fsTeams;
+              saveServerTeams(fsTeams);
+            }
+          } catch {}
+        }
+
+        if (!serverSquads || Object.keys(serverSquads).length === 0) {
+          try {
+            const fsSquads = await getSquadsFromFirestore();
+            if (fsSquads && Object.keys(fsSquads).length > 0) {
+              serverSquads = fsSquads;
+              saveServerSquads(fsSquads);
+            }
+          } catch {}
+        }
+
         if (serverTeams && Array.isArray(serverTeams) && serverTeams.length > 0 && isMounted) {
           setTeams(serverTeams);
           try {
             localStorage.setItem('dawry_teams_custom_v2', JSON.stringify(serverTeams));
           } catch {}
+          saveTeamsToFirestore(serverTeams).catch(() => {});
         }
         if (serverSquads && typeof serverSquads === 'object' && Object.keys(serverSquads).length > 0 && isMounted) {
           setSquads(serverSquads);
           saveStoredSquads(serverSquads);
+          saveSquadsToFirestore(serverSquads).catch(() => {});
         }
       } catch (err) {
         console.warn('Could not sync teams/squads from server on mount:', err);
@@ -1102,14 +1138,7 @@ export default function App() {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const hasScores = parsed.some((m: any) => m.scoreA !== null && m.scoreA !== undefined && !isNaN(Number(m.scoreA)));
-          if (hasScores) {
-            return parsed;
-          }
-          // If stored has 0 scored matches, merge with official verified matches
-          const mergedWithOfficial = mergeTournamentMatches(parsed, officialMatches as Match[]);
-          localStorage.setItem('dawry_matches_storage_v2', JSON.stringify(mergedWithOfficial));
-          return mergedWithOfficial;
+          return parsed;
         }
       }
     } catch {}
